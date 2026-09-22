@@ -1,0 +1,37 @@
+{
+  "source": "Owner-supplied extracted folder: Project scope selections",
+  "preserved_on": "2026-09-21",
+  "notes": "All supplied files preserved byte-for-byte, including hidden .thumbnail. Original ZIP not supplied. Reference-only; exclude from application target.",
+  "files": [
+    {
+      "path": ".thumbnail",
+      "bytes": 69189,
+      "sha256": "2a88b24c510a97c76aef61b12804e992cabf8489e45f253b4ca2f1684b4a22c2"
+    },
+    {
+      "path": "Bible Reader - iPad.dc.html",
+      "bytes": 35813,
+      "sha256": "d453bb28100c94ce6a4d8b14680ec7692b0f97ba009b56268ce45b7c8c4d45e6"
+    },
+    {
+      "path": "Bible Reader - iPhone.dc.html",
+      "bytes": 83226,
+      "sha256": "a4d613c33f5ac052c76562dd0880815ff7e4a32bde4e46cf8e19c344c98d570f"
+    },
+    {
+      "path": "ios-frame.jsx",
+      "bytes": 16507,
+      "sha256": "24642b887be3d26ab5d1ff445ad98c363cffd33746c539a117da570ac7b6eb54"
+    },
+    {
+      "path": "support.js",
+      "bytes": 69150,
+      "sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+    },
+    {
+      "path": "uploads/Bible-App-Visual-Design-Brief.docx",
+      "bytes": 44374,
+      "sha256": "d05024d9e952ab9b01a1cc06ad099e49d9177eeaefa6169162eb4bd84978a8e3"
+    }
+  ]
+}

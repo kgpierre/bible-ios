@@ -1,0 +1,424 @@
+import XCTest
+
+final class BibleReaderUITests: XCTestCase {
+    override func setUpWithError() throws { continueAfterFailure = false }
+    @MainActor
+    func testReaderChapterAndAppearanceRoundTrip() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        capture(app, name: "2a — compact reader")
+        app.buttons["appearanceButton"].tap()
+        XCTAssertTrue(app.navigationBars["Appearance"].waitForExistence(timeout: 5))
+        app.buttons["Dark"].tap()
+        app.buttons["appearanceDoneButton"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        capture(app, name: "2a — dark reader")
+        app.buttons["passageButton"].tap()
+        choosePsalms(app)
+        XCTAssertTrue(app.buttons["chapter-PSA-119"].waitForExistence(timeout: 5))
+        capture(app, name: "Prototype chapter picker")
+        app.buttons["chapter-PSA-119"].tap()
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
+        app.textViews["chapterText"].swipeUp()
+        app.buttons["destination-saved"].tap()
+        app.buttons["destination-read"].tap()
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
+        capture(app, name: "Long chapter after destination round trip")
+    }
+
+    @MainActor
+    func testNativeSelectionMenu() throws {
+        let app = testApplication()
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let firstVerse = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
+        XCTAssertTrue(firstVerse.exists)
+        firstVerse.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15,dy: 8)).press(forDuration: 1.2)
+        capture(app, name: "Native selection menu")
+        let color = app.menuItems["Sage"]
+        XCTAssertTrue(color.waitForExistence(timeout: 5), app.debugDescription)
+        color.tap()
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "Sage", "There")).firstMatch.waitForExistence(timeout: 5))
+        app.buttons["destination-read"].tap()
+        XCTAssertTrue(reader.waitForExistence(timeout: 5))
+        capture(app, name: "Native selection and verse highlight")
+    }
+
+    @MainActor
+    func testCrossVerseSelectionDrag() throws {
+        let app = testApplication()
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
+        let second = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "The same came")).firstMatch
+        first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15, dy: 8)).press(forDuration: 1.2)
+        XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
+        capture(app, name: "Initial word selection before drag")
+        // The default-size 'There' selection end is 59 points right and 31 down
+        // from the first verse's AX frame, measured in the native selection screenshot.
+        let endHandle = first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 59, dy: 31))
+        endHandle.press(forDuration: 0.2, thenDragTo: second.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.8)))
+        capture(app, name: "Cross-verse native selection")
+        XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
+        app.menuItems["Blue"].tap()
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "John 3:1–2 (excerpt)")).firstMatch.waitForExistence(timeout: 5))
+        capture(app, name: "Two-verse multiline highlight")
+    }
+
+    @MainActor
+    func testIPadWideAndNarrowRestoration() throws {
+        let app = testApplication()
+        app.launch()
+        guard app.frame.width > 600 else { throw XCTSkip("iPad-specific adaptive layout check") }
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["passageButton"].tap()
+        choosePsalms(app)
+        app.buttons["chapter-PSA-119"].tap()
+        let reader = app.textViews["chapterText"]
+        reader.swipeUp()
+        let firstVisible = reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
+        XCTAssertFalse(app.buttons["destination-read"].exists)
+        capture(app, name: "3a — wide sidebar reader")
+        let sidebarToggle = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "sidebar")).firstMatch
+        XCTAssertTrue(sidebarToggle.exists)
+        sidebarToggle.tap()
+        capture(app, name: "3b — focused reader")
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.buttons["destination-read"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
+        let restored = reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label
+        capture(app, name: "3d — compact layout restored")
+        XCTAssertEqual(restored, firstVisible)
+    }
+
+    @MainActor
+    func testNativeTabAccessoryComparison() throws {
+        let app = testApplication()
+        app.launchArguments = ["--native-tabs-probe"]
+        app.launch()
+        guard app.frame.width < 600 else { throw XCTSkip("Compact native tab accessory comparison") }
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 5))
+        capture(app, name: "Native TabView accessory comparison")
+    }
+
+    @MainActor
+    func testMissingCorpusDoesNotSubstituteFixtures() throws {
+        let app = testApplication()
+        app.launchArguments = ["--missing-corpus"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["readerUnavailableTitle"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.textViews["chapterText"].exists)
+    }
+
+    @MainActor
+    func testFreshInstallStartsGenesisAndRestoresChosenChapter() throws {
+        let app = testApplication()
+        app.launchEnvironment.removeValue(forKey: "BIBLE_TEST_CHAPTER")
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("Genesis 1"))
+        capture(app,name: "Fresh local corpus — Genesis 1")
+        app.buttons["passageButton"].tap()
+        app.buttons["chapter-GEN-2"].tap()
+        let changed = expectation(for: NSPredicate(format: "label CONTAINS %@", "Genesis 2"), evaluatedWith: app.buttons["passageButton"])
+        wait(for: [changed],timeout: 5)
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground,timeout: 5))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("Genesis 2"))
+        capture(app,name: "Chosen chapter restored after relaunch")
+    }
+
+    @MainActor
+    func testBooksSegmentsAndCollapsingNavigation() throws {
+        let app = testApplication()
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        capture(app, name: "Updated reader navigation")
+        reader.swipeUp()
+        XCTAssertTrue(app.buttons["booksButton"].exists)
+        XCTAssertFalse(app.buttons["destination-read"].staticTexts["Read"].exists)
+        capture(app, name: "Navigation labels collapsed")
+        reader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
+            .press(forDuration: 0.05, thenDragTo: reader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
+        XCTAssertTrue(app.buttons["destination-read"].staticTexts["Read"].waitForExistence(timeout: 5))
+        app.buttons["booksButton"].tap()
+        XCTAssertTrue(app.buttons["book-MAT"].waitForExistence(timeout: 5))
+        capture(app, name: "Books — New Testament")
+        app.buttons["Old Testament"].tap()
+        XCTAssertTrue(app.buttons["book-GEN"].waitForExistence(timeout: 5))
+        capture(app, name: "Books — Old Testament")
+        app.buttons["book-GEN"].tap()
+        XCTAssertTrue(app.buttons["chapter-GEN-2"].waitForExistence(timeout: 5))
+        app.buttons["chapter-GEN-2"].tap()
+        XCTAssertTrue(app.buttons["passageButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("Genesis 2"))
+    }
+
+    @MainActor
+    func testSearchAndReferenceNavigation() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["destination-search"].tap()
+        let field = app.textFields["searchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("light\n")
+        XCTAssertTrue(app.staticTexts["searchCount"].waitForExistence(timeout: 10))
+        capture(app, name: "Local search results")
+        let hit = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "search-hit-")).firstMatch
+        XCTAssertTrue(hit.waitForExistence(timeout: 5))
+        hit.tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        app.buttons["destination-search"].tap()
+        XCTAssertEqual(field.value as? String, "light")
+        XCTAssertTrue(app.staticTexts["searchCount"].exists)
+        app.buttons["clearSearch"].tap()
+        field.typeText("Jhon 3\n")
+        XCTAssertTrue(app.buttons["openReferenceSuggestion"].waitForExistence(timeout: 10))
+        capture(app, name: "Explicit reference correction")
+        app.buttons["openReferenceSuggestion"].tap()
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        app.buttons["passageButton"].tap()
+        let reference = app.textFields["referenceField"]
+        XCTAssertTrue(reference.waitForExistence(timeout: 5))
+        reference.tap()
+        reference.typeText("Jude 5")
+        XCTAssertTrue(app.buttons["openReference"].waitForExistence(timeout: 5))
+        app.buttons["openReference"].tap()
+        XCTAssertTrue(app.buttons["passageButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("Jude 1"))
+        capture(app, name: "Single-chapter reference destination")
+    }
+
+    @MainActor
+    func testSearchSurvivesIPadResize() throws {
+        let app = testApplication()
+        app.launch()
+        guard app.frame.width > 600 else { throw XCTSkip("iPad-specific search check") }
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.buttons["sidebar-search"].waitForExistence(timeout: 10))
+        app.buttons["sidebar-search"].tap()
+        let field = app.textFields["searchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("John 3:16\n")
+        XCTAssertTrue(app.buttons["openReference"].waitForExistence(timeout: 10))
+        app.buttons["openReference"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].exists)
+        XCTAssertEqual(field.value as? String, "John 3:16")
+        capture(app, name: "iPad Search beside reader")
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.buttons["destination-search"].waitForExistence(timeout: 5))
+        XCTAssertEqual(field.value as? String, "John 3:16")
+        capture(app, name: "Search preserved in narrow iPad")
+    }
+
+    @MainActor
+    func testBooksAtLargeTypeInDarkAppearance() throws {
+        let app = testApplication()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        app.buttons["Dark"].tap()
+        app.buttons["appearanceDoneButton"].tap()
+        app.buttons["booksButton"].tap()
+        XCTAssertTrue(app.navigationBars["Books"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["book-MAT"].waitForExistence(timeout: 5))
+        capture(app, name: "Books — largest type and dark appearance")
+        app.buttons["book-MAT"].tap()
+        XCTAssertTrue(app.buttons["chapter-MAT-1"].waitForExistence(timeout: 5))
+        capture(app, name: "Chapters — largest type and dark appearance")
+    }
+
+    @MainActor
+    func testChapterSummaryAvailabilityAndDismissal() throws {
+        let app = testApplication()
+        app.launch()
+        let button = app.buttons["chapterSummaryButton"]
+        XCTAssertTrue(button.waitForExistence(timeout: 10))
+        XCTAssertEqual(button.label, "Summarize current chapter")
+        button.tap()
+        XCTAssertTrue(app.navigationBars["Chapter summary"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["John 3"].exists)
+        // Some simulator runtimes can generate; others report unavailable. Check the actual terminal state.
+        let terminal = app.staticTexts.matching(NSPredicate(format: "identifier IN %@", ["chapterSummaryStatus", "chapterSummaryText"])).firstMatch
+        XCTAssertTrue(terminal.waitForExistence(timeout: 45))
+        if app.staticTexts["chapterSummaryStatus"].exists {
+            XCTAssertTrue(app.buttons["retryChapterSummary"].exists)
+        }
+        capture(app, name: "On-device chapter summary — simulator result")
+        app.buttons["chapterSummaryDone"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+    }
+
+    @MainActor
+    func testTypographyControlsPersistAcrossRelaunch() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        app.buttons["readingFacePicker"].tap()
+        app.buttons["System Sans"].tap()
+        app.buttons["readingSizeStepper-Increment"].tap()
+        app.buttons["readingSpacingPicker"].tap()
+        app.buttons["Relaxed"].tap()
+        capture(app, name: "Persisted reading style controls")
+        app.buttons["appearanceDoneButton"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        capture(app, name: "System Sans reader with larger relaxed text")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        XCTAssertTrue(app.buttons["readingFacePicker"].label.contains("System Sans"))
+        XCTAssertTrue(app.buttons["readingSpacingPicker"].label.contains("Relaxed"))
+        XCTAssertEqual(app.steppers["readingSizeStepper"].value as? String, "1")
+        app.buttons["appearanceDoneButton"].tap()
+    }
+
+    @MainActor
+    func testIsolatedPaperTurnExperiment() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["More"].tap()
+        app.buttons["Paper turn experiment"].tap()
+        XCTAssertTrue(app.navigationBars["Paper turn experiment"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["paperReference"].label.contains("John 3"))
+        app.buttons["paperNext"].tap()
+        let forward = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 4"), evaluatedWith: app.staticTexts["paperReference"])
+        wait(for: [forward], timeout: 10)
+        capture(app, name: "Native paper curl experiment — completed forward turn")
+        app.buttons["paperPrevious"].tap()
+        let reverse = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 3"), evaluatedWith: app.staticTexts["paperReference"])
+        wait(for: [reverse], timeout: 10)
+        app.textViews["paperChapter-eng-kjv-1769-protestant:JHN:3"].swipeLeft()
+        let gesture = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 4"), evaluatedWith: app.staticTexts["paperReference"])
+        wait(for: [gesture], timeout: 10)
+        app.buttons["paperTurnDone"].tap()
+        XCTAssertTrue(app.buttons["passageButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+    }
+
+    @MainActor
+    func testExactHighlightRecolorRemovalAndUndo() throws {
+        let app = testApplication()
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
+        let initialVerseY = first.frame.minY
+        func selectFirstWord() {
+            first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15, dy: 8)).press(forDuration: 1.2)
+            XCTAssertTrue(app.menuItems["Yellow"].waitForExistence(timeout: 5))
+        }
+        selectFirstWord()
+        app.menuItems["Sage"].tap()
+        selectFirstWord()
+        XCTAssertTrue(app.menuItems["✓ Sage"].exists)
+        capture(app, name: "Exact selection — current Sage highlight")
+        app.menuItems["Blue"].tap()
+        app.buttons["destination-saved"].tap()
+        let blue = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "Blue", "John 3:1 (excerpt)")).firstMatch
+        XCTAssertTrue(blue.waitForExistence(timeout: 5))
+        XCTAssertTrue(blue.label.contains("There"))
+        XCTAssertFalse(blue.label.contains("was a man"))
+        capture(app, name: "Saved — only the selected word")
+        app.buttons["destination-read"].tap()
+        XCTAssertEqual(first.frame.minY, initialVerseY, accuracy: 2, "Saved must not leave a blank large-title area in Read")
+        capture(app, name: "Restored selection before interaction")
+        // Reopen the restored selection with the same native long press used initially.
+        selectFirstWord()
+        if app.buttons["Next Page"].exists { app.buttons["Next Page"].tap() }
+        let remove = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND (elementType == %d OR elementType == %d)", "Remove Highlight", XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue)).firstMatch
+        XCTAssertTrue(remove.waitForExistence(timeout: 5))
+        remove.tap()
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
+        app.buttons["More"].tap()
+        app.buttons["Undo annotation"].tap()
+        XCTAssertTrue(blue.waitForExistence(timeout: 5))
+        XCTAssertFalse(blue.label.contains("was a man"))
+        capture(app, name: "Undo — exact Blue excerpt restored")
+    }
+
+    @MainActor
+    private func testApplication() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchEnvironment["BIBLE_TEST_STORE"] = UUID().uuidString
+        app.launchEnvironment["BIBLE_TEST_CHAPTER"] = "JHN:3"
+        return app
+    }
+
+    @MainActor
+    private func choosePsalms(_ app: XCUIApplication) {
+        app.buttons["chapterBooksButton"].tap()
+        app.buttons["Old Testament"].tap()
+        let psalms = app.buttons["book-PSA"]
+        for _ in 0..<8 {
+            if psalms.isHittable { break }
+            app.swipeUp()
+        }
+        psalms.tap()
+        let chapter = app.buttons["chapter-PSA-119"]
+        for _ in 0..<10 {
+            if chapter.isHittable { break }
+            app.swipeUp()
+        }
+    }
+
+    @MainActor
+    func testAnnotationsAndChapterSurviveRelaunch() throws {
+        let app = testApplication()
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
+        first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15,dy: 8)).press(forDuration: 1.2)
+        XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
+        app.menuItems["Sage"].tap()
+        first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15,dy: 8)).press(forDuration: 1.2)
+        let nextMenuPage = app.buttons["Next Page"]
+        if nextMenuPage.exists { nextMenuPage.tap() }
+        let bookmarkAction = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND (elementType == %d OR elementType == %d)", "Bookmark", XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue)).firstMatch
+        XCTAssertTrue(bookmarkAction.waitForExistence(timeout: 5))
+        bookmarkAction.tap()
+        XCTAssertTrue(reader.waitForExistence(timeout: 5))
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Bookmarked")).firstMatch.waitForExistence(timeout: 5))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Bookmarked")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Sage")).firstMatch.exists)
+        capture(app,name: "Durable annotations after relaunch")
+    }
+
+    @MainActor
+    private func capture(_ app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+}

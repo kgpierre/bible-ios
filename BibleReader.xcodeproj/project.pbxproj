@@ -1,0 +1,589 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 110;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000001 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000002 /* GRDB */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		270FFFF53061FD7300C5C980 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 270FFFDF3061FD7100C5C980 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 270FFFE63061FD7100C5C980;
+			remoteInfo = BibleReader;
+		};
+		270FFFFF3061FD7300C5C980 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 270FFFDF3061FD7100C5C980 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 270FFFE63061FD7100C5C980;
+			remoteInfo = BibleReader;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		270FFFE73061FD7100C5C980 /* BibleReader.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BibleReader.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		270FFFF43061FD7300C5C980 /* BibleReaderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BibleReaderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		270FFFFE3061FD7300C5C980 /* BibleReaderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BibleReaderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		270F00013061FD7300C5C980 /* BibleReaderUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BibleReaderUITests;
+			sourceTree = "<group>";
+		};
+		270FFFE93061FD7100C5C980 /* BibleReader */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BibleReader;
+			sourceTree = "<group>";
+		};
+		270FFFF73061FD7300C5C980 /* BibleReaderTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = BibleReaderTests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		270FFFE43061FD7100C5C980 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				A00000000000000000000001 /* GRDB in Frameworks */,
+			);
+		};
+		270FFFF13061FD7300C5C980 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		270FFFFB3061FD7300C5C980 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		270FFFDE3061FD7100C5C980 = {
+			isa = PBXGroup;
+			children = (
+				270FFFE93061FD7100C5C980 /* BibleReader */,
+				270FFFF73061FD7300C5C980 /* BibleReaderTests */,
+				270F00013061FD7300C5C980 /* BibleReaderUITests */,
+				270FFFE83061FD7100C5C980 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		270FFFE83061FD7100C5C980 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				270FFFE73061FD7100C5C980 /* BibleReader.app */,
+				270FFFF43061FD7300C5C980 /* BibleReaderTests.xctest */,
+				270FFFFE3061FD7300C5C980 /* BibleReaderUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		270FFFE63061FD7100C5C980 /* BibleReader */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 270F00063061FD7300C5C980 /* Build configuration list for PBXNativeTarget "BibleReader" */;
+			buildPhases = (
+				270FFFE33061FD7100C5C980 /* Sources */,
+				270FFFE43061FD7100C5C980 /* Frameworks */,
+				270FFFE53061FD7100C5C980 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				270FFFE93061FD7100C5C980 /* BibleReader */,
+			);
+			name = BibleReader;
+			packageProductDependencies = (
+				A00000000000000000000002 /* GRDB */,
+			);
+			productName = BibleReader;
+			productReference = 270FFFE73061FD7100C5C980 /* BibleReader.app */;
+			productType = "com.apple.product-type.application";
+		};
+		270FFFF33061FD7300C5C980 /* BibleReaderTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 270F00093061FD7300C5C980 /* Build configuration list for PBXNativeTarget "BibleReaderTests" */;
+			buildPhases = (
+				270FFFF03061FD7300C5C980 /* Sources */,
+				270FFFF13061FD7300C5C980 /* Frameworks */,
+				270FFFF23061FD7300C5C980 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				270FFFF63061FD7300C5C980 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				270FFFF73061FD7300C5C980 /* BibleReaderTests */,
+			);
+			name = BibleReaderTests;
+			productName = BibleReaderTests;
+			productReference = 270FFFF43061FD7300C5C980 /* BibleReaderTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		270FFFFD3061FD7300C5C980 /* BibleReaderUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 270F000C3061FD7300C5C980 /* Build configuration list for PBXNativeTarget "BibleReaderUITests" */;
+			buildPhases = (
+				270FFFFA3061FD7300C5C980 /* Sources */,
+				270FFFFB3061FD7300C5C980 /* Frameworks */,
+				270FFFFC3061FD7300C5C980 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				270F00003061FD7300C5C980 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				270F00013061FD7300C5C980 /* BibleReaderUITests */,
+			);
+			name = BibleReaderUITests;
+			productName = BibleReaderUITests;
+			productReference = 270FFFFE3061FD7300C5C980 /* BibleReaderUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		270FFFDF3061FD7100C5C980 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					270FFFE63061FD7100C5C980 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					270FFFF33061FD7300C5C980 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 270FFFE63061FD7100C5C980;
+					};
+					270FFFFD3061FD7300C5C980 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 270FFFE63061FD7100C5C980;
+					};
+				};
+			};
+			buildConfigurationList = 270FFFE23061FD7100C5C980 /* Build configuration list for PBXProject "BibleReader" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 270FFFDE3061FD7100C5C980;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A00000000000000000000003 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 270FFFE83061FD7100C5C980 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				270FFFE63061FD7100C5C980 /* BibleReader */,
+				270FFFF33061FD7300C5C980 /* BibleReaderTests */,
+				270FFFFD3061FD7300C5C980 /* BibleReaderUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		270FFFE53061FD7100C5C980 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		270FFFF23061FD7300C5C980 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+		270FFFFC3061FD7300C5C980 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		270FFFE33061FD7100C5C980 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		270FFFF03061FD7300C5C980 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		270FFFFA3061FD7300C5C980 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		270F00003061FD7300C5C980 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 270FFFE63061FD7100C5C980 /* BibleReader */;
+			targetProxy = 270FFFFF3061FD7300C5C980 /* PBXContainerItemProxy */;
+		};
+		270FFFF63061FD7300C5C980 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 270FFFE63061FD7100C5C980 /* BibleReader */;
+			targetProxy = 270FFFF53061FD7300C5C980 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		270F00043061FD7300C5C980 /* Debug configuration for PBXProject "BibleReader" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		270F00053061FD7300C5C980 /* Release configuration for PBXProject "BibleReader" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		270F00073061FD7300C5C980 /* Debug configuration for PBXNativeTarget "BibleReader" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AVER2M3454;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Configuration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Bible Reader";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.example.BibleReader;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		270F00083061FD7300C5C980 /* Release configuration for PBXNativeTarget "BibleReader" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AVER2M3454;
+				ENABLE_PREVIEWS = YES;
+				EXCLUDED_SOURCE_FILE_NAMES = PrototypeChapters.json;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Configuration/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Bible Reader";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.example.BibleReader;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		270F000A3061FD7300C5C980 /* Debug configuration for PBXNativeTarget "BibleReaderTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.example.BibleReaderTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BibleReader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BibleReader";
+			};
+			name = Debug;
+		};
+		270F000B3061FD7300C5C980 /* Release configuration for PBXNativeTarget "BibleReaderTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.example.BibleReaderTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BibleReader.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/BibleReader";
+			};
+			name = Release;
+		};
+		270F000D3061FD7300C5C980 /* Debug configuration for PBXNativeTarget "BibleReaderUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.example.BibleReaderUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BibleReader;
+			};
+			name = Debug;
+		};
+		270F000E3061FD7300C5C980 /* Release configuration for PBXNativeTarget "BibleReaderUITests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.example.BibleReaderUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = BibleReader;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		270F00063061FD7300C5C980 /* Build configuration list for PBXNativeTarget "BibleReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				270F00073061FD7300C5C980 /* Debug configuration for PBXNativeTarget "BibleReader" */,
+				270F00083061FD7300C5C980 /* Release configuration for PBXNativeTarget "BibleReader" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		270F00093061FD7300C5C980 /* Build configuration list for PBXNativeTarget "BibleReaderTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				270F000A3061FD7300C5C980 /* Debug configuration for PBXNativeTarget "BibleReaderTests" */,
+				270F000B3061FD7300C5C980 /* Release configuration for PBXNativeTarget "BibleReaderTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		270F000C3061FD7300C5C980 /* Build configuration list for PBXNativeTarget "BibleReaderUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				270F000D3061FD7300C5C980 /* Debug configuration for PBXNativeTarget "BibleReaderUITests" */,
+				270F000E3061FD7300C5C980 /* Release configuration for PBXNativeTarget "BibleReaderUITests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		270FFFE23061FD7100C5C980 /* Build configuration list for PBXProject "BibleReader" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				270F00043061FD7300C5C980 /* Debug configuration for PBXProject "BibleReader" */,
+				270F00053061FD7300C5C980 /* Release configuration for PBXProject "BibleReader" */,
+			);
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A00000000000000000000003 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 7.11.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A00000000000000000000002 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00000000000000000000003 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 270FFFDF3061FD7100C5C980 /* Project object */;
+	validationLevel = 1;
+}

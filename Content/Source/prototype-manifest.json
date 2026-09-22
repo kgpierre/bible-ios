@@ -1,0 +1,18 @@
+{
+  "usage": "Debug-only renderer fixtures; not a release corpus or canon decision",
+  "sourceURL": "https://ebible.org/Scriptures/eng-kjv_usfx.zip",
+  "sourcePage": "https://ebible.org/find/show.php?id=eng-kjv",
+  "retrieved": "2026-09-21",
+  "archiveSHA256": "6d834ebe8bcf157587ce93b774615d9e9554f1201951a072cc379930d49bb6fb",
+  "providerID": "eng-kjv",
+  "providerLabel": "King James Version + Apocrypha",
+  "rightsReview": "Unresolved for release territories; see original copr.htm",
+  "conversion": "v1; XML whitespace collapsed; add retains italics; w/wj/nd retain wording; poetry, source headings and notes retained separately; lexical IDs not rendered",
+  "chapters": {
+    "prototype-eng-kjv:JHN:2": 25,
+    "prototype-eng-kjv:JHN:3": 36,
+    "prototype-eng-kjv:JHN:4": 54,
+    "prototype-eng-kjv:PSA:119": 176
+  },
+  "fixtureSHA256": "9b1a4ec8eaa3ea4e4ab21fa18a08f5b1328e918891d731d87ab22ef144417040"
+}

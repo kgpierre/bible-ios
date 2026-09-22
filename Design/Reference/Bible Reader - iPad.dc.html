@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+body{margin:0;background:#E8E4DA;font-family:-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#45604C}a:hover{color:#2F4536}
+</style>
+</helmet>
+
+<section style="padding:48px 56px 96px;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px">
+    <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:36px;font-weight:600;color:#242824;letter-spacing:-0.3px">Bible Reader — iPad</div>
+    <div style="font-size:15px;color:#62675F;line-height:22px">Built on <a href="#2a">2a</a>: verse‑per‑line setting, book‑page heading. 11″ landscape window (1194 × 834 pt). Scripture 24 pt / 35 pt baseline in a centered 640 pt column (~60 characters). Native inset sidebar carries Read, Saved, Search and the book list; the passage control moves to the toolbar centre since there is no tab bar. Sidebar, toolbar and popovers are system components; the reading surface stays opaque.</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:48px">
+
+    <!-- 3a sidebar open -->
+    <div id="3a" style="display:flex;flex-direction:column;gap:14px;width:1238px">
+      <div style="width:1238px;height:878px;border-radius:38px;background:#141414;padding:22px;box-sizing:border-box;box-shadow:0 40px 80px rgba(0,0,0,0.18)">
+        <div style="position:relative;width:1194px;height:834px;border-radius:22px;overflow:hidden;background:#F7F4ED">
+          <!-- status bar -->
+          <div style="position:absolute;top:0;left:0;right:0;height:24px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:13px;font-weight:600;color:#242824;z-index:5"><span>9:41 AM  Mon Sep 21</span><span>Wi‑Fi  100%</span></div>
+          <!-- sidebar (native, inset) -->
+          <div style="position:absolute;top:34px;left:14px;bottom:14px;width:320px;border-radius:26px;background:rgba(255,255,255,0.72);border:0.5px solid rgba(36,40,36,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.05),0 10px 30px rgba(0,0,0,0.06);display:flex;flex-direction:column;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 4px">
+              <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center"><svg width="22" height="18" viewBox="0 0 22 18"><rect x="1" y="1" width="20" height="16" rx="4" stroke="#45604C" stroke-width="1.8" fill="none"></rect><path d="M8 1v16" stroke="#45604C" stroke-width="1.8"></path></svg></div>
+              <span style="font-size:17px;font-weight:600;color:#242824;letter-spacing:-0.4px">Library</span>
+              <div style="width:44px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;padding:6px 10px 0">
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;background:rgba(69,96,76,0.12)">
+                <svg width="22" height="20" viewBox="0 0 24 22"><path d="M2 3.5C5.5 2 8.5 2 12 4c3.5-2 6.5-2 10-.5v15c-3.5-1.5-6.5-1.5-10 .5-3.5-2-6.5-2-10-.5z" fill="#45604C"></path><path d="M12 4v15" stroke="#F7F4ED" stroke-width="1.5"></path></svg>
+                <span style="font-size:17px;font-weight:600;color:#45604C;letter-spacing:-0.4px">Read</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px">
+                <svg width="16" height="20" viewBox="0 0 18 22"><path d="M3 2h12v18l-6-4.5L3 20z" stroke="#45604C" stroke-width="1.8" fill="none" stroke-linejoin="round"></path></svg>
+                <span style="font-size:17px;color:#242824;letter-spacing:-0.4px">Saved</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px">
+                <svg width="20" height="20" viewBox="0 0 22 22"><circle cx="9.5" cy="9.5" r="7" stroke="#45604C" stroke-width="1.8" fill="none"></circle><path d="M14.5 14.5L20 20" stroke="#45604C" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                <span style="font-size:17px;color:#242824;letter-spacing:-0.4px">Search</span>
+              </div>
+            </div>
+            <div style="margin:16px 14px 0;height:40px;border-radius:12px;background:rgba(36,40,36,0.06);display:flex;align-items:center;gap:8px;padding:0 12px">
+              <svg width="16" height="16" viewBox="0 0 22 22"><circle cx="9.5" cy="9.5" r="7" stroke="#62675F" stroke-width="2" fill="none"></circle><path d="M14.5 14.5L20 20" stroke="#62675F" stroke-width="2" stroke-linecap="round"></path></svg>
+              <span style="font-size:15px;color:#62675F">Book or reference</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:#62675F;padding:18px 24px 6px;letter-spacing:0.3px">NEW TESTAMENT</div>
+            <div style="display:flex;flex-direction:column;padding:0 10px;overflow:hidden;flex:1">
+              <sc-for list="{{ ntBooks }}" as="b" hint-placeholder-count="12">
+                <div style="display:flex;align-items:center;justify-content:space-between;height:44px;padding:0 12px;border-radius:12px;background:{{ b.bg }}">
+                  <span style="font-size:17px;letter-spacing:-0.4px;color:#242824;font-weight:{{ b.w }}">{{ b.name }}</span>
+                  <span style="font-size:15px;color:#62675F">{{ b.ch }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <!-- reading area -->
+          <div style="position:absolute;top:0;left:348px;right:0;bottom:0;overflow:hidden">
+            <div style="width:640px;margin:0 auto;padding-top:112px">
+              <div style="padding-left:40px;margin-bottom:30px">
+                <div style="font-size:14px;font-weight:600;color:#62675F;letter-spacing:0.6px;margin-bottom:8px">THE GOSPEL ACCORDING TO</div>
+                <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:46px;font-weight:600;color:#242824;line-height:52px;margin-bottom:4px;letter-spacing:-0.5px">John</div>
+                <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:24px;color:#62675F;line-height:32px">Chapter 3</div>
+              </div>
+              <sc-for list="{{ verses }}" as="v" hint-placeholder-count="8">
+                <div style="display:grid;grid-template-columns:40px minmax(0,1fr);font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:24px;line-height:35px;color:#242824;margin-bottom:6px;text-wrap:pretty">
+                  <span style="font-family:-apple-system,system-ui;font-size:15px;font-weight:500;color:#62675F;line-height:35px;text-align:right;padding-right:12px">{{ v.n }}</span>
+                  <span>{{ v.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <!-- toolbar (native) -->
+            <div style="position:absolute;top:34px;left:0;right:14px;height:44px;display:flex;align-items:center;justify-content:center">
+              <div style="height:44px;padding:0 14px 0 16px;border-radius:9999px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)">
+                <span style="font-size:17px;font-weight:600;color:#242824;letter-spacing:-0.4px">John 3</span>
+                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4.5l4 4 4-4" stroke="#62675F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="position:absolute;right:0;top:0;display:flex;gap:10px">
+                <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05);font-size:17px;font-weight:500;color:#242824;letter-spacing:-0.5px">Aa</div>
+                <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)"><svg width="20" height="6" viewBox="0 0 20 6"><circle cx="3" cy="3" r="2.2" fill="#242824"></circle><circle cx="10" cy="3" r="2.2" fill="#242824"></circle><circle cx="17" cy="3" r="2.2" fill="#242824"></circle></svg></div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:200px;height:5px;border-radius:3px;background:rgba(0,0,0,0.25)"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;max-width:760px">
+        <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#F7F4ED;background:#45604C;border-radius:6px;padding:2px 7px">3a</span>
+        <div style="font-size:14px;color:#62675F;line-height:20px"><b style="color:#242824">Wide window · sidebar open.</b> Inset sidebar holds the three destinations and the book list (current book tinted). Reading column centred in the remaining width; toolbar centres the passage control, which opens an anchored popover here rather than a sheet.</div>
+      </div>
+    </div>
+
+    <!-- 3b sidebar collapsed -->
+    <div id="3b" style="display:flex;flex-direction:column;gap:14px;width:1238px">
+      <div style="width:1238px;height:878px;border-radius:38px;background:#141414;padding:22px;box-sizing:border-box;box-shadow:0 40px 80px rgba(0,0,0,0.18)">
+        <div style="position:relative;width:1194px;height:834px;border-radius:22px;overflow:hidden;background:#F7F4ED">
+          <div style="position:absolute;top:0;left:0;right:0;height:24px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:13px;font-weight:600;color:#242824;z-index:5"><span>9:41 AM  Mon Sep 21</span><span>Wi‑Fi  100%</span></div>
+          <div style="position:absolute;inset:0;overflow:hidden">
+            <div style="width:640px;margin:0 auto;padding-top:112px">
+              <div style="padding-left:40px;margin-bottom:30px">
+                <div style="font-size:14px;font-weight:600;color:#62675F;letter-spacing:0.6px;margin-bottom:8px">THE GOSPEL ACCORDING TO</div>
+                <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:46px;font-weight:600;color:#242824;line-height:52px;margin-bottom:4px;letter-spacing:-0.5px">John</div>
+                <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:24px;color:#62675F;line-height:32px">Chapter 3</div>
+              </div>
+              <sc-for list="{{ verses }}" as="v" hint-placeholder-count="8">
+                <div style="display:grid;grid-template-columns:40px minmax(0,1fr);font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:24px;line-height:35px;color:#242824;margin-bottom:6px;text-wrap:pretty">
+                  <span style="font-family:-apple-system,system-ui;font-size:15px;font-weight:500;color:#62675F;line-height:35px;text-align:right;padding-right:12px">{{ v.n }}</span>
+                  <span>{{ v.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="position:absolute;top:34px;left:14px;right:14px;height:44px;display:flex;align-items:center;justify-content:center">
+              <div style="position:absolute;left:0;top:0;width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)"><svg width="22" height="18" viewBox="0 0 22 18"><rect x="1" y="1" width="20" height="16" rx="4" stroke="#242824" stroke-width="1.8" fill="none"></rect><path d="M8 1v16" stroke="#242824" stroke-width="1.8"></path></svg></div>
+              <div style="height:44px;padding:0 14px 0 16px;border-radius:9999px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)">
+                <span style="font-size:17px;font-weight:600;color:#242824;letter-spacing:-0.4px">John 3</span>
+                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4.5l4 4 4-4" stroke="#62675F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="position:absolute;right:0;top:0;display:flex;gap:10px">
+                <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05);font-size:17px;font-weight:500;color:#242824;letter-spacing:-0.5px">Aa</div>
+                <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)"><svg width="20" height="6" viewBox="0 0 20 6"><circle cx="3" cy="3" r="2.2" fill="#242824"></circle><circle cx="10" cy="3" r="2.2" fill="#242824"></circle><circle cx="17" cy="3" r="2.2" fill="#242824"></circle></svg></div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:200px;height:5px;border-radius:3px;background:rgba(0,0,0,0.25)"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;max-width:760px">
+        <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#F7F4ED;background:#45604C;border-radius:6px;padding:2px 7px">3b</span>
+        <div style="font-size:14px;color:#62675F;line-height:20px"><b style="color:#242824">Sidebar collapsed · immersive page.</b> Column width unchanged; extra width becomes margin. Sidebar toggle stays as the leading toolbar item; ⌘⇧S / ⌘F / ⌘[ ⌘] shortcuts for sidebar, Search and chapter moves.</div>
+      </div>
+    </div>
+
+    <!-- 3c saved beside reader -->
+    <div id="3c" style="display:flex;flex-direction:column;gap:14px;width:1238px">
+      <div style="width:1238px;height:878px;border-radius:38px;background:#141414;padding:22px;box-sizing:border-box;box-shadow:0 40px 80px rgba(0,0,0,0.18)">
+        <div style="position:relative;width:1194px;height:834px;border-radius:22px;overflow:hidden;background:#F7F4ED">
+          <div style="position:absolute;top:0;left:0;right:0;height:24px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:13px;font-weight:600;color:#242824;z-index:5"><span>9:41 AM  Mon Sep 21</span><span>Wi‑Fi  100%</span></div>
+          <div style="position:absolute;top:34px;left:14px;bottom:14px;width:320px;border-radius:26px;background:rgba(255,255,255,0.72);border:0.5px solid rgba(36,40,36,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.05),0 10px 30px rgba(0,0,0,0.06);display:flex;flex-direction:column;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 4px">
+              <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center"><svg width="22" height="18" viewBox="0 0 22 18"><rect x="1" y="1" width="20" height="16" rx="4" stroke="#45604C" stroke-width="1.8" fill="none"></rect><path d="M8 1v16" stroke="#45604C" stroke-width="1.8"></path></svg></div>
+              <span style="font-size:17px;font-weight:600;color:#242824;letter-spacing:-0.4px">Library</span>
+              <div style="width:44px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;padding:6px 10px 0">
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px">
+                <svg width="22" height="20" viewBox="0 0 24 22"><path d="M2 3.5C5.5 2 8.5 2 12 4c3.5-2 6.5-2 10-.5v15c-3.5-1.5-6.5-1.5-10 .5-3.5-2-6.5-2-10-.5z" stroke="#45604C" stroke-width="1.8" fill="none" stroke-linejoin="round"></path><path d="M12 4v15" stroke="#45604C" stroke-width="1.5"></path></svg>
+                <span style="font-size:17px;color:#242824;letter-spacing:-0.4px">Read</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;background:rgba(69,96,76,0.12)">
+                <svg width="16" height="20" viewBox="0 0 18 22"><path d="M3 2h12v18l-6-4.5L3 20z" fill="#45604C"></path></svg>
+                <span style="font-size:17px;font-weight:600;color:#45604C;letter-spacing:-0.4px">Saved</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px">
+                <svg width="20" height="20" viewBox="0 0 22 22"><circle cx="9.5" cy="9.5" r="7" stroke="#45604C" stroke-width="1.8" fill="none"></circle><path d="M14.5 14.5L20 20" stroke="#45604C" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                <span style="font-size:17px;color:#242824;letter-spacing:-0.4px">Search</span>
+              </div>
+            </div>
+            <!-- segmented (native) -->
+            <div style="margin:16px 14px 0;height:36px;border-radius:10px;background:rgba(36,40,36,0.06);display:flex;padding:2px">
+              <div style="flex:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#62675F">All</div>
+              <div style="flex:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#242824;background:#FFFFFF;box-shadow:0 1px 3px rgba(0,0,0,0.1)">Highlights</div>
+              <div style="flex:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#62675F">Bookmarks</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px 6px">
+              <span style="font-size:13px;font-weight:600;color:#62675F;letter-spacing:0.3px">RECENT</span>
+              <span style="font-size:13px;color:#45604C">Bible order</span>
+            </div>
+            <div style="display:flex;flex-direction:column;padding:0 10px;overflow:hidden;flex:1">
+              <sc-for list="{{ saved }}" as="s" hint-placeholder-count="5">
+                <div style="display:flex;gap:12px;padding:12px 12px;border-radius:14px;background:{{ s.bg }}">
+                  <div style="width:12px;display:flex;justify-content:center;padding-top:4px"><div style="width:12px;height:12px;border-radius:6px;background:{{ s.dot }}"></div></div>
+                  <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                    <span style="font-size:15px;font-weight:600;color:#242824;letter-spacing:-0.2px">{{ s.ref }}</span>
+                    <span style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:16px;line-height:22px;color:#62675F;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ s.t }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="position:absolute;top:0;left:348px;right:0;bottom:0;overflow:hidden">
+            <div style="width:640px;margin:0 auto;padding-top:112px">
+              <sc-for list="{{ hlVerses }}" as="v" hint-placeholder-count="8">
+                <div style="display:grid;grid-template-columns:40px minmax(0,1fr);font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:24px;line-height:35px;color:#242824;margin-bottom:6px;text-wrap:pretty">
+                  <span style="font-family:-apple-system,system-ui;font-size:15px;font-weight:500;color:#62675F;line-height:35px;text-align:right;padding-right:12px">{{ v.n }}</span>
+                  <span><span style="border-radius:4px;padding:2px 0;background:{{ v.bg }};box-decoration-break:clone;-webkit-box-decoration-break:clone">{{ v.t }}</span></span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="position:absolute;top:34px;left:0;right:14px;height:44px;display:flex;align-items:center;justify-content:center">
+              <div style="height:44px;padding:0 14px 0 16px;border-radius:9999px;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)">
+                <span style="font-size:17px;font-weight:600;color:#242824;letter-spacing:-0.4px">John 3</span>
+                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4.5l4 4 4-4" stroke="#62675F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="position:absolute;right:0;top:0;display:flex;gap:10px">
+                <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05);font-size:17px;font-weight:500;color:#242824;letter-spacing:-0.5px">Aa</div>
+                <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)"><svg width="20" height="6" viewBox="0 0 20 6"><circle cx="3" cy="3" r="2.2" fill="#242824"></circle><circle cx="10" cy="3" r="2.2" fill="#242824"></circle><circle cx="17" cy="3" r="2.2" fill="#242824"></circle></svg></div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:200px;height:5px;border-radius:3px;background:rgba(0,0,0,0.25)"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;max-width:760px">
+        <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#F7F4ED;background:#45604C;border-radius:6px;padding:2px 7px">3c</span>
+        <div style="font-size:14px;color:#62675F;line-height:20px"><b style="color:#242824">Saved beside the reader.</b> Selecting Saved swaps the sidebar's lower half for the list (native segmented filter, Recent / Bible order). Tapping John 3:16 scrolls the reader so the verse sits in view; the row stays selected. Colour dot + reference identify state, never colour alone.</div>
+      </div>
+    </div>
+
+    <!-- 3d narrow window -->
+    <div id="3d" style="display:flex;flex-direction:column;gap:14px;width:1238px">
+      <div style="width:1238px;height:878px;border-radius:38px;background:#141414;padding:22px;box-sizing:border-box;box-shadow:0 40px 80px rgba(0,0,0,0.18)">
+        <div style="position:relative;width:1194px;height:834px;border-radius:22px;overflow:hidden;background:#2B2B2B">
+          <!-- other app -->
+          <div style="position:absolute;top:0;left:0;bottom:0;width:760px;background:#DCD9D1;display:flex;align-items:center;justify-content:center;font-size:15px;color:#62675F">Another app in Split View</div>
+          <div style="position:absolute;top:0;left:760px;bottom:0;width:10px;display:flex;align-items:center;justify-content:center"><div style="width:5px;height:60px;border-radius:3px;background:rgba(255,255,255,0.35)"></div></div>
+          <!-- our app, compact -->
+          <div style="position:absolute;top:0;left:770px;right:0;bottom:0;background:#F7F4ED;overflow:hidden">
+            <div style="position:absolute;top:0;left:0;right:0;height:24px;display:flex;justify-content:flex-end;align-items:center;padding:0 22px;font-size:13px;font-weight:600;color:#242824;z-index:5"><span>Wi‑Fi  100%</span></div>
+            <div style="position:absolute;inset:0;overflow:hidden;padding:96px 24px 0 20px">
+              <div style="padding-left:36px;margin-bottom:24px">
+                <div style="font-size:13px;font-weight:600;color:#62675F;letter-spacing:0.6px;margin-bottom:6px">THE GOSPEL ACCORDING TO</div>
+                <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:40px;font-weight:600;color:#242824;line-height:44px;margin-bottom:4px;letter-spacing:-0.4px">John</div>
+                <div style="font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:22px;color:#62675F;line-height:30px">Chapter 3</div>
+              </div>
+              <sc-for list="{{ versesCompact }}" as="v" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:36px minmax(0,1fr);font-family:ui-serif,'New York','Iowan Old Style',Georgia,serif;font-size:22px;line-height:32px;color:#242824;margin-bottom:6px;text-wrap:pretty">
+                  <span style="font-family:-apple-system,system-ui;font-size:14px;font-weight:500;color:#62675F;line-height:32px;text-align:right;padding-right:10px">{{ v.n }}</span>
+                  <span>{{ v.t }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="position:absolute;top:34px;left:16px;right:16px;display:flex;justify-content:flex-end;align-items:center;gap:10px">
+              <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05);font-size:17px;font-weight:500;color:#242824;letter-spacing:-0.5px">Aa</div>
+              <div style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.05)"><svg width="20" height="6" viewBox="0 0 20 6"><circle cx="3" cy="3" r="2.2" fill="#242824"></circle><circle cx="10" cy="3" r="2.2" fill="#242824"></circle><circle cx="17" cy="3" r="2.2" fill="#242824"></circle></svg></div>
+            </div>
+            <div style="position:absolute;bottom:20px;left:16px;right:16px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="height:56px;padding:0 18px 0 20px;border-radius:9999px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.6);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 2px 6px rgba(0,0,0,0.06),0 8px 24px rgba(0,0,0,0.08)">
+                <span style="font-size:17px;font-weight:600;color:#242824;letter-spacing:-0.4px">John 3</span>
+                <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4.5l4 4 4-4" stroke="#62675F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="height:64px;flex:1;border-radius:9999px;display:flex;align-items:center;justify-content:space-around;padding:0 6px;background:rgba(255,255,255,0.6);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:0.5px solid rgba(0,0,0,0.06);box-shadow:0 2px 6px rgba(0,0,0,0.06),0 8px 24px rgba(0,0,0,0.08)">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:70px;height:52px;justify-content:center;border-radius:9999px;background:rgba(69,96,76,0.12)">
+                  <svg width="24" height="22" viewBox="0 0 24 22"><path d="M2 3.5C5.5 2 8.5 2 12 4c3.5-2 6.5-2 10-.5v15c-3.5-1.5-6.5-1.5-10 .5-3.5-2-6.5-2-10-.5z" fill="#45604C"></path><path d="M12 4v15" stroke="#F7F4ED" stroke-width="1.5"></path></svg>
+                  <span style="font-size:10px;font-weight:600;color:#45604C">Read</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:70px;height:52px;justify-content:center">
+                  <svg width="18" height="22" viewBox="0 0 18 22"><path d="M3 2h12v18l-6-4.5L3 20z" stroke="#62675F" stroke-width="1.8" fill="none" stroke-linejoin="round"></path></svg>
+                  <span style="font-size:10px;font-weight:500;color:#62675F">Saved</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:70px;height:52px;justify-content:center">
+                  <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="9.5" cy="9.5" r="7" stroke="#62675F" stroke-width="1.8" fill="none"></circle><path d="M14.5 14.5L20 20" stroke="#62675F" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                  <span style="font-size:10px;font-weight:500;color:#62675F">Search</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);width:200px;height:5px;border-radius:3px;background:rgba(255,255,255,0.5)"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;max-width:760px">
+        <span style="flex-shrink:0;font-size:12px;font-weight:700;color:#F7F4ED;background:#45604C;border-radius:6px;padding:2px 7px">3d</span>
+        <div style="font-size:14px;color:#62675F;line-height:20px"><b style="color:#242824">Narrow resized window (424 pt).</b> Below the sidebar threshold the app adopts the iPhone composition from <a href="#2a">2a</a> — tab bar plus bottom passage pill, 22 pt Scripture. Chapter, position and selection persist through the resize.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const V = {
+      1:"There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:",
+      2:"The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.",
+      3:"Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.",
+      4:"Nicodemus saith unto him, How can a man be born when he is old? can he enter the second time into his mother's womb, and be born?",
+      5:"Jesus answered, Verily, verily, I say unto thee, Except a man be born of water and of the Spirit, he cannot enter into the kingdom of God.",
+      6:"That which is born of the flesh is flesh; and that which is born of the Spirit is spirit.",
+      7:"Marvel not that I said unto thee, Ye must be born again.",
+      8:"The wind bloweth where it listeth, and thou hearest the sound thereof, but canst not tell whence it cometh, and whither it goeth: so is every one that is born of the Spirit.",
+      9:"Nicodemus answered and said unto him, How can these things be?",
+      10:"Jesus answered and said unto him, Art thou a master of Israel, and knowest not these things?",
+      11:"Verily, verily, I say unto thee, We speak that we do know, and testify that we have seen; and ye receive not our witness.",
+      12:"If I have told you earthly things, and ye believe not, how shall ye believe, if I tell you of heavenly things?",
+      13:"And no man hath ascended up to heaven, but he that came down from heaven, even the Son of man which is in heaven.",
+      14:"And as Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up:",
+      15:"That whosoever believeth in him should not perish, but have eternal life.",
+      16:"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
+      17:"For God sent not his Son into the world to condemn the world; but that the world through him might be saved.",
+      18:"He that believeth on him is not condemned: but he that believeth not is condemned already, because he hath not believed in the name of the only begotten Son of God.",
+      19:"And this is the condemnation, that light is come into the world, and men loved darkness rather than light, because their deeds were evil.",
+      20:"For every one that doeth evil hateth the light, neither cometh to the light, lest his deeds should be reproved.",
+      21:"But he that doeth truth cometh to the light, that his deeds may be made manifest, that they are wrought in God."
+    };
+    const range = (a, b, fn) => { const o = []; for (let n = a; n <= b; n++) o.push(Object.assign({ n, t: V[n], bg: 'transparent' }, fn ? fn(n) : {})); return o; };
+    const books = [['Matthew',28],['Mark',16],['Luke',24],['John',21],['Acts',28],['Romans',16],['1 Corinthians',16],['2 Corinthians',13],['Galatians',6],['Ephesians',6],['Philippians',4],['Colossians',4]];
+    return {
+      verses: range(1, 12),
+      versesCompact: range(1, 9),
+      hlVerses: range(13, 21, n => n === 16 ? { bg: '#F1E3A5' } : {}),
+      ntBooks: books.map(([name, ch]) => ({ name, ch, w: name === 'John' ? 600 : 400, bg: name === 'John' ? 'rgba(69,96,76,0.08)' : 'transparent' })),
+      saved: [
+        { ref: 'John 3:16', t: 'For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him…', dot: '#F1E3A5', bg: 'rgba(69,96,76,0.12)' },
+        { ref: 'Romans 8:28', t: 'And we know that all things work together for good to them that love God…', dot: '#D9E6CE', bg: 'transparent' },
+        { ref: 'Isaiah 40:31', t: 'But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles…', dot: '#D8E5EF', bg: 'transparent' },
+        { ref: 'Psalm 23:1–3', t: 'The LORD is my shepherd; I shall not want. He maketh me to lie down in green pastures…', dot: '#EED9DE', bg: 'transparent' },
+        { ref: 'Matthew 5:14', t: 'Ye are the light of the world. A city that is set on an hill cannot be hid.', dot: '#F1E3A5', bg: 'transparent' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

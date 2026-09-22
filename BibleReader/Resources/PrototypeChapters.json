@@ -1,0 +1,4903 @@
+[
+  {
+    "id": "prototype-eng-kjv:JHN:2",
+    "bookID": "JHN",
+    "bookName": "John",
+    "eyebrow": "THE GOSPEL ACCORDING TO",
+    "label": "2",
+    "editionLabel": "KJV · development fixture",
+    "verses": [
+      {
+        "id": "prototype-eng-kjv:JHN:2:1",
+        "label": "1",
+        "runs": [
+          {
+            "text": "And the third day there was a marriage in Cana of Galilee; and the mother of Jesus was there:",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:2",
+        "label": "2",
+        "runs": [
+          {
+            "text": "And both Jesus was called, and his disciples, to the marriage.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:3",
+        "label": "3",
+        "runs": [
+          {
+            "text": "And when they wanted wine, the mother of Jesus saith unto him, They have no wine.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:4",
+        "label": "4",
+        "runs": [
+          {
+            "text": "Jesus saith unto her, Woman, what have I to do with thee? mine hour is not yet come.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:5",
+        "label": "5",
+        "runs": [
+          {
+            "text": "His mother saith unto the servants, Whatsoever he saith unto you, do ",
+            "italic": false
+          },
+          {
+            "text": "it",
+            "italic": true
+          },
+          {
+            "text": ".",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:6",
+        "label": "6",
+        "runs": [
+          {
+            "text": "And there were set there six waterpots of stone, after the manner of the purifying of the Jews, containing two or three firkins apiece.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:7",
+        "label": "7",
+        "runs": [
+          {
+            "text": "Jesus saith unto them, Fill the waterpots with water. And they filled them up to the brim.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:8",
+        "label": "8",
+        "runs": [
+          {
+            "text": "And he saith unto them, Draw out now, and bear unto the governor of the feast. And they bare ",
+            "italic": false
+          },
+          {
+            "text": "it",
+            "italic": true
+          },
+          {
+            "text": ".",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:9",
+        "label": "9",
+        "runs": [
+          {
+            "text": "When the ruler of the feast had tasted the water that was made wine, and knew not whence it was: (but the servants which drew the water knew;) the governor of the feast called the bridegroom,",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:10",
+        "label": "10",
+        "runs": [
+          {
+            "text": "And saith unto him, Every man at the beginning doth set forth good wine; and when men have well drunk, then that which is worse: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " thou hast kept the good wine until now.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:11",
+        "label": "11",
+        "runs": [
+          {
+            "text": "This beginning of miracles did Jesus in Cana of Galilee, and manifested forth his glory; and his disciples believed on him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:12",
+        "label": "12",
+        "runs": [
+          {
+            "text": "¶ After this he went down to Capernaum, he, and his mother, and his brethren, and his disciples: and they continued there not many days.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:13",
+        "label": "13",
+        "runs": [
+          {
+            "text": "¶ And the Jews’ passover was at hand, and Jesus went up to Jerusalem,",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:14",
+        "label": "14",
+        "runs": [
+          {
+            "text": "And found in the temple those that sold oxen and sheep and doves, and the changers of money sitting:",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:15",
+        "label": "15",
+        "runs": [
+          {
+            "text": "And when he had made a scourge of small cords, he drove them all out of the temple, and the sheep, and the oxen; and poured out the changers’ money, and overthrew the tables;",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:16",
+        "label": "16",
+        "runs": [
+          {
+            "text": "And said unto them that sold doves, Take these things hence; make not my Father’s house an house of merchandise.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:17",
+        "label": "17",
+        "runs": [
+          {
+            "text": "And his disciples remembered that it was written, The zeal of thine house hath eaten me up.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:18",
+        "label": "18",
+        "runs": [
+          {
+            "text": "¶ Then answered the Jews and said unto him, What sign shewest thou unto us, seeing that thou doest these things?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:19",
+        "label": "19",
+        "runs": [
+          {
+            "text": "Jesus answered and said unto them, Destroy this temple, and in three days I will raise it up.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:20",
+        "label": "20",
+        "runs": [
+          {
+            "text": "Then said the Jews, Forty and six years was this temple in building, and wilt thou rear it up in three days?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:21",
+        "label": "21",
+        "runs": [
+          {
+            "text": "But he spake of the temple of his body.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:22",
+        "label": "22",
+        "runs": [
+          {
+            "text": "When therefore he was risen from the dead, his disciples remembered that he had said this unto them; and they believed the scripture, and the word which Jesus had said.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:23",
+        "label": "23",
+        "runs": [
+          {
+            "text": "¶ Now when he was in Jerusalem at the passover, in the feast ",
+            "italic": false
+          },
+          {
+            "text": "day",
+            "italic": true
+          },
+          {
+            "text": ", many believed in his name, when they saw the miracles which he did.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:24",
+        "label": "24",
+        "runs": [
+          {
+            "text": "But Jesus did not commit himself unto them, because he knew all ",
+            "italic": false
+          },
+          {
+            "text": "men",
+            "italic": true
+          },
+          {
+            "text": ",",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:2:25",
+        "label": "25",
+        "runs": [
+          {
+            "text": "And needed not that any should testify of man: for he knew what was in man.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      }
+    ]
+  },
+  {
+    "id": "prototype-eng-kjv:JHN:3",
+    "bookID": "JHN",
+    "bookName": "John",
+    "eyebrow": "THE GOSPEL ACCORDING TO",
+    "label": "3",
+    "editionLabel": "KJV · development fixture",
+    "verses": [
+      {
+        "id": "prototype-eng-kjv:JHN:3:1",
+        "label": "1",
+        "runs": [
+          {
+            "text": "There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:2",
+        "label": "2",
+        "runs": [
+          {
+            "text": "The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:3",
+        "label": "3",
+        "runs": [
+          {
+            "text": "Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:4",
+        "label": "4",
+        "runs": [
+          {
+            "text": "Nicodemus saith unto him, How can a man be born when he is old? can he enter the second time into his mother’s womb, and be born?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:5",
+        "label": "5",
+        "runs": [
+          {
+            "text": "Jesus answered, Verily, verily, I say unto thee, Except a man be born of water and ",
+            "italic": false
+          },
+          {
+            "text": "of",
+            "italic": true
+          },
+          {
+            "text": " the Spirit, he cannot enter into the kingdom of God.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:6",
+        "label": "6",
+        "runs": [
+          {
+            "text": "That which is born of the flesh is flesh; and that which is born of the Spirit is spirit.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:7",
+        "label": "7",
+        "runs": [
+          {
+            "text": "Marvel not that I said unto thee, Ye must be born again.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:8",
+        "label": "8",
+        "runs": [
+          {
+            "text": "The wind bloweth where it listeth, and thou hearest the sound thereof, but canst not tell whence it cometh, and whither it goeth: so is every one that is born of the Spirit.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:9",
+        "label": "9",
+        "runs": [
+          {
+            "text": "Nicodemus answered and said unto him, How can these things be?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:10",
+        "label": "10",
+        "runs": [
+          {
+            "text": "Jesus answered and said unto him, Art thou a master of Israel, and knowest not these things?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:11",
+        "label": "11",
+        "runs": [
+          {
+            "text": "Verily, verily, I say unto thee, We speak that we do know, and testify that we have seen; and ye receive not our witness.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:12",
+        "label": "12",
+        "runs": [
+          {
+            "text": "If I have told you earthly things, and ye believe not, how shall ye believe, if I tell you ",
+            "italic": false
+          },
+          {
+            "text": "of",
+            "italic": true
+          },
+          {
+            "text": " heavenly things?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:13",
+        "label": "13",
+        "runs": [
+          {
+            "text": "And no man hath ascended up to heaven, but he that came down from heaven, ",
+            "italic": false
+          },
+          {
+            "text": "even",
+            "italic": true
+          },
+          {
+            "text": " the Son of man which is in heaven.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:14",
+        "label": "14",
+        "runs": [
+          {
+            "text": "¶ And as Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up:",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:15",
+        "label": "15",
+        "runs": [
+          {
+            "text": "That whosoever believeth in him should not perish, but have eternal life.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:16",
+        "label": "16",
+        "runs": [
+          {
+            "text": "¶ For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:17",
+        "label": "17",
+        "runs": [
+          {
+            "text": "For God sent not his Son into the world to condemn the world; but that the world through him might be saved.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:18",
+        "label": "18",
+        "runs": [
+          {
+            "text": "¶ He that believeth on him is not condemned: but he that believeth not is condemned already, because he hath not believed in the name of the only begotten Son of God.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:19",
+        "label": "19",
+        "runs": [
+          {
+            "text": "And this is the condemnation, that light is come into the world, and men loved darkness rather than light, because their deeds were evil.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:20",
+        "label": "20",
+        "runs": [
+          {
+            "text": "For every one that doeth evil hateth the light, neither cometh to the light, lest his deeds should be reproved.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:21",
+        "label": "21",
+        "runs": [
+          {
+            "text": "But he that doeth truth cometh to the light, that his deeds may be made manifest, that they are wrought in God.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:22",
+        "label": "22",
+        "runs": [
+          {
+            "text": "¶ After these things came Jesus and his disciples into the land of Judæa; and there he tarried with them, and baptized.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:23",
+        "label": "23",
+        "runs": [
+          {
+            "text": "¶ And John also was baptizing in Ænon near to Salim, because there was much water there: and they came, and were baptized.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:24",
+        "label": "24",
+        "runs": [
+          {
+            "text": "For John was not yet cast into prison.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:25",
+        "label": "25",
+        "runs": [
+          {
+            "text": "¶ Then there arose a question between ",
+            "italic": false
+          },
+          {
+            "text": "some",
+            "italic": true
+          },
+          {
+            "text": " of John’s disciples and the Jews about purifying.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:26",
+        "label": "26",
+        "runs": [
+          {
+            "text": "And they came unto John, and said unto him, Rabbi, he that was with thee beyond Jordan, to whom thou barest witness, behold, the same baptizeth, and all ",
+            "italic": false
+          },
+          {
+            "text": "men",
+            "italic": true
+          },
+          {
+            "text": " come to him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:27",
+        "label": "27",
+        "runs": [
+          {
+            "text": "John answered and said, A man can receive nothing, except it be given him from heaven.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:28",
+        "label": "28",
+        "runs": [
+          {
+            "text": "Ye yourselves bear me witness, that I said, I am not the Christ, but that I am sent before him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:29",
+        "label": "29",
+        "runs": [
+          {
+            "text": "He that hath the bride is the bridegroom: but the friend of the bridegroom, which standeth and heareth him, rejoiceth greatly because of the bridegroom’s voice: this my joy therefore is fulfilled.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:30",
+        "label": "30",
+        "runs": [
+          {
+            "text": "He must increase, but I ",
+            "italic": false
+          },
+          {
+            "text": "must",
+            "italic": true
+          },
+          {
+            "text": " decrease.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:31",
+        "label": "31",
+        "runs": [
+          {
+            "text": "He that cometh from above is above all: he that is of the earth is earthly, and speaketh of the earth: he that cometh from heaven is above all.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:32",
+        "label": "32",
+        "runs": [
+          {
+            "text": "And what he hath seen and heard, that he testifieth; and no man receiveth his testimony.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:33",
+        "label": "33",
+        "runs": [
+          {
+            "text": "He that hath received his testimony hath set to his seal that God is true.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:34",
+        "label": "34",
+        "runs": [
+          {
+            "text": "For he whom God hath sent speaketh the words of God: for God giveth not the Spirit by measure ",
+            "italic": false
+          },
+          {
+            "text": "unto him",
+            "italic": true
+          },
+          {
+            "text": ".",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:35",
+        "label": "35",
+        "runs": [
+          {
+            "text": "The Father loveth the Son, and hath given all things into his hand.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:3:36",
+        "label": "36",
+        "runs": [
+          {
+            "text": "He that believeth on the Son hath everlasting life: and he that believeth not the Son shall not see life; but the wrath of God abideth on him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      }
+    ]
+  },
+  {
+    "id": "prototype-eng-kjv:JHN:4",
+    "bookID": "JHN",
+    "bookName": "John",
+    "eyebrow": "THE GOSPEL ACCORDING TO",
+    "label": "4",
+    "editionLabel": "KJV · development fixture",
+    "verses": [
+      {
+        "id": "prototype-eng-kjv:JHN:4:1",
+        "label": "1",
+        "runs": [
+          {
+            "text": "When therefore the Lord knew how the Pharisees had heard that Jesus made and baptized more disciples than John,",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:2",
+        "label": "2",
+        "runs": [
+          {
+            "text": "(Though Jesus himself baptized not, but his disciples,)",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:3",
+        "label": "3",
+        "runs": [
+          {
+            "text": "He left Judæa, and departed again into Galilee.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:4",
+        "label": "4",
+        "runs": [
+          {
+            "text": "And he must needs go through Samaria.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:5",
+        "label": "5",
+        "runs": [
+          {
+            "text": "Then cometh he to a city of Samaria, which is called Sychar, near to the parcel of ground that Jacob gave to his son Joseph.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:6",
+        "label": "6",
+        "runs": [
+          {
+            "text": "Now Jacob’s well was there. Jesus therefore, being wearied with ",
+            "italic": false
+          },
+          {
+            "text": "his",
+            "italic": true
+          },
+          {
+            "text": " journey, sat thus on the well: ",
+            "italic": false
+          },
+          {
+            "text": "and",
+            "italic": true
+          },
+          {
+            "text": " it was about the sixth hour.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:7",
+        "label": "7",
+        "runs": [
+          {
+            "text": "There cometh a woman of Samaria to draw water: Jesus saith unto her, Give me to drink.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:8",
+        "label": "8",
+        "runs": [
+          {
+            "text": "(For his disciples were gone away unto the city to buy meat.)",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:9",
+        "label": "9",
+        "runs": [
+          {
+            "text": "Then saith the woman of Samaria unto him, How is it that thou, being a Jew, askest drink of me, which am a woman of Samaria? for the Jews have no dealings with the Samaritans.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:10",
+        "label": "10",
+        "runs": [
+          {
+            "text": "Jesus answered and said unto her, If thou knewest the gift of God, and who it is that saith to thee, Give me to drink; thou wouldest have asked of him, and he would have given thee living water.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:11",
+        "label": "11",
+        "runs": [
+          {
+            "text": "The woman saith unto him, Sir, thou hast nothing to draw with, and the well is deep: from whence then hast thou that living water?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:12",
+        "label": "12",
+        "runs": [
+          {
+            "text": "Art thou greater than our father Jacob, which gave us the well, and drank thereof himself, and his children, and his cattle?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:13",
+        "label": "13",
+        "runs": [
+          {
+            "text": "Jesus answered and said unto her, Whosoever drinketh of this water shall thirst again:",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:14",
+        "label": "14",
+        "runs": [
+          {
+            "text": "But whosoever drinketh of the water that I shall give him shall never thirst; but the water that I shall give him shall be in him a well of water springing up into everlasting life.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:15",
+        "label": "15",
+        "runs": [
+          {
+            "text": "The woman saith unto him, Sir, give me this water, that I thirst not, neither come hither to draw.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:16",
+        "label": "16",
+        "runs": [
+          {
+            "text": "Jesus saith unto her, Go, call thy husband, and come hither.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:17",
+        "label": "17",
+        "runs": [
+          {
+            "text": "The woman answered and said, I have no husband. Jesus said unto her, Thou hast well said, I have no husband:",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:18",
+        "label": "18",
+        "runs": [
+          {
+            "text": "For thou hast had five husbands; and he whom thou now hast is not thy husband: in that saidst thou truly.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:19",
+        "label": "19",
+        "runs": [
+          {
+            "text": "The woman saith unto him, Sir, I perceive that thou art a prophet.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:20",
+        "label": "20",
+        "runs": [
+          {
+            "text": "Our fathers worshipped in this mountain; and ye say, that in Jerusalem is the place where men ought to worship.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:21",
+        "label": "21",
+        "runs": [
+          {
+            "text": "Jesus saith unto her, Woman, believe me, the hour cometh, when ye shall neither in this mountain, nor yet at Jerusalem, worship the Father.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:22",
+        "label": "22",
+        "runs": [
+          {
+            "text": "Ye worship ye know not what: we know what we worship: for salvation is of the Jews.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:23",
+        "label": "23",
+        "runs": [
+          {
+            "text": "But the hour cometh, and now is, when the true worshippers shall worship the Father in spirit and in truth: for the Father seeketh such to worship him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:24",
+        "label": "24",
+        "runs": [
+          {
+            "text": "God ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " a Spirit: and they that worship him must worship ",
+            "italic": false
+          },
+          {
+            "text": "him",
+            "italic": true
+          },
+          {
+            "text": " in spirit and in truth.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:25",
+        "label": "25",
+        "runs": [
+          {
+            "text": "The woman saith unto him, I know that Messias cometh, which is called Christ: when he is come, he will tell us all things.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:26",
+        "label": "26",
+        "runs": [
+          {
+            "text": "Jesus saith unto her, I that speak unto thee am ",
+            "italic": false
+          },
+          {
+            "text": "he.",
+            "italic": true
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:27",
+        "label": "27",
+        "runs": [
+          {
+            "text": "¶ And upon this came his disciples, and marvelled that he talked with the woman: yet no man said, What seekest thou? or, Why talkest thou with her?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:28",
+        "label": "28",
+        "runs": [
+          {
+            "text": "The woman then left her waterpot, and went her way into the city, and saith to the men,",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:29",
+        "label": "29",
+        "runs": [
+          {
+            "text": "Come, see a man, which told me all things that ever I did: is not this the Christ?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:30",
+        "label": "30",
+        "runs": [
+          {
+            "text": "Then they went out of the city, and came unto him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:31",
+        "label": "31",
+        "runs": [
+          {
+            "text": "¶ In the mean while his disciples prayed him, saying, Master, eat.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:32",
+        "label": "32",
+        "runs": [
+          {
+            "text": "But he said unto them, I have meat to eat that ye know not of.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:33",
+        "label": "33",
+        "runs": [
+          {
+            "text": "Therefore said the disciples one to another, Hath any man brought him ",
+            "italic": false
+          },
+          {
+            "text": "ought",
+            "italic": true
+          },
+          {
+            "text": " to eat?",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:34",
+        "label": "34",
+        "runs": [
+          {
+            "text": "Jesus saith unto them, My meat is to do the will of him that sent me, and to finish his work.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:35",
+        "label": "35",
+        "runs": [
+          {
+            "text": "Say not ye, There are yet four months, and ",
+            "italic": false
+          },
+          {
+            "text": "then",
+            "italic": true
+          },
+          {
+            "text": " cometh harvest? behold, I say unto you, Lift up your eyes, and look on the fields; for they are white already to harvest.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:36",
+        "label": "36",
+        "runs": [
+          {
+            "text": "And he that reapeth receiveth wages, and gathereth fruit unto life eternal: that both he that soweth and he that reapeth may rejoice together.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:37",
+        "label": "37",
+        "runs": [
+          {
+            "text": "And herein is that saying true, One soweth, and another reapeth.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:38",
+        "label": "38",
+        "runs": [
+          {
+            "text": "I sent you to reap that whereon ye bestowed no labour: other men laboured, and ye are entered into their labours.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:39",
+        "label": "39",
+        "runs": [
+          {
+            "text": "¶ And many of the Samaritans of that city believed on him for the saying of the woman, which testified, He told me all that ever I did.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:40",
+        "label": "40",
+        "runs": [
+          {
+            "text": "So when the Samaritans were come unto him, they besought him that he would tarry with them: and he abode there two days.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:41",
+        "label": "41",
+        "runs": [
+          {
+            "text": "And many more believed because of his own word;",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:42",
+        "label": "42",
+        "runs": [
+          {
+            "text": "And said unto the woman, Now we believe, not because of thy saying: for we have heard ",
+            "italic": false
+          },
+          {
+            "text": "him",
+            "italic": true
+          },
+          {
+            "text": " ourselves, and know that this is indeed the Christ, the Saviour of the world.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:43",
+        "label": "43",
+        "runs": [
+          {
+            "text": "¶ Now after two days he departed thence, and went into Galilee.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:44",
+        "label": "44",
+        "runs": [
+          {
+            "text": "For Jesus himself testified, that a prophet hath no honour in his own country.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:45",
+        "label": "45",
+        "runs": [
+          {
+            "text": "Then when he was come into Galilee, the Galilæans received him, having seen all the things that he did at Jerusalem at the feast: for they also went unto the feast.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:46",
+        "label": "46",
+        "runs": [
+          {
+            "text": "So Jesus came again into Cana of Galilee, where he made the water wine. And there was a certain nobleman, whose son was sick at Capernaum.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:47",
+        "label": "47",
+        "runs": [
+          {
+            "text": "When he heard that Jesus was come out of Judæa into Galilee, he went unto him, and besought him that he would come down, and heal his son: for he was at the point of death.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:48",
+        "label": "48",
+        "runs": [
+          {
+            "text": "Then said Jesus unto him, Except ye see signs and wonders, ye will not believe.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:49",
+        "label": "49",
+        "runs": [
+          {
+            "text": "The nobleman saith unto him, Sir, come down ere my child die.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:50",
+        "label": "50",
+        "runs": [
+          {
+            "text": "Jesus saith unto him, Go thy way; thy son liveth. And the man believed the word that Jesus had spoken unto him, and he went his way.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:51",
+        "label": "51",
+        "runs": [
+          {
+            "text": "And as he was now going down, his servants met him, and told ",
+            "italic": false
+          },
+          {
+            "text": "him",
+            "italic": true
+          },
+          {
+            "text": ", saying, Thy son liveth.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:52",
+        "label": "52",
+        "runs": [
+          {
+            "text": "Then enquired he of them the hour when he began to amend. And they said unto him, Yesterday at the seventh hour the fever left him.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:53",
+        "label": "53",
+        "runs": [
+          {
+            "text": "So the father knew that ",
+            "italic": false
+          },
+          {
+            "text": "it was",
+            "italic": true
+          },
+          {
+            "text": " at the same hour, in the which Jesus said unto him, Thy son liveth: and himself believed, and his whole house.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:JHN:4:54",
+        "label": "54",
+        "runs": [
+          {
+            "text": "This ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " again the second miracle ",
+            "italic": false
+          },
+          {
+            "text": "that",
+            "italic": true
+          },
+          {
+            "text": " Jesus did, when he was come out of Judæa into Galilee.",
+            "italic": false
+          }
+        ],
+        "structure": "p",
+        "headings": [],
+        "notes": []
+      }
+    ]
+  },
+  {
+    "id": "prototype-eng-kjv:PSA:119",
+    "bookID": "PSA",
+    "bookName": "Psalms",
+    "eyebrow": "THE BOOK OF",
+    "label": "119",
+    "editionLabel": "KJV · development fixture",
+    "verses": [
+      {
+        "id": "prototype-eng-kjv:PSA:119:1",
+        "label": "1",
+        "runs": [
+          {
+            "text": "Blessed ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " the undefiled in the way, who walk in the law of the LORD.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "א ALEPH."
+        ],
+        "notes": [
+          "119.1 undefiled: or, perfect, or, sincere"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:2",
+        "label": "2",
+        "runs": [
+          {
+            "text": "Blessed ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " they that keep his testimonies, ",
+            "italic": false
+          },
+          {
+            "text": "and that",
+            "italic": true
+          },
+          {
+            "text": " seek him with the whole heart.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:3",
+        "label": "3",
+        "runs": [
+          {
+            "text": "They also do no iniquity: they walk in his ways.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:4",
+        "label": "4",
+        "runs": [
+          {
+            "text": "Thou hast commanded ",
+            "italic": false
+          },
+          {
+            "text": "us",
+            "italic": true
+          },
+          {
+            "text": " to keep thy precepts diligently.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:5",
+        "label": "5",
+        "runs": [
+          {
+            "text": "O that my ways were directed to keep thy statutes!",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:6",
+        "label": "6",
+        "runs": [
+          {
+            "text": "Then shall I not be ashamed, when I have respect unto all thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:7",
+        "label": "7",
+        "runs": [
+          {
+            "text": "I will praise thee with uprightness of heart, when I shall have learned thy righteous judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.7 thy…: Heb. judgments of thy righteousness"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:8",
+        "label": "8",
+        "runs": [
+          {
+            "text": "I will keep thy statutes: O forsake me not utterly.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:9",
+        "label": "9",
+        "runs": [
+          {
+            "text": "Wherewithal shall a young man cleanse his way? by taking heed ",
+            "italic": false
+          },
+          {
+            "text": "thereto",
+            "italic": true
+          },
+          {
+            "text": " according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ב BETH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:10",
+        "label": "10",
+        "runs": [
+          {
+            "text": "With my whole heart have I sought thee: O let me not wander from thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:11",
+        "label": "11",
+        "runs": [
+          {
+            "text": "Thy word have I hid in mine heart, that I might not sin against thee.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:12",
+        "label": "12",
+        "runs": [
+          {
+            "text": "Blessed ",
+            "italic": false
+          },
+          {
+            "text": "art",
+            "italic": true
+          },
+          {
+            "text": " thou, O LORD: teach me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:13",
+        "label": "13",
+        "runs": [
+          {
+            "text": "With my lips have I declared all the judgments of thy mouth.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:14",
+        "label": "14",
+        "runs": [
+          {
+            "text": "I have rejoiced in the way of thy testimonies, as ",
+            "italic": false
+          },
+          {
+            "text": "much as",
+            "italic": true
+          },
+          {
+            "text": " in all riches.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:15",
+        "label": "15",
+        "runs": [
+          {
+            "text": "I will meditate in thy precepts, and have respect unto thy ways.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:16",
+        "label": "16",
+        "runs": [
+          {
+            "text": "I will delight myself in thy statutes: I will not forget thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:17",
+        "label": "17",
+        "runs": [
+          {
+            "text": "Deal bountifully with thy servant, ",
+            "italic": false
+          },
+          {
+            "text": "that",
+            "italic": true
+          },
+          {
+            "text": " I may live, and keep thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ג GIMEL."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:18",
+        "label": "18",
+        "runs": [
+          {
+            "text": "Open thou mine eyes, that I may behold wondrous things out of thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.18 Open: Heb. Reveal"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:19",
+        "label": "19",
+        "runs": [
+          {
+            "text": "I ",
+            "italic": false
+          },
+          {
+            "text": "am",
+            "italic": true
+          },
+          {
+            "text": " a stranger in the earth: hide not thy commandments from me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:20",
+        "label": "20",
+        "runs": [
+          {
+            "text": "My soul breaketh for the longing ",
+            "italic": false
+          },
+          {
+            "text": "that it hath",
+            "italic": true
+          },
+          {
+            "text": " unto thy judgments at all times.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:21",
+        "label": "21",
+        "runs": [
+          {
+            "text": "Thou hast rebuked the proud ",
+            "italic": false
+          },
+          {
+            "text": "that are",
+            "italic": true
+          },
+          {
+            "text": " cursed, which do err from thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:22",
+        "label": "22",
+        "runs": [
+          {
+            "text": "Remove from me reproach and contempt; for I have kept thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:23",
+        "label": "23",
+        "runs": [
+          {
+            "text": "Princes also did sit ",
+            "italic": false
+          },
+          {
+            "text": "and",
+            "italic": true
+          },
+          {
+            "text": " speak against me: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " thy servant did meditate in thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:24",
+        "label": "24",
+        "runs": [
+          {
+            "text": "Thy testimonies also ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " my delight ",
+            "italic": false
+          },
+          {
+            "text": "and",
+            "italic": true
+          },
+          {
+            "text": " my counsellors.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.24 my counsellors: Heb. men of my counsel"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:25",
+        "label": "25",
+        "runs": [
+          {
+            "text": "My soul cleaveth unto the dust: quicken thou me according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ד DALETH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:26",
+        "label": "26",
+        "runs": [
+          {
+            "text": "I have declared my ways, and thou heardest me: teach me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:27",
+        "label": "27",
+        "runs": [
+          {
+            "text": "Make me to understand the way of thy precepts: so shall I talk of thy wondrous works.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:28",
+        "label": "28",
+        "runs": [
+          {
+            "text": "My soul melteth for heaviness: strengthen thou me according unto thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.28 melteth: Heb. droppeth"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:29",
+        "label": "29",
+        "runs": [
+          {
+            "text": "Remove from me the way of lying: and grant me thy law graciously.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:30",
+        "label": "30",
+        "runs": [
+          {
+            "text": "I have chosen the way of truth: thy judgments have I laid ",
+            "italic": false
+          },
+          {
+            "text": "before me",
+            "italic": true
+          },
+          {
+            "text": ".",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:31",
+        "label": "31",
+        "runs": [
+          {
+            "text": "I have stuck unto thy testimonies: O LORD, put me not to shame.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:32",
+        "label": "32",
+        "runs": [
+          {
+            "text": "I will run the way of thy commandments, when thou shalt enlarge my heart.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:33",
+        "label": "33",
+        "runs": [
+          {
+            "text": "Teach me, O LORD, the way of thy statutes; and I shall keep it ",
+            "italic": false
+          },
+          {
+            "text": "unto",
+            "italic": true
+          },
+          {
+            "text": " the end.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ה HE."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:34",
+        "label": "34",
+        "runs": [
+          {
+            "text": "Give me understanding, and I shall keep thy law; yea, I shall observe it with ",
+            "italic": false
+          },
+          {
+            "text": "my",
+            "italic": true
+          },
+          {
+            "text": " whole heart.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:35",
+        "label": "35",
+        "runs": [
+          {
+            "text": "Make me to go in the path of thy commandments; for therein do I delight.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:36",
+        "label": "36",
+        "runs": [
+          {
+            "text": "Incline my heart unto thy testimonies, and not to covetousness.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:37",
+        "label": "37",
+        "runs": [
+          {
+            "text": "Turn away mine eyes from beholding vanity; ",
+            "italic": false
+          },
+          {
+            "text": "and",
+            "italic": true
+          },
+          {
+            "text": " quicken thou me in thy way.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.37 Turn…: Heb. Make to pass"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:38",
+        "label": "38",
+        "runs": [
+          {
+            "text": "Stablish thy word unto thy servant, who ",
+            "italic": false
+          },
+          {
+            "text": "is devoted",
+            "italic": true
+          },
+          {
+            "text": " to thy fear.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:39",
+        "label": "39",
+        "runs": [
+          {
+            "text": "Turn away my reproach which I fear: for thy judgments ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " good.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:40",
+        "label": "40",
+        "runs": [
+          {
+            "text": "Behold, I have longed after thy precepts: quicken me in thy righteousness.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:41",
+        "label": "41",
+        "runs": [
+          {
+            "text": "Let thy mercies come also unto me, O LORD, ",
+            "italic": false
+          },
+          {
+            "text": "even",
+            "italic": true
+          },
+          {
+            "text": " thy salvation, according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ו VAU."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:42",
+        "label": "42",
+        "runs": [
+          {
+            "text": "So shall I have wherewith to answer him that reproacheth me: for I trust in thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.42 So…: or, So shall I answer him that reproveth me in a thing"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:43",
+        "label": "43",
+        "runs": [
+          {
+            "text": "And take not the word of truth utterly out of my mouth; for I have hoped in thy judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:44",
+        "label": "44",
+        "runs": [
+          {
+            "text": "So shall I keep thy law continually for ever and ever.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:45",
+        "label": "45",
+        "runs": [
+          {
+            "text": "And I will walk at liberty: for I seek thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.45 at liberty: Heb. at large"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:46",
+        "label": "46",
+        "runs": [
+          {
+            "text": "I will speak of thy testimonies also before kings, and will not be ashamed.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:47",
+        "label": "47",
+        "runs": [
+          {
+            "text": "And I will delight myself in thy commandments, which I have loved.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:48",
+        "label": "48",
+        "runs": [
+          {
+            "text": "My hands also will I lift up unto thy commandments, which I have loved; and I will meditate in thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:49",
+        "label": "49",
+        "runs": [
+          {
+            "text": "Remember the word unto thy servant, upon which thou hast caused me to hope.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ז ZAIN."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:50",
+        "label": "50",
+        "runs": [
+          {
+            "text": "This ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " my comfort in my affliction: for thy word hath quickened me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:51",
+        "label": "51",
+        "runs": [
+          {
+            "text": "The proud have had me greatly in derision: ",
+            "italic": false
+          },
+          {
+            "text": "yet",
+            "italic": true
+          },
+          {
+            "text": " have I not declined from thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:52",
+        "label": "52",
+        "runs": [
+          {
+            "text": "I remembered thy judgments of old, O LORD; and have comforted myself.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:53",
+        "label": "53",
+        "runs": [
+          {
+            "text": "Horror hath taken hold upon me because of the wicked that forsake thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:54",
+        "label": "54",
+        "runs": [
+          {
+            "text": "Thy statutes have been my songs in the house of my pilgrimage.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:55",
+        "label": "55",
+        "runs": [
+          {
+            "text": "I have remembered thy name, O LORD, in the night, and have kept thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:56",
+        "label": "56",
+        "runs": [
+          {
+            "text": "This I had, because I kept thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:57",
+        "label": "57",
+        "runs": [
+          {
+            "text": "Thou art",
+            "italic": true
+          },
+          {
+            "text": " my portion, O LORD: I have said that I would keep thy words.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ח CHETH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:58",
+        "label": "58",
+        "runs": [
+          {
+            "text": "I intreated thy favour with ",
+            "italic": false
+          },
+          {
+            "text": "my",
+            "italic": true
+          },
+          {
+            "text": " whole heart: be merciful unto me according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.58 favour: Heb. face"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:59",
+        "label": "59",
+        "runs": [
+          {
+            "text": "I thought on my ways, and turned my feet unto thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:60",
+        "label": "60",
+        "runs": [
+          {
+            "text": "I made haste, and delayed not to keep thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:61",
+        "label": "61",
+        "runs": [
+          {
+            "text": "The bands of the wicked have robbed me: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " I have not forgotten thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.61 bands: or, companies"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:62",
+        "label": "62",
+        "runs": [
+          {
+            "text": "At midnight I will rise to give thanks unto thee because of thy righteous judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:63",
+        "label": "63",
+        "runs": [
+          {
+            "text": "I ",
+            "italic": false
+          },
+          {
+            "text": "am",
+            "italic": true
+          },
+          {
+            "text": " a companion of all ",
+            "italic": false
+          },
+          {
+            "text": "them",
+            "italic": true
+          },
+          {
+            "text": " that fear thee, and of them that keep thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:64",
+        "label": "64",
+        "runs": [
+          {
+            "text": "The earth, O LORD, is full of thy mercy: teach me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:65",
+        "label": "65",
+        "runs": [
+          {
+            "text": "Thou hast dealt well with thy servant, O LORD, according unto thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ט TETH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:66",
+        "label": "66",
+        "runs": [
+          {
+            "text": "Teach me good judgment and knowledge: for I have believed thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:67",
+        "label": "67",
+        "runs": [
+          {
+            "text": "Before I was afflicted I went astray: but now have I kept thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:68",
+        "label": "68",
+        "runs": [
+          {
+            "text": "Thou ",
+            "italic": false
+          },
+          {
+            "text": "art",
+            "italic": true
+          },
+          {
+            "text": " good, and doest good; teach me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:69",
+        "label": "69",
+        "runs": [
+          {
+            "text": "The proud have forged a lie against me: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " I will keep thy precepts with ",
+            "italic": false
+          },
+          {
+            "text": "my",
+            "italic": true
+          },
+          {
+            "text": " whole heart.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:70",
+        "label": "70",
+        "runs": [
+          {
+            "text": "Their heart is as fat as grease; ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " I delight in thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:71",
+        "label": "71",
+        "runs": [
+          {
+            "text": "It is",
+            "italic": true
+          },
+          {
+            "text": " good for me that I have been afflicted; that I might learn thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:72",
+        "label": "72",
+        "runs": [
+          {
+            "text": "The law of thy mouth ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " better unto me than thousands of gold and silver.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:73",
+        "label": "73",
+        "runs": [
+          {
+            "text": "Thy hands have made me and fashioned me: give me understanding, that I may learn thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "י JOD."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:74",
+        "label": "74",
+        "runs": [
+          {
+            "text": "They that fear thee will be glad when they see me; because I have hoped in thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:75",
+        "label": "75",
+        "runs": [
+          {
+            "text": "I know, O LORD, that thy judgments ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " right, and ",
+            "italic": false
+          },
+          {
+            "text": "that",
+            "italic": true
+          },
+          {
+            "text": " thou in faithfulness hast afflicted me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.75 right: Heb. righteousness"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:76",
+        "label": "76",
+        "runs": [
+          {
+            "text": "Let, I pray thee, thy merciful kindness be for my comfort, according to thy word unto thy servant.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.76 for…: Heb. to comfort me"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:77",
+        "label": "77",
+        "runs": [
+          {
+            "text": "Let thy tender mercies come unto me, that I may live: for thy law ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " my delight.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:78",
+        "label": "78",
+        "runs": [
+          {
+            "text": "Let the proud be ashamed; for they dealt perversely with me without a cause: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " I will meditate in thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:79",
+        "label": "79",
+        "runs": [
+          {
+            "text": "Let those that fear thee turn unto me, and those that have known thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:80",
+        "label": "80",
+        "runs": [
+          {
+            "text": "Let my heart be sound in thy statutes; that I be not ashamed.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:81",
+        "label": "81",
+        "runs": [
+          {
+            "text": "My soul fainteth for thy salvation: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " I hope in thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "כ CAPH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:82",
+        "label": "82",
+        "runs": [
+          {
+            "text": "Mine eyes fail for thy word, saying, When wilt thou comfort me?",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:83",
+        "label": "83",
+        "runs": [
+          {
+            "text": "For I am become like a bottle in the smoke; ",
+            "italic": false
+          },
+          {
+            "text": "yet",
+            "italic": true
+          },
+          {
+            "text": " do I not forget thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:84",
+        "label": "84",
+        "runs": [
+          {
+            "text": "How many ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " the days of thy servant? when wilt thou execute judgment on them that persecute me?",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:85",
+        "label": "85",
+        "runs": [
+          {
+            "text": "The proud have digged pits for me, which ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " not after thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:86",
+        "label": "86",
+        "runs": [
+          {
+            "text": "All thy commandments ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " faithful: they persecute me wrongfully; help thou me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.86 faithful: Heb. faithfulness"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:87",
+        "label": "87",
+        "runs": [
+          {
+            "text": "They had almost consumed me upon earth; but I forsook not thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:88",
+        "label": "88",
+        "runs": [
+          {
+            "text": "Quicken me after thy lovingkindness; so shall I keep the testimony of thy mouth.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:89",
+        "label": "89",
+        "runs": [
+          {
+            "text": "For ever, O LORD, thy word is settled in heaven.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ל LAMED."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:90",
+        "label": "90",
+        "runs": [
+          {
+            "text": "Thy faithfulness ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " unto all generations: thou hast established the earth, and it abideth.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.90 unto…: Heb. to generation and generation",
+          "119.90 abideth: Heb. standeth"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:91",
+        "label": "91",
+        "runs": [
+          {
+            "text": "They continue this day according to thine ordinances: for all ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " thy servants.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:92",
+        "label": "92",
+        "runs": [
+          {
+            "text": "Unless thy law ",
+            "italic": false
+          },
+          {
+            "text": "had been",
+            "italic": true
+          },
+          {
+            "text": " my delights, I should then have perished in mine affliction.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:93",
+        "label": "93",
+        "runs": [
+          {
+            "text": "I will never forget thy precepts: for with them thou hast quickened me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:94",
+        "label": "94",
+        "runs": [
+          {
+            "text": "I ",
+            "italic": false
+          },
+          {
+            "text": "am",
+            "italic": true
+          },
+          {
+            "text": " thine, save me; for I have sought thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:95",
+        "label": "95",
+        "runs": [
+          {
+            "text": "The wicked have waited for me to destroy me: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " I will consider thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:96",
+        "label": "96",
+        "runs": [
+          {
+            "text": "I have seen an end of all perfection: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " thy commandment ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " exceeding broad.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:97",
+        "label": "97",
+        "runs": [
+          {
+            "text": "O how love I thy law! it ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " my meditation all the day.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "מ MEM."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:98",
+        "label": "98",
+        "runs": [
+          {
+            "text": "Thou through thy commandments hast made me wiser than mine enemies: for they ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " ever with me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.98 they…: Heb. it is ever with me"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:99",
+        "label": "99",
+        "runs": [
+          {
+            "text": "I have more understanding than all my teachers: for thy testimonies ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " my meditation.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:100",
+        "label": "100",
+        "runs": [
+          {
+            "text": "I understand more than the ancients, because I keep thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:101",
+        "label": "101",
+        "runs": [
+          {
+            "text": "I have refrained my feet from every evil way, that I might keep thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:102",
+        "label": "102",
+        "runs": [
+          {
+            "text": "I have not departed from thy judgments: for thou hast taught me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:103",
+        "label": "103",
+        "runs": [
+          {
+            "text": "How sweet are thy words unto my taste! ",
+            "italic": false
+          },
+          {
+            "text": "yea, sweeter",
+            "italic": true
+          },
+          {
+            "text": " than honey to my mouth!",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.103 taste: Heb. palate"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:104",
+        "label": "104",
+        "runs": [
+          {
+            "text": "Through thy precepts I get understanding: therefore I hate every false way.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:105",
+        "label": "105",
+        "runs": [
+          {
+            "text": "Thy word ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " a lamp unto my feet, and a light unto my path.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "נ NUN."
+        ],
+        "notes": [
+          "119.105 lamp: or, candle"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:106",
+        "label": "106",
+        "runs": [
+          {
+            "text": "I have sworn, and I will perform ",
+            "italic": false
+          },
+          {
+            "text": "it",
+            "italic": true
+          },
+          {
+            "text": ", that I will keep thy righteous judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:107",
+        "label": "107",
+        "runs": [
+          {
+            "text": "I am afflicted very much: quicken me, O LORD, according unto thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:108",
+        "label": "108",
+        "runs": [
+          {
+            "text": "Accept, I beseech thee, the freewill offerings of my mouth, O LORD, and teach me thy judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:109",
+        "label": "109",
+        "runs": [
+          {
+            "text": "My soul ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " continually in my hand: yet do I not forget thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:110",
+        "label": "110",
+        "runs": [
+          {
+            "text": "The wicked have laid a snare for me: yet I erred not from thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:111",
+        "label": "111",
+        "runs": [
+          {
+            "text": "Thy testimonies have I taken as an heritage for ever: for they ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " the rejoicing of my heart.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:112",
+        "label": "112",
+        "runs": [
+          {
+            "text": "I have inclined mine heart to perform thy statutes alway, ",
+            "italic": false
+          },
+          {
+            "text": "even unto",
+            "italic": true
+          },
+          {
+            "text": " the end.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.112 to perform: Heb. to do"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:113",
+        "label": "113",
+        "runs": [
+          {
+            "text": "I hate ",
+            "italic": false
+          },
+          {
+            "text": "vain",
+            "italic": true
+          },
+          {
+            "text": " thoughts: but thy law do I love.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ס SAMECH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:114",
+        "label": "114",
+        "runs": [
+          {
+            "text": "Thou ",
+            "italic": false
+          },
+          {
+            "text": "art",
+            "italic": true
+          },
+          {
+            "text": " my hiding place and my shield: I hope in thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:115",
+        "label": "115",
+        "runs": [
+          {
+            "text": "Depart from me, ye evildoers: for I will keep the commandments of my God.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:116",
+        "label": "116",
+        "runs": [
+          {
+            "text": "Uphold me according unto thy word, that I may live: and let me not be ashamed of my hope.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:117",
+        "label": "117",
+        "runs": [
+          {
+            "text": "Hold thou me up, and I shall be safe: and I will have respect unto thy statutes continually.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:118",
+        "label": "118",
+        "runs": [
+          {
+            "text": "Thou hast trodden down all them that err from thy statutes: for their deceit ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " falsehood.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:119",
+        "label": "119",
+        "runs": [
+          {
+            "text": "Thou puttest away all the wicked of the earth ",
+            "italic": false
+          },
+          {
+            "text": "like",
+            "italic": true
+          },
+          {
+            "text": " dross: therefore I love thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.119 puttest…: Heb. causest to cease"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:120",
+        "label": "120",
+        "runs": [
+          {
+            "text": "My flesh trembleth for fear of thee; and I am afraid of thy judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:121",
+        "label": "121",
+        "runs": [
+          {
+            "text": "I have done judgment and justice: leave me not to mine oppressors.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ע AIN."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:122",
+        "label": "122",
+        "runs": [
+          {
+            "text": "Be surety for thy servant for good: let not the proud oppress me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:123",
+        "label": "123",
+        "runs": [
+          {
+            "text": "Mine eyes fail for thy salvation, and for the word of thy righteousness.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:124",
+        "label": "124",
+        "runs": [
+          {
+            "text": "Deal with thy servant according unto thy mercy, and teach me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:125",
+        "label": "125",
+        "runs": [
+          {
+            "text": "I ",
+            "italic": false
+          },
+          {
+            "text": "am",
+            "italic": true
+          },
+          {
+            "text": " thy servant; give me understanding, that I may know thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:126",
+        "label": "126",
+        "runs": [
+          {
+            "text": "It is",
+            "italic": true
+          },
+          {
+            "text": " time for ",
+            "italic": false
+          },
+          {
+            "text": "thee",
+            "italic": true
+          },
+          {
+            "text": ", LORD, to work: ",
+            "italic": false
+          },
+          {
+            "text": "for",
+            "italic": true
+          },
+          {
+            "text": " they have made void thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:127",
+        "label": "127",
+        "runs": [
+          {
+            "text": "Therefore I love thy commandments above gold; yea, above fine gold.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:128",
+        "label": "128",
+        "runs": [
+          {
+            "text": "Therefore I esteem all ",
+            "italic": false
+          },
+          {
+            "text": "thy",
+            "italic": true
+          },
+          {
+            "text": " precepts ",
+            "italic": false
+          },
+          {
+            "text": "concerning",
+            "italic": true
+          },
+          {
+            "text": " all ",
+            "italic": false
+          },
+          {
+            "text": "things to be",
+            "italic": true
+          },
+          {
+            "text": " right; ",
+            "italic": false
+          },
+          {
+            "text": "and",
+            "italic": true
+          },
+          {
+            "text": " I hate every false way.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:129",
+        "label": "129",
+        "runs": [
+          {
+            "text": "Thy testimonies ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " wonderful: therefore doth my soul keep them.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "פ PE."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:130",
+        "label": "130",
+        "runs": [
+          {
+            "text": "The entrance of thy words giveth light; it giveth understanding unto the simple.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:131",
+        "label": "131",
+        "runs": [
+          {
+            "text": "I opened my mouth, and panted: for I longed for thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:132",
+        "label": "132",
+        "runs": [
+          {
+            "text": "Look thou upon me, and be merciful unto me, as thou usest to do unto those that love thy name.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.132 as thou…: Heb. according to the custom toward those, etc"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:133",
+        "label": "133",
+        "runs": [
+          {
+            "text": "Order my steps in thy word: and let not any iniquity have dominion over me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:134",
+        "label": "134",
+        "runs": [
+          {
+            "text": "Deliver me from the oppression of man: so will I keep thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:135",
+        "label": "135",
+        "runs": [
+          {
+            "text": "Make thy face to shine upon thy servant; and teach me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:136",
+        "label": "136",
+        "runs": [
+          {
+            "text": "Rivers of waters run down mine eyes, because they keep not thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:137",
+        "label": "137",
+        "runs": [
+          {
+            "text": "Righteous ",
+            "italic": false
+          },
+          {
+            "text": "art",
+            "italic": true
+          },
+          {
+            "text": " thou, O LORD, and upright ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " thy judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "צ TZADDI."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:138",
+        "label": "138",
+        "runs": [
+          {
+            "text": "Thy testimonies ",
+            "italic": false
+          },
+          {
+            "text": "that",
+            "italic": true
+          },
+          {
+            "text": " thou hast commanded ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " righteous and very faithful.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.138 righteous: Heb. righteousness",
+          "119.138 faithful: Heb. faithfulness"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:139",
+        "label": "139",
+        "runs": [
+          {
+            "text": "My zeal hath consumed me, because mine enemies have forgotten thy words.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.139 consumed…: Heb. cut me off"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:140",
+        "label": "140",
+        "runs": [
+          {
+            "text": "Thy word ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " very pure: therefore thy servant loveth it.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.140 pure: Heb. tried, or, refined"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:141",
+        "label": "141",
+        "runs": [
+          {
+            "text": "I ",
+            "italic": false
+          },
+          {
+            "text": "am",
+            "italic": true
+          },
+          {
+            "text": " small and despised: ",
+            "italic": false
+          },
+          {
+            "text": "yet",
+            "italic": true
+          },
+          {
+            "text": " do not I forget thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:142",
+        "label": "142",
+        "runs": [
+          {
+            "text": "Thy righteousness ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " an everlasting righteousness, and thy law ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " the truth.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:143",
+        "label": "143",
+        "runs": [
+          {
+            "text": "Trouble and anguish have taken hold on me: ",
+            "italic": false
+          },
+          {
+            "text": "yet",
+            "italic": true
+          },
+          {
+            "text": " thy commandments ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " my delights.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.143 taken…: Heb. found me"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:144",
+        "label": "144",
+        "runs": [
+          {
+            "text": "The righteousness of thy testimonies ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " everlasting: give me understanding, and I shall live.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:145",
+        "label": "145",
+        "runs": [
+          {
+            "text": "I cried with ",
+            "italic": false
+          },
+          {
+            "text": "my",
+            "italic": true
+          },
+          {
+            "text": " whole heart; hear me, O LORD: I will keep thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ק KOPH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:146",
+        "label": "146",
+        "runs": [
+          {
+            "text": "I cried unto thee; save me, and I shall keep thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.146 and I…: or, that I may keep"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:147",
+        "label": "147",
+        "runs": [
+          {
+            "text": "I prevented the dawning of the morning, and cried: I hoped in thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:148",
+        "label": "148",
+        "runs": [
+          {
+            "text": "Mine eyes prevent the ",
+            "italic": false
+          },
+          {
+            "text": "night",
+            "italic": true
+          },
+          {
+            "text": " watches, that I might meditate in thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:149",
+        "label": "149",
+        "runs": [
+          {
+            "text": "Hear my voice according unto thy lovingkindness: O LORD, quicken me according to thy judgment.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:150",
+        "label": "150",
+        "runs": [
+          {
+            "text": "They draw nigh that follow after mischief: they are far from thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:151",
+        "label": "151",
+        "runs": [
+          {
+            "text": "Thou ",
+            "italic": false
+          },
+          {
+            "text": "art",
+            "italic": true
+          },
+          {
+            "text": " near, O LORD; and all thy commandments ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " truth.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:152",
+        "label": "152",
+        "runs": [
+          {
+            "text": "Concerning thy testimonies, I have known of old that thou hast founded them for ever.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:153",
+        "label": "153",
+        "runs": [
+          {
+            "text": "Consider mine affliction, and deliver me: for I do not forget thy law.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ר RESH."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:154",
+        "label": "154",
+        "runs": [
+          {
+            "text": "Plead my cause, and deliver me: quicken me according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:155",
+        "label": "155",
+        "runs": [
+          {
+            "text": "Salvation ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " far from the wicked: for they seek not thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:156",
+        "label": "156",
+        "runs": [
+          {
+            "text": "Great ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " thy tender mercies, O LORD: quicken me according to thy judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.156 Great: or, Many"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:157",
+        "label": "157",
+        "runs": [
+          {
+            "text": "Many ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " my persecutors and mine enemies; ",
+            "italic": false
+          },
+          {
+            "text": "yet",
+            "italic": true
+          },
+          {
+            "text": " do I not decline from thy testimonies.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:158",
+        "label": "158",
+        "runs": [
+          {
+            "text": "I beheld the transgressors, and was grieved; because they kept not thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:159",
+        "label": "159",
+        "runs": [
+          {
+            "text": "Consider how I love thy precepts: quicken me, O LORD, according to thy lovingkindness.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:160",
+        "label": "160",
+        "runs": [
+          {
+            "text": "Thy word ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " true ",
+            "italic": false
+          },
+          {
+            "text": "from",
+            "italic": true
+          },
+          {
+            "text": " the beginning: and every one of thy righteous judgments ",
+            "italic": false
+          },
+          {
+            "text": "endureth",
+            "italic": true
+          },
+          {
+            "text": " for ever.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.160 Thy word…: Heb. The beginning of thy word is true"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:161",
+        "label": "161",
+        "runs": [
+          {
+            "text": "Princes have persecuted me without a cause: but my heart standeth in awe of thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ש SCHIN."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:162",
+        "label": "162",
+        "runs": [
+          {
+            "text": "I rejoice at thy word, as one that findeth great spoil.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:163",
+        "label": "163",
+        "runs": [
+          {
+            "text": "I hate and abhor lying: ",
+            "italic": false
+          },
+          {
+            "text": "but",
+            "italic": true
+          },
+          {
+            "text": " thy law do I love.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:164",
+        "label": "164",
+        "runs": [
+          {
+            "text": "Seven times a day do I praise thee because of thy righteous judgments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:165",
+        "label": "165",
+        "runs": [
+          {
+            "text": "Great peace have they which love thy law: and nothing shall offend them.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": [
+          "119.165 nothing…: Heb. they shall have no stumblingblock"
+        ]
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:166",
+        "label": "166",
+        "runs": [
+          {
+            "text": "LORD, I have hoped for thy salvation, and done thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:167",
+        "label": "167",
+        "runs": [
+          {
+            "text": "My soul hath kept thy testimonies; and I love them exceedingly.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:168",
+        "label": "168",
+        "runs": [
+          {
+            "text": "I have kept thy precepts and thy testimonies: for all my ways ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " before thee.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:169",
+        "label": "169",
+        "runs": [
+          {
+            "text": "Let my cry come near before thee, O LORD: give me understanding according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [
+          "ת TAU."
+        ],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:170",
+        "label": "170",
+        "runs": [
+          {
+            "text": "Let my supplication come before thee: deliver me according to thy word.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:171",
+        "label": "171",
+        "runs": [
+          {
+            "text": "My lips shall utter praise, when thou hast taught me thy statutes.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:172",
+        "label": "172",
+        "runs": [
+          {
+            "text": "My tongue shall speak of thy word: for all thy commandments ",
+            "italic": false
+          },
+          {
+            "text": "are",
+            "italic": true
+          },
+          {
+            "text": " righteousness.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:173",
+        "label": "173",
+        "runs": [
+          {
+            "text": "Let thine hand help me; for I have chosen thy precepts.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:174",
+        "label": "174",
+        "runs": [
+          {
+            "text": "I have longed for thy salvation, O LORD; and thy law ",
+            "italic": false
+          },
+          {
+            "text": "is",
+            "italic": true
+          },
+          {
+            "text": " my delight.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:175",
+        "label": "175",
+        "runs": [
+          {
+            "text": "Let my soul live, and it shall praise thee; and let thy judgments help me.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      },
+      {
+        "id": "prototype-eng-kjv:PSA:119:176",
+        "label": "176",
+        "runs": [
+          {
+            "text": "I have gone astray like a lost sheep; seek thy servant; for I do not forget thy commandments.",
+            "italic": false
+          }
+        ],
+        "structure": "q1",
+        "headings": [],
+        "notes": []
+      }
+    ]
+  }
+]
