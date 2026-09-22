@@ -2,6 +2,11 @@ import SwiftUI
 
 /// Editorial navigation metadata, never included in Scripture, search, copy, or sharing.
 enum BookDescriptions {
+    // Matches the editorial eyebrow metadata in the pinned bundled chapter documents.
+    static func eyebrow(for bookID: String) -> String {
+        ["MAT", "MRK", "LUK", "JHN"].contains(bookID) ? "THE GOSPEL ACCORDING TO" : "THE BOOK OF"
+    }
+
     static let values: [String: String] = [
         "GEN": "Beginnings, the patriarchs, and God’s covenant.",
         "EXO": "Deliverance from Egypt and the covenant at Sinai.",

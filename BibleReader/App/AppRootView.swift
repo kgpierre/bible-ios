@@ -2,9 +2,6 @@ import SwiftUI
 
 struct AppRootView: View {
     @State private var state = AppState()
-    #if DEBUG
-    @State private var paperExperiment: PaperTurnModel?
-    #endif
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -60,14 +57,21 @@ struct AppRootView: View {
             .sheet(isPresented: $state.isBooksPresented) {
                 PrototypeChapterPicker(state: state.reader, startsWithBooks: true) { state.destination = .read }
             }
-            .sheet(item: $state.summary) { ChapterSummaryView(state: $0) }
-            #if DEBUG
-            .sheet(item: $paperExperiment) { PaperTurnExperimentView(model: $0) }
-            #endif
+            .sheet(item: $state.summary) { summary in
+                ChapterSummaryView(state: summary) { source in
+                    if let chapter = state.reader.catalogChapter(source.chapterID) {
+                        state.reader.navigate(to: chapter, verseID: source.id, cueVerseIDs: [source.id])
+                        state.destination = .read
+                    }
+                }
+            }
             .sheet(isPresented: $state.isPrototypeInfoPresented) { prototypeInfo }
 
         }
         .task { await state.reader.load() }
+        .task(id: "\(state.destination.rawValue):\(state.reader.savedRevision)") {
+            if state.destination == .saved { await state.reader.loadSavedItems() }
+        }
         .alert("Local reading data", isPresented: Binding(get: { state.reader.errorMessage != nil }, set: { if !$0 { state.reader.errorMessage = nil } })) {
             if state.reader.canRetry {
                 Button("Retry") { Task { await state.reader.retry() } }
@@ -76,26 +80,33 @@ struct AppRootView: View {
         } message: { Text(state.reader.errorMessage ?? "") }
     }
 
-    @ViewBuilder private var compactDestination: some View {
-        switch state.destination {
-        case .read:
+    private var compactDestination: some View {
+        ZStack {
             chapter(wide: false)
-                .navigationTitle("")
-                .navigationBarTitleDisplayMode(.inline)
-        case .saved: saved
-        case .search:
-            SearchView(state: state.search) { passage in
+                .opacity(state.destination == .read ? 1 : 0)
+                .allowsHitTesting(state.destination == .read)
+                .accessibilityHidden(state.destination != .read)
+            saved
+                .opacity(state.destination == .saved ? 1 : 0)
+                .allowsHitTesting(state.destination == .saved)
+                .accessibilityHidden(state.destination != .saved)
+            SearchView(state: state.search, active: state.destination == .search) { passage in
                 state.reader.openPassage(passage)
                 state.destination = .read
             }
+            .opacity(state.destination == .search ? 1 : 0)
+            .allowsHitTesting(state.destination == .search)
+            .accessibilityHidden(state.destination != .search)
         }
+        .navigationTitle(state.destination == .saved ? "Saved" : "")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     @ViewBuilder private func chapter(wide: Bool) -> some View {
         if let document = state.reader.document {
             GeometryReader { geometry in
-                NativeChapterView(document: document, state: state.reader, wide: wide,
-                                  chromeInsets: geometry.safeAreaInsets)
+                PaperChapterView(document: document, state: state.reader, wide: wide,
+                                  chromeInsets: geometry.safeAreaInsets, isActive: wide || state.destination == .read)
                     .ignoresSafeArea(.container, edges: .vertical)
             }
         } else if state.reader.isLoading {
@@ -107,7 +118,7 @@ struct AppRootView: View {
 
     private func reader(wide: Bool) -> some View {
         chapter(wide: wide)
-            .background(Color(.readingCanvas).ignoresSafeArea())
+            .background { Color(.readingCanvas).ignoresSafeArea().allowsHitTesting(false) }
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { readerToolbar(wide: wide) }
@@ -128,7 +139,7 @@ struct AppRootView: View {
             Button("Appearance", systemImage: "textformat.size") { state.isAppearancePresented = true }
                 .accessibilityIdentifier("appearanceButton")
             Button {
-                if let chapter = state.reader.document { state.summary = ChapterSummaryState(chapter: chapter) }
+                if let chapter = state.reader.document { state.summary = state.reader.summaryState(for: chapter) }
             } label: {
                 Image(systemName: "apple.intelligence")
             }
@@ -136,10 +147,6 @@ struct AppRootView: View {
             .accessibilityIdentifier("chapterSummaryButton")
             .disabled(state.reader.document == nil || state.reader.isLoading)
             Menu("More", systemImage: "ellipsis") {
-                #if DEBUG
-                Button("Paper turn experiment") { paperExperiment = PaperTurnModel(reader: state.reader) }
-                    .disabled(state.reader.document == nil)
-                #endif
                 Button("About this edition") { state.isPrototypeInfoPresented = true }
                 Button("Search", systemImage: "magnifyingglass") {
                     state.destination = .search
@@ -174,6 +181,7 @@ struct AppRootView: View {
                             .font(.subheadline)
                             .labelStyle(.titleAndIcon)
                             .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(state.destination == destination ? Color(.accent) : Color(.readingSecondary))
@@ -210,20 +218,24 @@ struct AppRootView: View {
 
     private var saved: some View {
         List { savedRows(wide: false) }
-            .navigationTitle("Saved")
             .scrollContentBackground(.hidden)
             .background(Color(.readingCanvas))
     }
 
     @ViewBuilder private func savedRows(wide: Bool) -> some View {
         Section("Saved on this device") {
-            if state.reader.savedItems.isEmpty {
+            if let error = state.reader.savedError {
+                Text(error).foregroundStyle(.secondary)
+                Button("Retry saved passages") { Task { await state.reader.loadSavedItems() } }
+            } else if state.reader.savedLoadedRevision < 0 || state.reader.isLoadingSaved {
+                ProgressView("Loading saved passages…")
+            } else if state.reader.savedItems.isEmpty {
                 Text("Your highlights and bookmarks will appear here.").foregroundStyle(.secondary)
             }
             ForEach(state.reader.savedItems) { item in
                 Button {
                     state.savedSelection = item.id
-                    if let chapter = state.reader.catalog.first(where: { $0.id == item.chapterID }) {
+                    if let chapter = state.reader.catalogChapter(item.chapterID) {
                         state.reader.navigate(to: chapter, verseID: item.verseID, utf16Offset: item.passage?.parts.first?.start ?? 0)
                         if !wide { state.destination = .read }
                     }

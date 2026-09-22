@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SearchView: View {
     @Bindable var state: SearchState
+    var active = true
     let open: (ResolvedPassage) -> Void
     @FocusState private var focused: Bool
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 38.0
@@ -49,9 +50,9 @@ struct SearchView: View {
         .foregroundStyle(Color(.readingPrimary))
         .tint(Color(.accent))
         .background(Color(.readingCanvas))
-        .task(id: "\(state.query)|\(state.retryToken)") { await state.run() }
-        .onAppear { focused = state.query.isEmpty }
-        .onChange(of: state.focusRequest) { _,_ in focused = true }
+        .task(id: "\(state.query)|\(state.retryToken)|\(active)") { if active { await state.run() } }
+        .onChange(of: active, initial: true) { _, active in focused = active && state.query.isEmpty }
+        .onChange(of: state.focusRequest) { _,_ in focused = active }
     }
 
     @ViewBuilder private var results: some View {
@@ -144,6 +145,7 @@ private struct SearchResultRow: View {
 struct ReferenceResult: View {
     let passage: ResolvedPassage
     let suggestion: Bool
+    var active = true
     let open: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

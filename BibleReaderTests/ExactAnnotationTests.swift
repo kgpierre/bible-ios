@@ -129,6 +129,7 @@ struct ExactAnnotationTests {
         await state.retry()
         #expect(state.errorMessage == nil)
         #expect(!state.canRetry)
+        await state.loadSavedItems()
         #expect(state.savedItems.count == 1)
         #expect(state.savedItems.first?.text == selected.text)
         #expect(state.savedItems.first?.color == .sage)
@@ -181,4 +182,88 @@ struct ExactAnnotationTests {
         try await store.undoExact(removal)
         #expect(try await store.annotations() == legacy)
     }
+    @Test func annotationCacheTracksOtherConnectionsAndRejectsStaleUndo() async throws {
+        let (first, corpus, url) = try fixture()
+        let doc = try await first.chapter("eng-kjv-1769-protestant:JHN:3")
+        let words = try passage(doc, range: NSRange(location: 0, length: 5))
+        let original = try await first.editExact(words, color: .sage)
+        let second = try BibleStore(corpusURL: corpus, userURL: url)
+        #expect(try await second.exactAnnotations().count == 1)
+        let recolor = try await second.editExact(words, color: .rose)
+        await #expect(throws: StorageIssue.self) { try await first.undoExact(original) }
+        #expect(try await first.exactAnnotations().first?.color == .rose)
+        try await second.undoExact(recolor)
+        #expect(try await first.exactAnnotations().first?.color == .sage)
+    }
+
+    @Test func warmEditsDoNotDecodeLibraryAndSavedDoesNotEvictReader() async throws {
+        let (seed, corpus, url) = try fixture()
+        let catalog = try await seed.chapters()
+        for chapter in catalog.prefix(12) {
+            let doc = try await seed.chapter(chapter.id)
+            _ = try await seed.editExact(passage(doc, range: NSRange(location: 0, length: 5)), color: .yellow)
+        }
+        let store = try BibleStore(corpusURL: corpus, userURL: url)
+        for chapter in catalog.prefix(3) { _ = try await store.chapter(chapter.id) }
+        #expect(try await store.savedItems().count == 12)
+        let decoded = await store.exactDecodeCount
+        let readerDecoded = await store.chapterDecodeCount
+        let savedDecoded = await store.savedChapterDecodeCount
+        let doc = try await store.chapter(catalog[0].id)
+        #expect(await store.chapterDecodeCount == readerDecoded)
+        let middle = try passage(doc, range: NSRange(location: 1, length: 2))
+        let change = try await store.editExact(middle, color: .blue)
+        let items = try await store.savedItems()
+        #expect(items.count == 13)
+        #expect(items.contains { $0.color == .blue && $0.text == middle.text })
+        #expect(await store.exactDecodeCount == decoded)
+        #expect(await store.savedChapterDecodeCount == savedDecoded)
+        try await store.undoExact(change)
+        #expect(try await store.savedItems().count == 12)
+        #expect(await store.exactDecodeCount == decoded)
+        let reopened = try BibleStore(corpusURL: corpus, userURL: url)
+        let rebuilt = try await reopened.savedItems()
+        #expect(rebuilt.map(\.id) == (try await store.savedItems()).map(\.id))
+        #expect(rebuilt.map(\.text) == (try await store.savedItems()).map(\.text))
+    }
+
+    @Test @MainActor func pendingHighlightRendersThenRollsBackOnWriteFailure() async throws {
+        let (store, _, url) = try fixture()
+        let state = ReaderState(makeStore: { store })
+        await state.load()
+        let doc = try #require(state.document)
+        let words = try passage(doc, range: NSRange(location: 0, length: 5))
+        await state.saveExact(words, color: .sage)
+        let original = state.exactAnnotations
+        let savedRevision = state.savedRevision
+        try sql("CREATE TRIGGER fail_exact BEFORE INSERT ON exact_annotation BEGIN SELECT RAISE(ABORT,'injected write failure'); END", at: url)
+        var lock: OpaquePointer?
+        #expect(sqlite3_open(url.path, &lock) == SQLITE_OK)
+        defer { sqlite3_exec(lock, "ROLLBACK", nil, nil, nil); sqlite3_close(lock) }
+        #expect(sqlite3_exec(lock, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK)
+        let save = Task { await state.saveExact(words, color: .rose) }
+        for _ in 0..<100 where !state.isSaving { await Task.yield() }
+        #expect(state.isSaving)
+        #expect(state.exactAnnotations.first?.color == .rose)
+        #expect(state.savedRevision == savedRevision)
+        #expect(sqlite3_exec(lock, "ROLLBACK", nil, nil, nil) == SQLITE_OK)
+        await save.value
+        #expect(state.exactAnnotations == original)
+        #expect(state.errorMessage != nil)
+        #expect(state.savedRevision == savedRevision)
+        #expect(try await store.exactAnnotations() == original)
+    }
+
+    @Test @MainActor func invalidEmptySelectionCannotCreatePendingAnnotation() async throws {
+        let (store, _, _) = try fixture()
+        let state = ReaderState(makeStore: { store })
+        await state.load()
+        let doc = try #require(state.document)
+        await state.saveExact(ExactPassage(chapterID: doc.id, reference: doc.reference, parts: []), color: .sage)
+        #expect(state.exactAnnotations.isEmpty)
+        #expect(state.errorMessage != nil)
+        #expect(!state.isSaving)
+        #expect(try await store.exactAnnotations().isEmpty)
+    }
+
 }

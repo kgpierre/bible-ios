@@ -8,11 +8,11 @@ Search works entirely offline with actual result counts, 50-result pages, matche
 
 Appearance preferences persist locally: system/light/dark, serif/system sans, modest text-size adjustment, and line spacing, composed with Dynamic Type. The icon-only Apple Intelligence button opens a separate overview of the current chapter using the on-device Foundation Models model. Availability depends on device, settings, language/region, and model readiness; initial model setup may require an OS-managed download. No remote inference fallback or summary persistence is added.
 
-**Still in development:** richer Saved filters/deletion controls, footnote presentation, summary quality and performance on eligible physical devices, and complete accessibility/device/privacy acceptance. A Debug-only native page-curl experiment is available in More; it remains isolated from normal reading and needs visual/device acceptance. See [the execution plan](Docs/Decisions/0005-thin-paper-turn.md). Final canon and distribution rights/territories require review before publishing.
+**Still in development:** richer Saved filters/deletion controls, footnote presentation, summary quality and performance on eligible physical devices, and complete accessibility/device/privacy acceptance. Native paper curls now turn chapters in the main reader; the separate experiment has been removed. Physical-device interaction/performance acceptance remains open. See [reader interaction changes](Docs/Decisions/0007-iphone-reader-interactions.md). Final canon and distribution rights/territories require review before publishing.
 
 Current owner priority: **refine iPhone text selection and highlights first**; further iPad refinement is deferred. Latest changes and detailed verification: [HANDOFF.md](HANDOFF.md).
 
-The iPhone palette marks the selected color, offers removal only for highlighted text, and preserves native selection through a Saved round trip. Failed annotation writes support Retry with the original exact-word intent. Latest verification: 34 unit tests and three focused iPhone UI tests passed, plus an unsigned device build. [Selection evidence](Docs/Decisions/0006-exact-annotations-and-summary.md#iphone-selection-refinement).
+The iPhone palette displays color swatches with a selected checkmark, offers removal only for highlighted text, and preserves native selection through a Saved round trip. A short hold starts word selection; native handles still extend the range. The side-by-side destinations use a native UIKit tab bar within the SwiftUI layout. Failed annotation writes support Retry with the original exact-word intent. The 22 September iOS 27 pass includes 35 non-UI tests and six focused UI tests, plus an unsigned device build. [Current evidence and limitations](Docs/Decisions/0007-iphone-reader-interactions.md).
 
 ## Setup
 
@@ -49,6 +49,30 @@ python3 Content/Tools/validate_corpus.py
 
 `CODE_SIGNING_ALLOWED=NO` verifies compilation, not installation/signing. Sandboxed automation needs access to Xcode macro plugins and CoreSimulator. See [content tooling](Content/README.md) for explicit source acquisition and deterministic import; ordinary app builds never run that pipeline.
 
+### 22 September interaction verification
+
+The focused iPhone command uses isolated test stores and does not reset ordinary user data:
+
+```sh
+xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' \
+  -clonedSourcePackagesDirPath .build/SourcePackages \
+  -derivedDataPath .build/ContentDerivedData \
+  -resultBundlePath .build/Reader-refinement-final.xcresult \
+  -only-testing:BibleReaderTests \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testNativeSelectionMenu \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testExactHighlightRecolorRemovalAndUndo \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testIntegratedPaperTurnsAndRelaunch \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testNativeTabTrackingAndCancelledTurn \
+  -collect-test-diagnostics never
+xcodebuild build -project BibleReader.xcodeproj -scheme BibleReader \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -clonedSourcePackagesDirPath .build/SourcePackages \
+  -derivedDataPath .build/DeviceDerivedData CODE_SIGNING_ALLOWED=NO
+```
+
+The focused command passed 35 non-UI tests and four UI tests. The iOS 26 compatibility pass includes 35 non-UI tests and six UI tests; the iPadOS 26 regression pass includes 35 non-UI tests and two UI tests. The unsigned Release build passed. Physical-device tests did not execute because test-target signing teams are unconfigured; project signing was left unchanged. See [decision 0007](Docs/Decisions/0007-iphone-reader-interactions.md) for individual result bundles and outstanding acceptance.
+
 ## Organization
 
 | Path | Responsibility |
@@ -72,3 +96,49 @@ Use four-space Swift indentation, feature-focused views, explicit state ownershi
 `Application Support/ReaderData/User.sqlite` contains annotations and reading position. It is eligible for normal OS backup and uses complete file protection. Never remove it to resolve an error. The v1 migration creates the legacy schema; additive v2 adds exact annotations while retaining legacy tables/records. Unknown future migrations and corrupt stores fail without resetting data. The old prototype held annotations only in memory, so there is no earlier on-disk prototype schema to migrate.
 
 Full requirements: [AGENTS.md](AGENTS.md). Previous reusable guide: [iOS development guidelines](Docs/IOS-DEVELOPMENT-GUIDELINES.md). Current engineering evidence: [offline corpus and persistence](Docs/Decisions/0003-offline-corpus-and-persistence.md). Source/asset provenance and unresolved distribution review are documented; no release, signing, physical-device, or privacy-audit approval is implied.
+
+### Summary and book questions (22 September 2026)
+
+The AI sheet now follows the supplied Summary/Questions reference: scalable serif text, question preview, quiet disclosure, question bubbles, source-reference chips, and native Liquid Glass input/suggestions. Follow-up questions stay within the captured book and use bounded passages from the bundled corpus. Sources open the actual reader verse. Requests and answers undergo separate scope/support checks; these reduce prompt-injection risk but do not guarantee factual accuracy or prevention. Sessions remain on-device and unpersisted. Details: [decision 0008](Docs/Decisions/0008-summary-and-book-questions.md).
+
+Summary validation: [screenshots and results](Docs/Validation/summary-redesign/README.md). Successful final full iPhone command (use a fresh result path when rerunning):
+
+```sh
+xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' \
+  -clonedSourcePackagesDirPath .build/SourcePackages -derivedDataPath .build/ContentDerivedData \
+  -resultBundlePath .build/Summary-final-phone.xcresult \
+  -only-testing:BibleReaderTests \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testChapterSummaryAvailabilityAndDismissal \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testBookQuestionsAndScope \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testSummaryLargestTypeDark \
+  -collect-test-diagnostics never
+```
+
+The vertical input alignment fix then passed the latter two UI tests in `.build/Summary-alignment-phone.xcresult`. Final unsigned device build:
+
+```sh
+xcodebuild build -project BibleReader.xcodeproj -scheme BibleReader -configuration Release \
+  -destination 'generic/platform=iOS' -clonedSourcePackagesDirPath .build/SourcePackages \
+  -derivedDataPath .build/DeviceDerivedData CODE_SIGNING_ALLOWED=NO
+```
+
+### Chapter picker and reader performance follow-up
+
+The chapter picker follows the owner’s updated design using native Liquid Glass, scalable serif chapter controls, and saved-highlight rings/dots. Annotation edits now use chapter-scoped caches, immediate pending rendering with rollback, incremental Saved resolution, and revision-based renderer updates. Ordinary scrolling no longer starts a page curl. Key-verse questions can return actual bundled quotations from the current book.
+
+Validation: [chapter picker](Docs/Validation/chapter-picker/README.md), [reader follow-ups](Docs/Validation/reader-followups/README.md), and [performance scope](Docs/Decisions/0010-reader-performance-followup.md). Final iPhone verification passed 53 non-UI tests and three UI flows; unsigned Release compilation passed. Repeat iPad rotation validation and physical-device profiling remain outstanding.
+
+```sh
+xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' \
+  -clonedSourcePackagesDirPath .build/SourcePackages -derivedDataPath .build/ContentDerivedData \
+  -resultBundlePath .build/Reader-followups-phone.xcresult \
+  -only-testing:BibleReaderTests \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testKeyVersesQuestionUsesCurrentBook \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testBooksAtLargeTypeInDarkAppearance \
+  -only-testing:BibleReaderUITests/BibleReaderUITests/testSearchAndReferenceNavigation \
+  -collect-test-diagnostics never
+```
+
+Use a fresh result-bundle path when rerunning.

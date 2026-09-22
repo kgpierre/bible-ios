@@ -114,8 +114,8 @@ struct ChapterTextMapTests {
         #expect(!view.selectionHighlightStatus(in: map.entries[1].range).hasHighlights)
         let menu = try #require(view.textView(view, editMenuForTextIn: selected, suggestedActions: []))
         let palette = try #require(menu.children.first as? UIMenu)
-        #expect((palette.children.first { $0.title == "✓ Sage" } as? UIAction)?.state == .on)
-        #expect((palette.children.first { $0.title == "Blue" } as? UIAction)?.state == .off)
+        #expect((palette.children.first { $0.accessibilityLabel == "Sage" } as? UIAction)?.state == .on)
+        #expect((palette.children.first { $0.accessibilityLabel == "Blue" } as? UIAction)?.state == .off)
         #expect(menu.children.contains { $0.title == "Remove Highlight" })
         let unhighlighted = try #require(view.textView(view, editMenuForTextIn: map.entries[1].range, suggestedActions: []))
         #expect(!unhighlighted.children.contains { $0.title == "Remove Highlight" })
@@ -185,4 +185,50 @@ struct ChapterTextMapTests {
         #expect(psalm.verses.first?.headings.isEmpty == false)
         #expect(psalm.verses.contains { $0.runs.contains(where: \.italic) })
     }
+    @Test @MainActor func unrelatedStateAndSameChapterNavigationDoNotRebuildText() throws {
+        let doc = document(), state = ReaderState(), view = ChapterTextView()
+        state.chapters = [doc]; state.chapterID = doc.id
+        view.frame = CGRect(x: 0, y: 0, width: 390, height: 700)
+        view.configure(document: doc, state: state, wide: false, scheme: .light)
+        view.layoutIfNeeded()
+        view.prepareVerseAccessibility()
+        let builds = view.documentBuildCount, frames = view.accessibilityFrameUpdateCount
+        let gutters = view.gutterPassCount
+        state.isSaving = true
+        view.configure(document: doc, state: state, wide: false, scheme: .light)
+        state.isSaving = false
+        view.configure(document: doc, state: state, wide: false, scheme: .light)
+        view.setNeedsLayout(); view.layoutIfNeeded()
+        #expect(view.documentBuildCount == builds)
+        #expect(view.gutterPassCount == gutters)
+        state.highlights[doc.verses[0].id] = .sage
+        view.configure(document: doc, state: state, wide: false, scheme: .light)
+        view.prepareVerseAccessibility()
+        #expect(view.highlightVerseUpdateCount == 1)
+        #expect(view.accessibilityFrameUpdateCount == frames)
+        let elements = try #require(view.accessibilityElements).compactMap { $0 as? UIAccessibilityElement }
+        #expect(elements.first?.accessibilityValue == "sage highlight")
+        state.navigationRevision += 1
+        state.anchor = ReadingAnchor(text: VerseAnchor(verseID: doc.verses[1].id, utf16Offset: 0), viewportY: 0.2)
+        state.navigationCue = [doc.verses[1].id]
+        view.configure(document: doc, state: state, wide: false, scheme: .light)
+        view.layoutIfNeeded()
+        #expect(view.documentBuildCount == builds)
+        #expect(view.highlightVerseUpdateCount == 1)
+        let map = try #require(view.map)
+        #expect(view.textStorage.attribute(.underlineStyle, at: map.entries[1].range.location, effectiveRange: nil) != nil)
+        #expect(view.textStorage.attribute(.backgroundColor, at: map.entries[0].range.location, effectiveRange: nil) != nil)
+    }
+
+    @Test @MainActor func pageContainerPassesSidebarAndChromeTouchesThrough() {
+        let region = ChapterTouchRegion()
+        region.frame = CGRect(x: 330, y: 0, width: 803, height: 744)
+        region.chromeInsets = EdgeInsets(top: 86, leading: 330, bottom: 20, trailing: 0)
+        #expect(!region.point(inside: CGPoint(x: -160, y: 120), with: nil))
+        #expect(region.point(inside: CGPoint(x: 100, y: 400), with: nil))
+        #expect(!region.point(inside: CGPoint(x: 600, y: 50), with: nil))
+        #expect(region.point(inside: CGPoint(x: 600, y: 400), with: nil))
+        #expect(!region.point(inside: CGPoint(x: 600, y: 735), with: nil))
+    }
+
 }

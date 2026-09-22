@@ -12,6 +12,9 @@ private actor SummaryFake: ChapterSummaryModel {
         self.contextFailures = contextFailures
     }
     func unavailableReason() -> String? { unavailable }
+    func presentation(overview: String) -> OverviewPresentation? {
+        OverviewPresentation(title: "A synthetic overview", peopleAndPlaces: ["Synthetic", "Invented", "Synthetic"])
+    }
     func generate(instructions: String, prompt: String) async throws -> String {
         prompts.append(prompt)
         if contextFailures > 0 { contextFailures -= 1; throw ChapterSummaryError.contextLimit }
@@ -68,6 +71,13 @@ struct ChapterSummaryTests {
         await state.run()
         #expect(state.status == .complete("Synthetic test overview."))
         #expect(state.chapter == doc)
+    }
+
+    @Test @MainActor func presentationFiltersAbsentAndDuplicateNames() async {
+        let state = ChapterSummaryState(chapter: chapter("Synthetic content"), model: SummaryFake())
+        await state.run()
+        #expect(state.overviewTitle == "A synthetic overview")
+        #expect(state.peopleAndPlaces == ["Synthetic"])
     }
 
     @Test @MainActor func cancellationRejectsLateResponse() async {

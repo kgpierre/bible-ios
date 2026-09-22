@@ -25,7 +25,29 @@ struct ChapterDocument: Codable, Equatable, Identifiable, Sendable {
         let structure: String
         let headings: [String]
         let notes: [String]
-        var text: String { runs.map(\.text).joined() }
+        let text: String
+
+        private enum CodingKeys: String, CodingKey { case id, label, runs, structure, headings, notes }
+
+        init(id: String, label: String, runs: [Run], structure: String, headings: [String], notes: [String]) {
+            self.id = id
+            self.label = label
+            self.runs = runs
+            self.structure = structure
+            self.headings = headings
+            self.notes = notes
+            text = runs.map(\.text).joined()
+        }
+
+        init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            self.init(id: try values.decode(String.self, forKey: .id),
+                label: try values.decode(String.self, forKey: .label),
+                runs: try values.decode([Run].self, forKey: .runs),
+                structure: try values.decode(String.self, forKey: .structure),
+                headings: try values.decode([String].self, forKey: .headings),
+                notes: try values.decode([String].self, forKey: .notes))
+        }
     }
 
     struct Run: Codable, Equatable, Sendable {

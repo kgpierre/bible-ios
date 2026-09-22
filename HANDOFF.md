@@ -1,6 +1,18 @@
 # Bible Reader — Development Handoff
 
-Updated 21 September 2026 after continuing the recommended sequence. Repository: `/Users/kyle/Developer/bible-app`.
+Updated 22 September 2026 after the owner-requested iPhone interaction/performance pass. Repository: `/Users/kyle/Developer/bible-app`.
+
+## Latest continuation — 22 September 2026
+
+The owner requested quicker phone selection, visible highlight **swatches instead of color-name text**, paper curls in normal reading with the experiment removed, and native tab interaction while **keeping all bottom controls side by side**. These newer instructions supersede the old Debug-only paper-turn direction below.
+
+Implemented: 0.3-second word-selection start with native handles/edit menus; semantic-color swatches and accessible names/checkmarks; integrated chapter curls; native `UITabBar` within the compact adjacent-control layout; retained compact destination views; cancellation-safe position flushes; a six-chapter decoded cache; SQL-only position validation; lazy Saved loading; and reduced per-frame/repeated text work. The audit's false save-error diagnosis was confirmed. Durable annotation writes, complete file protection, existing schema, and Scripture resources are preserved.
+
+The iOS 27 performance bundle passed **35 non-UI tests and six UI tests**, including selection/recolor/Undo, Books/scrolling, turns/relaunch, and appearance. The iOS 26 compatibility bundle also passed **35 non-UI and six UI tests**, including native tab drag tracking, a short edge-drag cancellation check, Search, and largest-type dark Books. Physical-phone testing was attempted but did not run: test-target signing teams are unconfigured, and Xcode's interactive tool offered only simulators. Signing settings were not changed.
+
+The final iOS 27 pass also passed **35 non-UI and four UI tests** after the last swatch/transition adjustments. The iPadOS 26 resize/selection regression passed **35 non-UI and two UI tests**. Unsigned Debug and Release device builds passed. Final screenshots are in `Docs/Validation/iPhone-reader-refinement/`.
+
+Read [decision 0007](Docs/Decisions/0007-iphone-reader-interactions.md) for implementation, current evidence, and remaining device gates. The older continuation sections below are historical; this latest section and decision 0007 take precedence.
 
 ## Current owner priority
 
@@ -66,7 +78,13 @@ Typed UserDefaults preferences persist system/light/dark, serif/system sans, siz
 
 Tests verify actual font/spacing changes, semantic selection across reflow, largest Dynamic Type scaling, persistence, and native controls across relaunch. In tests, apply trait overrides with `updateTraitsIfNeeded()` before checking fonts. Native stepper value is the correct persistence assertion; `+1` is grouped inside its accessibility element, not necessarily a separate static text.
 
-### On-device chapter overview
+### Summary redesign and scoped questions — 22 September update
+
+Latest owner reference: 4a/4b Summary/Questions sheet supplied in the conversation. Use the paper canvas, larger scalable serif copy, question preview, quiet AI disclosure, tinted question bubbles, wrapping passage chips, and floating native Liquid Glass input. Suggestions remain accessible at large text sizes. Source chips open their verified bundled verse in the reader. The owner selected questions within the captured chapter and book, not the whole Bible.
+
+`BookQuestionAnswerer` uses bounded JSON user input, a separate guided scope assessment, book-only local retrieval, guided answers, deterministic source-ID validation, and a fresh supporting-passage review. No tools, remote model, logging, or persisted conversation. These reduce prompt-injection risk without guaranteeing prevention or accuracy. Optional generated title/people-place metadata is bounded; displayed names must also occur in the chapter. Keep real-model refusal/availability behavior visible. See `Docs/Decisions/0008-summary-and-book-questions.md` for the contract and limitations. Validation/screenshots: `Docs/Validation/summary-redesign/README.md`. Final iPhone: 44 non-UI tests + 3 UI flows passed; subsequent input-centering fix: 2 focused UI flows + unsigned Release build passed. iPadOS 26 native-bar/refusal/large-type checks passed before the final small refinements listed in that inventory. Physical-device and broader adversarial model evaluation remain open.
+
+### On-device chapter overview — original implementation record
 
 `Features/Summary/` implements the icon-only entry, captured chapter identity, native sheet, loading/cancel/retry/failure/refusal/availability states, and explicit AI attribution. It uses `SystemLanguageModel.default`, default guardrails, no tools or remote fallback, no prompt/output logs, and no persistence. Only the requested chapter’s text/reference is sent to the model.
 
@@ -74,7 +92,7 @@ Independent bounded sessions summarize chunks, then reduce partial overviews. Ch
 
 The iOS 27 iPhone simulator **returned real generated output**. The iPadOS 26 simulator **declined a summary**; the refusal state worked. Neither result proves physical-device quality, latency, or accuracy. Generated content can oversimplify or misstate the chapter. Keep physical-device evaluation as release work. Initial model readiness/setup belongs to the OS and can require downloads; do not promise fresh-install offline AI when its model is absent.
 
-Fakes test unavailable-model behavior, chunk preservation/context retry, retry after failure, and cancellation. A separate UIKit test verifies the symbol exists. The native UI test accepts either generated output or an explained terminal unavailable/failure state, then returns to the same chapter. Summary text remains selectable. A possible selectable-text leading-margin refinement is deferred while the owner prioritizes selection/highlights.
+Fakes test unavailable-model behavior, chunk preservation/context retry, retry after failure, and cancellation. A separate UIKit test verifies the symbol exists. The native UI test accepts either generated output or an explained terminal unavailable/failure state, then returns to the same chapter. Summary text remains selectable. The later 22 September redesign above supersedes this original presentation.
 
 ### Debug paper-curl experiment
 
@@ -143,3 +161,21 @@ xcrun xcresulttool export attachments --path .build/Next-unique-name.xcresult \
 ```
 
 Use fresh result paths; select `-only-testing:` cases as appropriate. Run simulator batches sequentially. Screenshots use `XCUIScreen.main.screenshot()` and have exported manifests mapping IDs to names. UI tests use isolated stores; never reset real user data. More details: `Docs/Decisions/0004-search-and-books.md`, `0005-thin-paper-turn.md`, and `0006-exact-annotations-and-summary.md`.
+
+### Follow-up fixes: scrolling and key-verse questions
+
+Owner reported ordinary scrolling triggering page curls and a valid whole-book key-verse question being rejected. The pager's built-in navigation gestures are now disabled; a discrete horizontal-intent recognizer defers the native curl until finger lift and releases vertical/diagonal drags to UITextView. Edge taps/short drags cannot turn. See the correction in decision 0007.
+
+Exact bounded key-verse questions are recognized as in scope; appended overrides are not. Whole-book retrieval may nominate up to six verse locations, but the repository resolves them only within the captured book and uses actual bundled text. Invalid locators are discarded. The exact key-verse requests show verified bundled verse quotations with a fixed introduction; other generated answers retain independent support review. See decision 0008. Neither this change nor model tests establish injection-proof behavior or eliminate Apple's possible model refusals.
+
+
+### Chapter picker and second performance audit — 22 September 2026
+
+The owner’s newer chapter-picker frame supersedes the earlier plain-number 2b treatment. The picker now uses scalable 60-point circular native glass controls, serif book/chapter type, a same-baseline count with large-text fallback, actual saved-highlight rings/dots, a raised dark canvas, Books/Done system toolbar items, and a native glass reference field. See decision 0009 and its screenshot inventory.
+
+The second audit’s main interaction costs are addressed: cached decoded exact annotations grouped by chapter, shared edit reducer for immediate pending highlights and transactional persistence, revision-based renderer invalidation, changed-verse attribute/accessibility updates, cached viewport gutters, indexed catalog navigation, combined startup metadata, and incremental Saved chapter resolution without evicting the reader cache. Rollback and stale Undo retain data. No annotation migration or corpus replacement was needed. See decision 0010 for scope, tests, and intentionally deferred profiling-dependent work.
+
+Current evidence is in `Docs/Validation/reader-followups/README.md` and `Docs/Validation/chapter-picker/README.md`. Physical iPhone gesture/selection feel and a Release Instruments trace on the slowest supported device remain open; simulator tests are not device latency evidence. Static signposts contain no reading references, questions, annotation contents, or database paths.
+
+
+Final pre-commit evidence: 53 non-UI tests and three iPhone UI flows passed in `Reader-followups-phone.xcresult`; unsigned Release build passed. iPad live-Saved editing and large-text picker dismissal passed in separate runs. Later attempts to rotate into the wide sidebar did not change the app’s portrait layout, so repeat iPad rotation validation remains unresolved. See the follow-up validation inventory for exact passing and failing runs. The newer integrated reader work supersedes the earlier Debug-only paper-turn recommendation above.

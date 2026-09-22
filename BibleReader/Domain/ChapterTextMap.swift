@@ -12,21 +12,25 @@ struct ChapterTextMap {
 
     init(document: ChapterDocument) {
         var buffer = ""
+        var utf16Count = 0
         var entries: [Entry] = []
         var sourceHeadingRanges: [NSRange] = []
         for verse in document.verses {
             for heading in verse.headings {
-                sourceHeadingRanges.append(NSRange(location: buffer.utf16.count, length: heading.utf16.count))
+                sourceHeadingRanges.append(NSRange(location: utf16Count, length: heading.utf16.count))
                 buffer += heading + "\n"
+                utf16Count += heading.utf16.count + 1
             }
-            let start = buffer.utf16.count
+            let start = utf16Count
             buffer += verse.text
             entries.append(Entry(verse: verse, range: NSRange(location: start, length: verse.text.utf16.count)))
             buffer += "\n"
+            utf16Count += verse.text.utf16.count + 1
         }
         for block in document.trailingBlocks ?? [] {
-            sourceHeadingRanges.append(NSRange(location: buffer.utf16.count, length: block.text.utf16.count))
+            sourceHeadingRanges.append(NSRange(location: utf16Count, length: block.text.utf16.count))
             buffer += block.text + "\n"
+            utf16Count += block.text.utf16.count + 1
         }
         self.sourceHeadingRanges = sourceHeadingRanges
         self.text = buffer

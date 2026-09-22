@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct CompactReaderNavigation: View {
     @Bindable var state: AppState
@@ -23,6 +24,7 @@ struct CompactReaderNavigation: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 4)
+        .onChange(of: state.destination) { _, _ in state.reader.navigationCollapsed = false }
     }
 
     private var books: some View {
@@ -43,48 +45,69 @@ struct CompactReaderNavigation: View {
     }
 
     private var destinations: some View {
-        HStack(spacing: 0) {
-            ForEach(AppDestination.allCases) { destination in
-                DestinationButton(destination: destination, selected: state.destination == destination, collapsed: collapsed) {
-                    state.destination = destination
-                    state.reader.navigationCollapsed = false
-                }
-            }
-        }
-        .padding(6)
-        .background(reduceTransparency ? Color(.readingCanvas) : .clear, in: .capsule)
-        .glassEffect(.regular, in: .capsule)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Reader destinations")
+        NativeReaderTabs(selection: $state.destination, collapsed: collapsed)
+            .frame(minWidth: 156, idealWidth: 168, maxWidth: .infinity)
+            .frame(height: 64)
     }
 }
 
-private struct DestinationButton: View {
-    let destination: AppDestination
-    let selected: Bool
+/// Native item tracking and selection feedback, within the owner's adjacent-control layout.
+private struct NativeReaderTabs: UIViewRepresentable {
+    @Binding var selection: AppDestination
     let collapsed: Bool
-    let action: () -> Void
 
-    private var symbol: String {
-        destination.symbol + (selected && destination != .search ? ".fill" : "")
-    }
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: symbol).font(.system(size: 20))
-                if !collapsed { Text(destination.title).font(.caption2.weight(.medium)) }
-            }
-            .frame(minWidth: 44, maxWidth: .infinity, minHeight: collapsed ? 44 : 52)
-            .padding(.horizontal, 2)
-            .contentShape(.rect)
-            .foregroundStyle(selected ? Color(.accent) : Color(.readingSecondary))
-            .background(selected ? Color(.accent).opacity(0.12) : .clear, in: .capsule)
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    func makeUIView(context: Context) -> ReaderTabBarContainer {
+        let container = ReaderTabBarContainer()
+        let bar = container.bar
+        bar.delegate = context.coordinator
+        bar.itemPositioning = .fill
+        bar.tintColor = UIColor(resource: .accent)
+        bar.unselectedItemTintColor = UIColor(resource: .readingSecondary)
+        bar.items = AppDestination.allCases.enumerated().map { index, destination in
+            let item = UITabBarItem(title: destination.rawValue.capitalized,
+                image: UIImage(systemName: destination.symbol),
+                selectedImage: UIImage(systemName: destination.symbol + (destination == .search ? "" : ".fill")))
+            item.tag = index
+            item.accessibilityLabel = destination.rawValue.capitalized
+            item.accessibilityIdentifier = "destination-" + destination.rawValue
+            return item
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(destination.title))
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityIdentifier("destination-\(destination.rawValue)")
+        return container
+    }
+    func updateUIView(_ container: ReaderTabBarContainer, context: Context) {
+        let bar = container.bar
+        context.coordinator.parent = self
+        bar.accessibilityValue = collapsed ? "Collapsed" : "Expanded"
+        for (index, item) in (bar.items ?? []).enumerated() {
+            item.title = collapsed ? nil : AppDestination.allCases[index].rawValue.capitalized
+        }
+        bar.selectedItem = bar.items?[AppDestination.allCases.firstIndex(of: selection) ?? 0]
+    }
+    final class Coordinator: NSObject, UITabBarDelegate {
+        var parent: NativeReaderTabs
+        init(_ parent: NativeReaderTabs) { self.parent = parent }
+        func tabBar(_ tabBar: UITabBar, didSelect item: UITabBarItem) {
+            parent.selection = AppDestination.allCases[item.tag]
+        }
+    }
+}
+
+private final class ReaderTabBarContainer: UIView {
+    let bar = UITabBar()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        addSubview(bar)
+    }
+    required init?(coder: NSCoder) { fatalError("Use init(frame:)") }
+    override var safeAreaInsets: UIEdgeInsets { .zero }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // UITabBar reserves horizontal floating-bar margins of its own. Keep them
+        // inside this control's layout rather than squeezing its three native items.
+        let margin: CGFloat = 20
+        let size = bar.sizeThatFits(CGSize(width: bounds.width + margin * 2, height: bounds.height))
+        bar.frame = CGRect(x: -margin, y: 0, width: bounds.width + margin * 2, height: max(bounds.height, size.height))
     }
 }
 
