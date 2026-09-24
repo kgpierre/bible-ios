@@ -57,9 +57,9 @@ enum SearchInputError: Error, Equatable {
     case tooLong, unmatchedQuote, tooManyTerms
     var message: String {
         switch self {
-        case .tooLong: "Use 200 characters or fewer."
-        case .unmatchedQuote: "Close the quotation marks to search for a phrase."
-        case .tooManyTerms: "Use 32 search terms or fewer."
+        case .tooLong: String(localized: "Use 200 characters or fewer.")
+        case .unmatchedQuote: String(localized: "Close the quotation marks to search for a phrase.")
+        case .tooManyTerms: String(localized: "Use 32 search terms or fewer.")
         }
     }
 }

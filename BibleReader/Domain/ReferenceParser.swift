@@ -38,12 +38,12 @@ struct ReferenceParser: Sendable {
         guard let expression = try? NSRegularExpression(pattern: pattern),
               let match = expression.firstMatch(in: input, range: NSRange(input.startIndex..., in: input)),
               let nameRange = Range(match.range(at: 1), in: input) else {
-            return input.contains(":") ? .invalid("Use one reference, such as John 3:16–18.") : .text
+            return input.contains(":") ? .invalid(String(localized: "Use one reference, such as John 3:16–18.")) : .text
         }
         let name = Self.key(String(input[nameRange]))
         let suffix = Range(match.range(at: 2), in: input).map { String(input[$0]).filter { !$0.isWhitespace } }
         let targets = aliases[name] ?? []
-        if targets.count > 1 { return .invalid("That book abbreviation is ambiguous. Enter the full book name.") }
+        if targets.count > 1 { return .invalid(String(localized: "That book abbreviation is ambiguous. Enter the full book name.")) }
         if let id = targets.first { return parseSuffix(suffix, bookID: id, suggested: false) }
         guard suffix != nil else { return .text }
         // A typo is an explicit proposal, never a navigation or query rewrite.
@@ -61,25 +61,25 @@ struct ReferenceParser: Sendable {
             let candidates = distances.filter { $0.value == best }.map(\.key)
             if candidates.count == 1 { return parseSuffix(suffix, bookID: candidates[0], suggested: true) }
         }
-        return .invalid("Book not recognized. Try a full name, such as John 3:16.")
+        return .invalid(String(localized: "Book not recognized. Try a full name, such as John 3:16."))
     }
 
     private func parseSuffix(_ suffix: String?, bookID: String, suggested: Bool) -> ReferenceIntent {
-        guard let book = books[bookID] else { return .invalid("This book is unavailable in this edition.") }
+        guard let book = books[bookID] else { return .invalid(String(localized: "This book is unavailable in this edition.")) }
         var chapter = "1"
         var first: String?
         var last: String?
         if let suffix {
             let pieces = suffix.split(separator: ":", omittingEmptySubsequences: false)
             if pieces.count > 2 || suffix.contains(",") || suffix.contains(";") {
-                return .invalid("Use one chapter and one continuous verse range at a time.")
+                return .invalid(String(localized: "Use one chapter and one continuous verse range at a time."))
             }
             let versePart: String?
             if pieces.count == 1, book.chapterCount == 1 {
                 versePart = String(pieces[0])
             } else {
                 guard pieces[0].utf8.allSatisfy({ (48...57).contains($0) }), let number = Int(pieces[0]), number > 0 else {
-                    return .invalid("Enter a valid chapter number. Chapter ranges are not supported.")
+                    return .invalid(String(localized: "Enter a valid chapter number. Chapter ranges are not supported."))
                 }
                 chapter = String(number)
                 versePart = pieces.count == 2 ? String(pieces[1]) : nil
@@ -88,7 +88,7 @@ struct ReferenceParser: Sendable {
                 let range = versePart.split(separator: "-", omittingEmptySubsequences: false)
                 guard (1...2).contains(range.count), range.allSatisfy({ !$0.isEmpty && $0.utf8.allSatisfy { (48...57).contains($0) } }), let start = Int(range[0]), start > 0,
                       let end = Int(range.last!), end >= start else {
-                    return .invalid("Enter a valid verse or increasing range, such as 16–18.")
+                    return .invalid(String(localized: "Enter a valid verse or increasing range, such as 16–18."))
                 }
                 first = String(start)
                 last = String(end)

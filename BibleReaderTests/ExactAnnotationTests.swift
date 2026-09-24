@@ -23,6 +23,107 @@ struct ExactAnnotationTests {
                             parts: [try #require(SavedTextPart(verseID: item.id, text: item.text, range: range))])
     }
 
+    @Test func savedDeletionKeepsIndependentBookmarkAndRejectsStaleUndo() async throws {
+        let (store, corpus, url) = try fixture()
+        let doc = try await store.chapter(try #require(await store.chapters().first).id)
+        let excerpt = try passage(doc, range: NSRange(location: 0, length: 2))
+        _ = try await store.editExact(excerpt, color: .sage)
+        _ = try await store.editExact(excerpt, color: nil, bookmarkAction: true)
+        let highlight = try #require(await store.savedItems().first { $0.color != nil })
+        let change = try await store.deleteSaved(highlight)
+        #expect(try await store.savedItems().count == 1)
+        #expect(try await store.savedItems().first?.bookmark == true)
+        let reopened = try BibleStore(corpusURL: corpus, userURL: url)
+        #expect(try await reopened.savedItems().count == 1)
+        try await store.undoExact(change)
+        #expect(try await store.savedItems().count == 2)
+        let again = try await store.deleteSaved(highlight)
+        _ = try await store.editExact(excerpt, color: .rose)
+        await #expect(throws: StorageIssue.self) { try await store.undoExact(again) }
+        #expect(try await store.savedItems().contains { $0.color == .rose })
+        await #expect(throws: StorageIssue.self) { try await store.deleteSaved(highlight) }
+    }
+
+    @Test func groupedLegacyDeletionIsAtomicAndUndoRestoresEveryRecord() async throws {
+        let (store, _, url) = try fixture()
+        let doc = try await store.chapter(try #require(await store.chapters().first).id)
+        let ids = Array(doc.verses.prefix(2).map(\.id))
+        _ = try await store.edit(verseIDs: ids, color: .yellow, bookmark: true)
+        let row = try #require(await store.savedItems().first { $0.color != nil })
+        #expect(row.records.highlights.count == 2)
+        try sql("CREATE TRIGGER fail_delete BEFORE DELETE ON highlight WHEN OLD.verseID = '\(ids[1])' BEGIN SELECT RAISE(ABORT,'test'); END", at: url)
+        await #expect(throws: (any Error).self) { try await store.deleteSaved(row) }
+        #expect(try await store.annotations().highlights.count == 2)
+        try sql("DROP TRIGGER fail_delete", at: url)
+        let deletion = try await store.deleteSaved(row)
+        #expect(try await store.annotations().highlights.isEmpty)
+        #expect(try await store.annotations().bookmarks.count == 1)
+        try await store.undoExact(deletion)
+        #expect(try await store.annotations().highlights == deletion.legacyBefore.highlights)
+        #expect(try await store.annotations().bookmarks.count == 1)
+    }
+
+    @Test func unavailableLegacySavedRecordCanBeDeletedAndRestored() async throws {
+        let (store, _, url) = try fixture()
+        let edition = await store.editionID
+        try sql("INSERT INTO highlight VALUES('missing','\(edition)','\(edition):MISSING:1:1','blue','missing',1,1)", at: url)
+        let row = try #require(await store.savedItems().first)
+        #expect(row.unavailable)
+        let deletion = try await store.deleteSaved(row)
+        #expect(try await store.savedItems().isEmpty)
+        try await store.undoExact(deletion)
+        #expect(try await store.savedItems().first?.id == row.id)
+    }
+
+    @Test func unavailableExactQuoteSurvivesDeleteUndoAndBookmarkDeleteKeepsHighlight() async throws {
+        let (store, _, url) = try fixture()
+        let edition = await store.editionID
+        let part = try #require(SavedTextPart(verseID: "\(edition):MISSING:1:1", text: "Retained original quote", range: NSRange(location: 0, length: 8)))
+        let record = ExactAnnotation(id: "unresolved", editionID: edition, revision: "old",
+            passage: ExactPassage(chapterID: "\(edition):MISSING:1", reference: "Missing 1:1", parts: [part]),
+            color: nil, created: 1, updated: 1)
+        let hex = try JSONEncoder().encode(record).map { String(format: "%02x", $0) }.joined()
+        try sql("INSERT INTO exact_annotation VALUES('unresolved','\(edition)',X'\(hex)')", at: url)
+        let row = try #require(await store.savedItems().first)
+        #expect(row.unavailable)
+        #expect(row.text == "Retained")
+        let deleted = try await store.deleteSaved(row)
+        try await store.undoExact(deleted)
+        #expect(try await store.exactAnnotations() == [record])
+        let doc = try await store.chapter(try #require(await store.chapters().first).id)
+        let excerpt = try passage(doc, range: NSRange(location: 0, length: 2))
+        _ = try await store.editExact(excerpt, color: .blue)
+        _ = try await store.editExact(excerpt, color: nil, bookmarkAction: true)
+        let bookmark = try #require(await store.savedItems().first { $0.bookmark && !$0.unavailable })
+        _ = try await store.deleteSaved(bookmark)
+        #expect(try await store.savedItems().contains { $0.color == .blue })
+        #expect(try await store.savedItems().contains { $0.id == "unresolved" })
+    }
+
+    @Test @MainActor func savedDeleteFailureRetainsRowAndPositionThenRetries() async throws {
+        let (store, _, url) = try fixture()
+        let reader = ReaderState(makeStore: { store })
+        await reader.load()
+        let doc = try #require(reader.document)
+        await reader.saveExact(try passage(doc, range: NSRange(location: 0, length: 2)), color: .blue)
+        await reader.loadSavedItems()
+        let row = try #require(reader.savedItems.first)
+        let anchor = reader.anchor
+        try sql("CREATE TRIGGER fail_delete BEFORE DELETE ON exact_annotation BEGIN SELECT RAISE(ABORT,'test'); END", at: url)
+        await reader.deleteSaved(row)
+        #expect(reader.savedItems.count == 1)
+        #expect(reader.canRetry)
+        try sql("DROP TRIGGER fail_delete", at: url)
+        await reader.retry()
+        #expect(reader.savedItems.isEmpty)
+        #expect(reader.canUndo)
+        await reader.undo()
+        await reader.loadSavedItems()
+        #expect(reader.savedItems.first?.id == row.id)
+        #expect(reader.chapterID == doc.id)
+        #expect(reader.anchor == anchor)
+    }
+
     @Test func unicodeBoundariesAndContextRecovery() throws {
         let text = "A e\u{301} 👨‍👩‍👧‍👦 end"
         let emoji = (text as NSString).range(of: "👨‍👩‍👧‍👦")

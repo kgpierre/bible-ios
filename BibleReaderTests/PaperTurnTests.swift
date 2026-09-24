@@ -1,8 +1,25 @@
 import Foundation
 import Testing
+import UIKit
 @testable import BibleReader
 
 struct PaperTurnTests {
+    @Test @MainActor func inactiveReaderStillSuppliesAPageForUIKitAppearance() async throws {
+        let document = try #require(await PrototypeLibrary.load().first)
+        let state = ReaderState()
+        state.chapters = [document]
+        state.chapterID = document.id
+        let view = PaperChapterView(document: document, state: state, wide: false, isActive: false)
+        let coordinator = view.makeCoordinator()
+        let controller = ReaderCurlController(transitionStyle: .pageCurl, navigationOrientation: .horizontal,
+            options: [.spineLocation: UIPageViewController.SpineLocation.min.rawValue])
+        coordinator.controller = controller
+        coordinator.update(view)
+        #expect(controller.viewControllers?.count == 1)
+        #expect(!coordinator.turnGesture.isEnabled)
+        #expect(state.document?.id == document.id)
+    }
+
     @Test @MainActor func preparedCancelledAndStaleTurnsPreserveReaderAndAnnotations() async throws {
         let corpus = try #require(Bundle.main.url(forResource: "BibleCorpus", withExtension: "sqlite"))
         let user = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("User.sqlite")
@@ -53,16 +70,22 @@ struct ChapterSwipeIntentTests {
             #expect(intent.completed(width: 400, duration: 0.4) == nil)
         }
     }
+    @Test func shorterSlowerSwipesAllowNaturalVerticalDrift() {
+        var intent = ChapterSwipeIntent()
+        intent.update(x: -25, y: 8)
+        intent.update(x: -60, y: 25)
+        #expect(intent.completed(width: 400, duration: 1.2) == 1)
+    }
     @Test func deliberateHorizontalTurnsButShortHeldAndCurvedDragsDoNot() {
         var intent = ChapterSwipeIntent()
         intent.update(x: -160, y: 8)
         #expect(intent.completed(width: 400, duration: 0.4) == 1)
-        #expect(intent.completed(width: 400, duration: 1) == nil)
+        #expect(intent.completed(width: 400, duration: 1.6) == nil)
         intent.update(x: 160, y: 4)
         #expect(intent.completed(width: 400, duration: 0.4) == -1)
         intent.update(x: 20, y: 1)
         #expect(intent.completed(width: 400, duration: 0.4) == nil)
-        intent.update(x: -180, y: 40)
+        intent.update(x: -30, y: 40)
         #expect(intent.completed(width: 400, duration: 0.4) == nil)
     }
 }

@@ -1,12 +1,20 @@
 import Foundation
+import Dispatch
 import GRDB
 import os
 
 /// Owns isolated database access. The bundle is never copied into writable user storage.
 actor BibleStore {
+    // Synchronous GRDB transactions must not occupy Swift's cooperative executor.
+    // Search suspends on its independent connection, allowing position/chapter work to proceed.
+    private nonisolated let executor = DispatchSerialQueue(label: "BibleReader.storage", qos: .userInitiated)
+    nonisolated var unownedExecutor: UnownedSerialExecutor { executor.asUnownedSerialExecutor() }
+
     let editionID: String
     let revision: String
     private let corpus: DatabaseQueue
+    private let searchCorpus: DatabaseQueue
+    private var searchCount: (expression: String, total: Int)?
     private let user: DatabaseQueue
     private let userURL: URL
     private var cachedReferenceParser: ReferenceParser?
@@ -65,6 +73,7 @@ actor BibleStore {
         var config = Configuration()
         config.readonly = true
         corpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
+        searchCorpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
         let identity = try corpus.read { db -> (String, String) in
             guard try Int.fetchOne(db, sql: "PRAGMA user_version") == 1,
                   let row = try Row.fetchOne(db, sql: "SELECT * FROM edition"),
@@ -116,7 +125,7 @@ actor BibleStore {
 
     func lookupReference(_ input: String) throws -> SearchResponse {
         switch try parser().parse(input) {
-        case .text: return input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .empty : .invalid("Enter a reference such as John 3:16 or Jude 5.")
+        case .text: return input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .empty : .invalid(String(localized: "Enter a reference such as John 3:16 or Jude 5."))
         case .invalid(let message): return .invalid(message)
         case .reference(let parsed): return try resolve(parsed, suggested: false)
         case .suggestion(let parsed): return try resolve(parsed, suggested: true)
@@ -137,13 +146,13 @@ actor BibleStore {
         let chapterID = try corpus.read { db in
             try String.fetchOne(db, sql: "SELECT id FROM chapter WHERE bookID=? AND label=?", arguments: [parsed.bookID,parsed.chapter])
         }
-        guard let chapterID else { return .invalid("That chapter is not in this book. Choose a chapter from Books.") }
+        guard let chapterID else { return .invalid(String(localized: "That chapter is not in this book. Choose a chapter from Books.")) }
         let document = try chapter(chapterID)
         var verses: [ChapterDocument.Verse] = []
         if let first = parsed.firstVerse, let last = parsed.lastVerse {
             guard let start = document.verses.firstIndex(where: { $0.label == first }),
                   let end = document.verses.firstIndex(where: { $0.label == last }), start <= end else {
-                return .invalid("That verse range is not in \(document.reference). This chapter has \(document.verses.count) source verses.")
+                return .invalid(String(localized: "That verse range is not in \(document.reference). This chapter has \(document.verses.count) source verses."))
             }
             verses = Array(document.verses[start...end])
         }
@@ -168,9 +177,10 @@ actor BibleStore {
             guard let parsed = try TextSearchQuery(input) else { return .empty }
             query = parsed
         } catch let error as SearchInputError { return .invalid(error.message) }
-        guard offset >= 0, offset <= 100_000 else { return .invalid("This result page is unavailable. Search again.") }
-        return try await corpus.read { db in
-            let total = try Int.fetchOne(db, sql: "SELECT count(*) FROM verse_search WHERE verse_search MATCH ?", arguments: [query.expression]) ?? 0
+        guard offset >= 0, offset <= 100_000 else { return .invalid(String(localized: "This result page is unavailable. Search again.")) }
+        let knownTotal = offset > 0 && searchCount?.expression == query.expression ? searchCount?.total : nil
+        let page = try await searchCorpus.read { db in
+            let total = try knownTotal ?? Int.fetchOne(db, sql: "SELECT count(*) FROM verse_search WHERE verse_search MATCH ?", arguments: [query.expression]) ?? 0
             let rows = try Row.fetchAll(db, sql: """
                 SELECT verse.id, verse.chapterID, verse.label AS verseLabel, verse.text,
                        chapter.label AS chapterLabel, book.name,
@@ -185,8 +195,10 @@ actor BibleStore {
                 return SearchHit(id: row["id"], chapterID: row["chapterID"], reference: "\(name) \(chapter):\(verse)",
                                  excerpt: SearchExcerpt.fragments(row["excerpt"], source: row["text"]))
             }
-            return .results(SearchPage(hits: hits,total: total))
+            return SearchPage(hits: hits,total: total)
         }
+        searchCount = (query.expression, page.total)
+        return .results(page)
     }
 
     func editionNotice() throws -> String {
@@ -229,8 +241,8 @@ actor BibleStore {
             return cached
         }
         let document = try corpus.read { db in
-            guard let payload = try String.fetchOne(db, sql: "SELECT payload FROM chapter_document WHERE chapterID=?", arguments: [id]) else { throw StorageIssue.invalidPassage }
-            return try JSONDecoder().decode(ChapterDocument.self, from: Data(payload.utf8))
+            guard let payload = try Data.fetchOne(db, sql: "SELECT CAST(payload AS BLOB) FROM chapter_document WHERE chapterID=?", arguments: [id]) else { throw StorageIssue.invalidPassage }
+            return try decoder.decode(ChapterDocument.self, from: payload)
         }
         #if DEBUG
         chapterDecodeCount += 1
@@ -270,7 +282,7 @@ actor BibleStore {
         let edition = editionID
         return try user.read { db in
             try Data.fetchOne(db, sql: "SELECT payload FROM reading_position WHERE editionID=?", arguments: [edition]).map {
-                try JSONDecoder().decode(StoredPosition.self, from: $0)
+                try decoder.decode(StoredPosition.self, from: $0)
             }
         }
     }
@@ -326,7 +338,7 @@ actor BibleStore {
 
     private func validate(_ ids: [String]) throws {
         guard let first = ids.first else { throw StorageIssue.invalidPassage }
-        let chapterID = first.split(separator: ":").dropLast().joined(separator: ":")
+        let chapterID = ScriptureID.chapter(containing: first)
         let verses = try chapter(chapterID).verses.map(\.id)
         guard let start = verses.firstIndex(of: first), start + ids.count <= verses.count,
               Array(verses[start..<start + ids.count]) == ids else { throw StorageIssue.invalidPassage }
@@ -358,7 +370,7 @@ actor BibleStore {
             let after = try Self.snapshot(db, edition: edition, ids: verseIDs)
             return AnnotationChange(verseIDs: verseIDs, before: before, after: after)
         }
-        dirtySavedChapters.formUnion(verseIDs.map { $0.split(separator: ":").dropLast().joined(separator: ":") })
+        dirtySavedChapters.formUnion(verseIDs.map { ScriptureID.chapter(containing: $0) })
         return change
     }
 
@@ -378,7 +390,7 @@ actor BibleStore {
                 try db.execute(sql: "INSERT INTO bookmark VALUES(?,?,?,?,?,?)", arguments: [b.id,edition,b.startID,b.endID,b.created,b.updated])
             }
         }
-        dirtySavedChapters.formUnion(change.verseIDs.map { $0.split(separator: ":").dropLast().joined(separator: ":") })
+        dirtySavedChapters.formUnion(change.verseIDs.map { ScriptureID.chapter(containing: $0) })
     }
 
     func exactAnnotations() throws -> [ExactAnnotation] {
@@ -428,7 +440,7 @@ actor BibleStore {
     func undoExact(_ change: ExactAnnotationChange) throws {
         let edition = editionID
         try user.write { db in
-            let chapterID = change.verseIDs[0].split(separator: ":").dropLast().joined(separator: ":")
+            let chapterID = ScriptureID.chapter(containing: change.verseIDs[0])
             let current = Self.exactScope(try cachedExact(db)[chapterID] ?? [], ids: change.verseIDs,
                                           recordIDs: Set((change.before + change.after).map(\.id)))
             let legacy = try Self.snapshot(db, edition: edition, ids: change.verseIDs)
@@ -447,10 +459,47 @@ actor BibleStore {
                     arguments: [bookmark.id, edition, bookmark.startID, bookmark.endID, bookmark.created, bookmark.updated])
             }
         }
-        let chapterID = change.verseIDs[0].split(separator: ":").dropLast().joined(separator: ":")
+        let chapterID = ScriptureID.chapter(containing: change.verseIDs[0])
         replaceCachedExact(chapterID: chapterID, removing: change.after, inserting: change.before)
     }
 
+
+    /// Delete only persisted records represented by a displayed row, even if its source is unavailable.
+    func deleteSaved(_ item: SavedItem) throws -> ExactAnnotationChange {
+        let selected = item.records
+        var seen = Set<String>()
+        let ids = (selected.exact.flatMap { $0.passage.verseIDs } + selected.highlights.map(\.verseID) +
+                   selected.bookmarks.flatMap { [$0.startID, $0.endID] }).filter { seen.insert($0).inserted }
+        guard !ids.isEmpty,
+              ids.allSatisfy({ ScriptureID.chapter(containing: $0) == item.chapterID }) else {
+            throw StorageIssue.invalidPassage
+        }
+        let change = try user.write { db in
+            let before = Self.exactScope(try cachedExact(db)[item.chapterID] ?? [], ids: ids)
+            let legacy = try Self.snapshot(db, edition: editionID, ids: ids)
+            guard selected.exact.allSatisfy({ before.contains($0) }),
+                  selected.highlights.allSatisfy({ legacy.highlights.contains($0) }),
+                  selected.bookmarks.allSatisfy({ legacy.bookmarks.contains($0) }) else { throw StorageIssue.undoConflict }
+            let exactIDs = Set(selected.exact.map(\.id))
+            let highlightIDs = Set(selected.highlights.map(\.id))
+            let bookmarkIDs = Set(selected.bookmarks.map(\.id))
+            for record in selected.exact {
+                try db.execute(sql: "DELETE FROM exact_annotation WHERE editionID=? AND id=?", arguments: [editionID, record.id])
+            }
+            for record in selected.highlights {
+                try db.execute(sql: "DELETE FROM highlight WHERE editionID=? AND id=?", arguments: [editionID, record.id])
+            }
+            for record in selected.bookmarks {
+                try db.execute(sql: "DELETE FROM bookmark WHERE editionID=? AND id=?", arguments: [editionID, record.id])
+            }
+            return ExactAnnotationChange(verseIDs: ids, before: before,
+                after: before.filter { !exactIDs.contains($0.id) }, legacyBefore: legacy,
+                legacyAfter: AnnotationSnapshot(highlights: legacy.highlights.filter { !highlightIDs.contains($0.id) },
+                                                bookmarks: legacy.bookmarks.filter { !bookmarkIDs.contains($0.id) }))
+        }
+        replaceCachedExact(chapterID: item.chapterID, removing: change.before, inserting: change.after)
+        return change
+    }
 
     func savedItems() throws -> [SavedItem] {
         let interval = ReaderPerformance.signposter.beginInterval("Saved resolution", id: ReaderPerformance.signposter.makeSignpostID())
@@ -465,24 +514,39 @@ actor BibleStore {
             return (try Self.snapshot(db, edition: edition, chapters: rebuilding), records, rebuilding)
         }
         guard let (snapshot, exactRecords, rebuilding) = data else { return cachedSavedItems ?? [] }
-        // Fetch chapter payloads in a batch, then resolve all saved passages in memory.
-        let verseIDs = snapshot.highlights.map(\.verseID) + snapshot.bookmarks.flatMap { [$0.startID,$0.endID] }
-        let chapterIDs = Array(Set(verseIDs.map { $0.split(separator: ":").dropLast().joined(separator: ":") } + exactRecords.map { $0.passage.chapterID })).sorted()
-        var documents = chapterCache.filter { chapterIDs.contains($0.key) }
-        let missing = chapterIDs.filter { documents[$0] == nil }
-        for start in stride(from: 0, to: missing.count, by: 200) {
+        // Saved needs canonical verse text and order, not chapter runs, notes, or typography.
+        let verseIDs = snapshot.highlights.map(\.verseID) + snapshot.bookmarks.flatMap { [$0.startID, $0.endID] }
+        let chapterIDs = Array(Set(verseIDs.map { ScriptureID.chapter(containing: $0) } + exactRecords.map { $0.passage.chapterID })).sorted()
+        struct Verse {
+            let id: String
+            let label: String
+            let text: String
+        }
+        struct Chapter {
+            let reference: String
+            var verses: [Verse] = []
+            var index: [String: Int] = [:]
+        }
+        var documents: [String: Chapter] = [:]
+        for start in stride(from: 0, to: chapterIDs.count, by: 200) {
             try Task.checkCancellation()
-            let chunk = Array(missing[start..<min(start+200,missing.count)])
+            let chunk = Array(chapterIDs[start..<min(start + 200, chapterIDs.count)])
             let placeholders = Array(repeating: "?", count: chunk.count).joined(separator: ",")
-            let payloads = try corpus.read { db in
-                try String.fetchAll(db, sql: "SELECT payload FROM chapter_document WHERE chapterID IN (\(placeholders))", arguments: StatementArguments(chunk))
+            let rows = try corpus.read { db in
+                try Row.fetchAll(db, sql: """
+                    SELECT verse.id, verse.chapterID, verse.label, verse.text,
+                           book.name || ' ' || chapter.label AS reference
+                    FROM verse JOIN chapter ON chapter.id=verse.chapterID JOIN book ON book.id=chapter.bookID
+                    WHERE verse.chapterID IN (\(placeholders)) ORDER BY verse.ordinal
+                    """, arguments: StatementArguments(chunk))
             }
-            for payload in payloads {
-                let doc = try JSONDecoder().decode(ChapterDocument.self, from: Data(payload.utf8))
-                documents[doc.id] = doc
-                #if DEBUG
-                savedChapterDecodeCount += 1
-                #endif
+            for row in rows {
+                let chapterID: String = row["chapterID"]
+                if documents[chapterID] == nil { documents[chapterID] = Chapter(reference: row["reference"]) }
+                let verse = Verse(id: row["id"], label: row["label"], text: row["text"])
+                let index = documents[chapterID]?.verses.count ?? 0
+                documents[chapterID]?.index[verse.id] = index
+                documents[chapterID]?.verses.append(verse)
             }
         }
         var items: [SavedItem] = []
@@ -491,13 +555,15 @@ actor BibleStore {
         for chapterID in chapterIDs {
             try Task.checkCancellation()
             guard let doc = documents[chapterID] else { continue }
-            var group: [(ChapterDocument.Verse, HighlightRecord)] = []
+            var group: [(Verse, HighlightRecord)] = []
             func finishGroup() {
                 guard let first = group.first, let last = group.last else { return }
                 let reference = "\(doc.reference):\(first.0.label)\(first.0.id == last.0.id ? "" : "–" + last.0.label)"
                 items.append(SavedItem(id: first.1.id, chapterID: chapterID, verseID: first.0.id,
                                        reference: reference, text: group.map { $0.0.text }.joined(separator: " "),
-                                       color: first.1.color, bookmark: false, updated: group.map { $0.1.updated }.max() ?? 0))
+                                       color: first.1.color, bookmark: false, updated: group.map { $0.1.updated }.max() ?? 0,
+                                       verseOrder: doc.index[first.0.id],
+                                       records: SavedRecords(highlights: group.map { $0.1 })))
                 group.removeAll()
             }
             for verse in doc.verses {
@@ -509,36 +575,39 @@ actor BibleStore {
             finishGroup()
         }
         for h in snapshot.highlights where !resolved.contains(h.verseID) {
-            items.append(SavedItem(id: h.id, chapterID: h.verseID.split(separator: ":").dropLast().joined(separator: ":"),
-                                   verseID: h.verseID, reference: h.verseID, text: "This saved reference is unavailable in the installed edition.",
-                                   color: h.color, bookmark: false, updated: h.updated))
+            items.append(SavedItem(id: h.id, chapterID: ScriptureID.chapter(containing: h.verseID),
+                                   verseID: h.verseID, reference: h.verseID, text: String(localized: "This saved reference is unavailable in the installed edition."),
+                                   color: h.color, bookmark: false, updated: h.updated, unavailable: true, records: SavedRecords(highlights: [h])))
         }
         for b in snapshot.bookmarks {
-            let chapterID = b.startID.split(separator: ":").dropLast().joined(separator: ":")
+            let chapterID = ScriptureID.chapter(containing: b.startID)
             let doc = documents[chapterID]
             let verses = doc?.verses ?? []
-            let start = verses.firstIndex { $0.id == b.startID }
-            let end = verses.firstIndex { $0.id == b.endID }
-            let passage = if let start, let end, start <= end { Array(verses[start...end]) } else { [ChapterDocument.Verse]() }
+            let start = doc?.index[b.startID]
+            let end = doc?.index[b.endID]
+            let passage = if let start, let end, start <= end { Array(verses[start...end]) } else { [Verse]() }
             let reference = if let first = passage.first, let last = passage.last { "\(doc!.reference):\(first.label)\(first.id == last.id ? "" : "–" + last.label)" } else { b.startID }
             items.append(SavedItem(id: b.id, chapterID: chapterID, verseID: b.startID, reference: reference,
-                                   text: passage.isEmpty ? "This saved reference is unavailable in the installed edition." : passage.map(\.text).joined(separator: " "),
-                                   color: nil, bookmark: true, updated: b.updated))
+                                   text: passage.isEmpty ? String(localized: "This saved reference is unavailable in the installed edition.") : passage.map(\.text).joined(separator: " "),
+                                   color: nil, bookmark: true, updated: b.updated, unavailable: passage.isEmpty, verseOrder: start, records: SavedRecords(bookmarks: [b])))
         }
         for record in exactRecords {
             guard let first = record.passage.parts.first else { continue }
-            let verses = documents[record.passage.chapterID]?.verses ?? []
+            let doc = documents[record.passage.chapterID]
+            let verses = doc?.verses ?? []
             let parts = record.passage.parts.compactMap { part -> SavedTextPart? in
-                guard let text = verses.first(where: { $0.id == part.verseID })?.text,
-                      let range = part.resolvedRange(in: text) else { return nil }
+                guard let index = doc?.index[part.verseID] else { return nil }
+                let text = verses[index].text
+                guard let range = part.resolvedRange(in: text) else { return nil }
                 return SavedTextPart(verseID: part.verseID, text: text, range: range)
             }
             let unavailable = parts.count != record.passage.parts.count
             var resolved = record.passage
             resolved.parts = parts
             items.append(SavedItem(id: record.id, chapterID: record.passage.chapterID, verseID: first.verseID,
-                reference: record.passage.reference + " (excerpt)", text: record.passage.text,
-                color: record.color, bookmark: record.isBookmark, updated: record.updated, passage: unavailable ? nil : resolved, unavailable: unavailable))
+                reference: String(localized: "\(record.passage.reference) (excerpt)"), text: record.passage.text,
+                color: record.color, bookmark: record.isBookmark, updated: record.updated, passage: unavailable ? nil : resolved, unavailable: unavailable,
+                verseOrder: doc?.index[first.verseID], records: SavedRecords(exact: [record])))
         }
         if let rebuilding { items.append(contentsOf: (cachedSavedItems ?? []).filter { !rebuilding.contains($0.chapterID) }) }
         let sorted = items.sorted { $0.updated == $1.updated ? $0.id < $1.id : $0.updated > $1.updated }

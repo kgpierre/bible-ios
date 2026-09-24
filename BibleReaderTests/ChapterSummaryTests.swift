@@ -7,7 +7,9 @@ private actor SummaryFake: ChapterSummaryModel {
     let unavailable: String?
     var prompts: [String] = []
     var contextFailures: Int
-    init(unavailable: String? = nil, contextFailures: Int = 0) {
+    let refuses: Bool
+    init(unavailable: String? = nil, contextFailures: Int = 0, refuses: Bool = false) {
+        self.refuses = refuses
         self.unavailable = unavailable
         self.contextFailures = contextFailures
     }
@@ -17,6 +19,7 @@ private actor SummaryFake: ChapterSummaryModel {
     }
     func generate(instructions: String, prompt: String) async throws -> String {
         prompts.append(prompt)
+        if refuses { throw ChapterSummaryError.refused }
         if contextFailures > 0 { contextFailures -= 1; throw ChapterSummaryError.contextLimit }
         return "Synthetic test overview."
     }
@@ -32,10 +35,46 @@ private actor DelayedSummaryFake: ChapterSummaryModel {
     func finish() { pending?.resume(returning: "Synthetic late response."); pending = nil }
 }
 
+private actor StreamingSummaryFake: ChapterSummaryModel {
+    var pending: CheckedContinuation<Void, Never>?
+    func unavailableReason() -> String? { nil }
+    func generate(instructions: String, prompt: String) async throws -> String { "Synthetic final overview." }
+    func stream(instructions: String, prompt: String, onPartial: @escaping @Sendable (String) async -> Void) async throws -> String {
+        await onPartial("Synthetic partial overview.")
+        await withCheckedContinuation { pending = $0 }
+        await onPartial("Synthetic late draft.")
+        return "Synthetic final overview."
+    }
+    func isPending() -> Bool { pending != nil }
+    func finish() { pending?.resume(); pending = nil }
+}
+
 struct ChapterSummaryTests {
     private func chapter(_ text: String) -> ChapterDocument {
         ChapterDocument(id: "synthetic:1", bookID: "synthetic", bookName: "Synthetic", eyebrow: "TEST", label: "1",
                         editionLabel: "Test", verses: [.init(id: "synthetic:1:1", label: "1", runs: [.init(text: text, italic: false)], structure: "p", headings: [], notes: [])])
+    }
+
+    @Test @MainActor func streamsDraftAndRejectsUpdatesAfterCancellation() async {
+        let model = StreamingSummaryFake()
+        let state = ChapterSummaryState(chapter: chapter("Synthetic content"), model: model)
+        let task = Task { await state.run() }
+        while !(await model.isPending()) { await Task.yield() }
+        #expect(state.status == .loading)
+        #expect(state.draft == "Synthetic partial overview.")
+        state.cancel()
+        task.cancel()
+        await model.finish()
+        await task.value
+        #expect(state.status == .cancelled)
+        #expect(state.draft != "Synthetic late draft.")
+    }
+
+    @Test @MainActor func refusalRemainsAnExplicitFailure() async {
+        let state = ChapterSummaryState(chapter: chapter("Synthetic content"), model: SummaryFake(refuses: true))
+        await state.run()
+        #expect(state.status == .failed(ChapterSummaryError.refused.message))
+        #expect(state.exchanges.isEmpty)
     }
 
     @Test @MainActor func supportedSymbolExists() {

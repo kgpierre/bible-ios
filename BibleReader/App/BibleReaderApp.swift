@@ -6,5 +6,6 @@ struct BibleReaderApp: App {
         WindowGroup {
             AppRootView()
         }
+        .commands { ReaderCommands() }
     }
 }

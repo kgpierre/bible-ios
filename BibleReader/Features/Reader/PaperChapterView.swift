@@ -15,8 +15,10 @@ struct PaperChapterView: UIViewControllerRepresentable {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicType
 
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+
     private var animated: Bool {
-        !reduceMotion && !reduceTransparency && contrast != .increased && !UIAccessibility.isVoiceOverRunning
+        !reduceMotion && !reduceTransparency && contrast != .increased && !voiceOver
     }
 
     func makeCoordinator() -> Coordinator { Coordinator(state: state) }
@@ -81,7 +83,16 @@ struct PaperChapterView: UIViewControllerRepresentable {
                 cancelTurn()
             }
             if previous?.isActive == false, configuration.isActive { active?.textView.restoreSelectionFocus() }
-            guard configuration.isActive else { turnGesture.isEnabled = false; return }
+            guard configuration.isActive else {
+                turnGesture.isEnabled = false
+                // Compact Saved still mounts its hidden reader after an iPad resize.
+                // UIKit requires a page before appearance, even when no reader gestures are active.
+                if active == nil {
+                    controller.setViewControllers([page(for: configuration.document, live: false)],
+                                                  direction: .forward, animated: false)
+                }
+                return
+            }
             // External navigation/reflow wins over an in-flight gesture; its completion becomes stale.
             let interrupted = turning && (typographyChanged || state.isNavigating || sourceID != state.chapterID || turnRevision != state.navigationRevision ||
                 previous?.scheme != configuration.scheme || previous?.dynamicType != configuration.dynamicType ||
@@ -150,7 +161,7 @@ struct PaperChapterView: UIViewControllerRepresentable {
             // horizontal gesture can request a turn; the native curl remains the transition.
             controller.dataSource = nil
             turnGesture.isEnabled = configuration.isActive && configuration.scenePhase == .active &&
-                configuration.animated && active?.textView.selectedRange.length == 0 && !state.isSaving && !state.isNavigating
+                active?.textView.selectedRange.length == 0 && !state.isSaving && !state.isNavigating
         }
 
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
@@ -169,7 +180,9 @@ struct PaperChapterView: UIViewControllerRepresentable {
         }
 
         func cancelTurn() {
-            active?.textView.capturePosition()
+            // Passive reflow preserves the last user-established anchor. Recapturing after
+            // each sidebar/rotation step can walk to a preceding, partially visible verse.
+            if let text = active?.textView, text.isDragging || text.isDecelerating { text.capturePosition() }
             generation = UUID()
             turning = false
             sourceID = nil
@@ -213,15 +226,18 @@ struct PaperChapterView: UIViewControllerRepresentable {
 @MainActor final class ChapterPageController: UIViewController {
     let document: ChapterDocument
     let textView = ChapterTextView()
-    private let preview = ReaderState()
+    private lazy var preview: ReaderState = {
+        let state = ReaderState()
+        state.chapters = [document]
+        state.chapterID = document.id
+        state.annotationEditingEnabled = false
+        return state
+    }()
     private var previewAnnotationsRevision = -1
 
     init(document: ChapterDocument) {
         self.document = document
         super.init(nibName: nil, bundle: nil)
-        preview.chapters = [document]
-        preview.chapterID = document.id
-        preview.annotationEditingEnabled = false
     }
     required init?(coder: NSCoder) { fatalError("Use init(document:)") }
     override func loadView() { view = textView }
@@ -299,7 +315,7 @@ struct PaperChapterView: UIViewControllerRepresentable {
         guard let touch = touches.first, let view, state == .possible else { return }
         let point = touch.location(in: view)
         intent.update(x: point.x - origin.x, y: point.y - origin.y)
-        if intent.rejected || touch.timestamp - beganAt > 0.8 { state = .failed }
+        if intent.rejected || touch.timestamp - beganAt > 1.5 { state = .failed }
     }
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         guard let touch = touches.first, let view, state == .possible else { return }
@@ -323,11 +339,11 @@ struct ChapterSwipeIntent {
     mutating func update(x: CGFloat, y: CGFloat) {
         self.x = x; self.y = y
         // Once the finger shows scroll intent, later horizontal drift cannot turn a page.
-        if abs(y) > 24 || (abs(y) >= 8 && abs(x) < abs(y) * 3) { rejected = true }
+        if abs(y) >= 10 && abs(x) < abs(y) * 1.8 { rejected = true }
     }
     func completed(width: CGFloat, duration: TimeInterval) -> Int? {
-        guard !rejected, duration <= 0.8, abs(x) >= max(80, min(120, width * 0.2)),
-              abs(x) >= abs(y) * 3 else { return nil }
+        guard !rejected, duration <= 1.5, abs(x) >= max(44, min(64, width * 0.12)),
+              abs(x) >= abs(y) * 2 else { return nil }
         return x < 0 ? 1 : -1
     }
 }

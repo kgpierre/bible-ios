@@ -17,7 +17,8 @@ struct ChapterSummaryView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        if questionsShown { questions } else { summary }
+                        summary
+                        if questionsShown { questions }
                         Color.clear.frame(height: 1).id("latestQuestion")
                     }
                     .foregroundStyle(Color(.readingPrimary))
@@ -56,15 +57,6 @@ struct ChapterSummaryView: View {
             }
             .accessibilityElement(children: .combine)
         }
-        ToolbarItem(placement: .topBarLeading) {
-            if questionsShown {
-                Button { questionFocused = false; questionsShown = false } label: { Image(systemName: "chevron.left") }
-                    .accessibilityLabel("Back to summary").accessibilityIdentifier("backToSummary")
-            } else {
-                Image(systemName: "apple.intelligence").foregroundStyle(Color(.accent))
-                    .accessibilityLabel("On-device Apple Intelligence")
-            }
-        }
         ToolbarItem(placement: .confirmationAction) {
             Button("Done") { generation?.cancel(); state.cancel(); dismiss() }
                 .accessibilityIdentifier("chapterSummaryDone")
@@ -91,10 +83,7 @@ struct ChapterSummaryView: View {
                 .font(.footnote).foregroundStyle(.secondary)
                 .padding(14).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(.readingSecondary).opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-            if !state.exchanges.isEmpty {
-                Button("Return to questions") { questionsShown = true }
-                    .frame(minHeight: 44)
-            }
+
         }
     }
 
@@ -115,7 +104,7 @@ struct ChapterSummaryView: View {
             }
             if let message = state.questionMessage {
                 questionBubble(state.question).id("questionError")
-                Text(message).readerTypography(.verse).lineSpacing(5)
+                Text(message).font(.body).lineSpacing(4)
                     .accessibilityIdentifier("bookQuestionStatus").accessibilityFocused($statusFocused)
             }
             Text("Questions stay within \(state.chapter.bookName). AI explanations are not Scripture. Compare them with the text.")
@@ -134,14 +123,14 @@ struct ChapterSummaryView: View {
     private func exchangeView(_ exchange: ChapterSummaryState.Exchange) -> some View {
         VStack(alignment: .leading, spacing: 22) {
             questionBubble(exchange.question)
-            Text(exchange.answer.text).readerTypography(.verse).lineSpacing(6)
+            Text(exchange.answer.text).font(.body).lineSpacing(4)
                 .textSelection(.enabled).accessibilityIdentifier("bookAnswerText")
             if exchange.answer.showsSourceText {
                 Text("Verse quotations · \(state.chapter.editionLabel)").font(.footnote).foregroundStyle(.secondary)
                 ForEach(exchange.answer.sources) { source in
                     VStack(alignment: .leading, spacing: 12) {
                         sourceButtons([source])
-                        Text(source.text).readerTypography(.verse).lineSpacing(6).textSelection(.enabled)
+                        Text(source.text).font(.body).lineSpacing(4).textSelection(.enabled)
                     }
                 }
             } else {
@@ -169,6 +158,11 @@ struct ChapterSummaryView: View {
     @ViewBuilder private var overview: some View {
         switch state.status {
         case .idle, .loading:
+            if !state.draft.isEmpty {
+                Text(state.draft).readerTypography(.verse).lineSpacing(6)
+                    .accessibilityIdentifier("chapterSummaryDraft")
+                Text("Draft overview · still generating and checking").font(.caption).foregroundStyle(.secondary)
+            }
             ProgressView("Summarizing this chapter…")
             Button("Cancel summary") { generation?.cancel(); state.cancel() }
         case .complete(let text):
@@ -176,10 +170,14 @@ struct ChapterSummaryView: View {
                 .textSelection(.enabled).accessibilityIdentifier("chapterSummaryText")
         case .unavailable(let message), .failed(let message):
             Text(message).readerTypography(.verse).foregroundStyle(.secondary).accessibilityIdentifier("chapterSummaryStatus")
-            Button("Try again") { start() }.disabled(state.isAnswering).accessibilityIdentifier("retryChapterSummary")
+            Button("Try again", systemImage: "arrow.clockwise") { start() }
+                .buttonStyle(.borderedProminent).tint(Color(.accent)).controlSize(.large)
+                .disabled(state.isAnswering).accessibilityIdentifier("retryChapterSummary")
         case .cancelled:
             Text("Summary cancelled.").foregroundStyle(.secondary)
-            Button("Try again") { start() }.disabled(state.isAnswering)
+            Button("Try again", systemImage: "arrow.clockwise") { start() }
+                .buttonStyle(.borderedProminent).tint(Color(.accent)).controlSize(.large)
+                .disabled(state.isAnswering)
         }
     }
 

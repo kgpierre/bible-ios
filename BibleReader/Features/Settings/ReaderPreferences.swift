@@ -4,14 +4,20 @@ import Observation
 enum ReadingFace: String, Codable, CaseIterable, Identifiable, Sendable {
     case serif, sans
     var id: Self { self }
-    var title: String { self == .serif ? "Serif" : "System Sans" }
+    var title: String { self == .serif ? String(localized: "Serif") : String(localized: "System Sans") }
 }
 
 enum ReadingSpacing: String, Codable, CaseIterable, Identifiable, Sendable {
     case compact, standard, relaxed
     var id: Self { self }
     var extraPoints: Double { switch self { case .compact: -2; case .standard: 0; case .relaxed: 4 } }
-    var title: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .compact: String(localized: "Compact")
+        case .standard: String(localized: "Standard")
+        case .relaxed: String(localized: "Relaxed")
+        }
+    }
 }
 
 struct ReadingTypography: Codable, Equatable, Sendable {

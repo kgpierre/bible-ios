@@ -28,6 +28,58 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
+    func testSavedFiltersDeletionUndoAndReturnToReader() throws {
+        let app = testApplication()
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
+        first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15, dy: 8)).press(forDuration: 0.4)
+        XCTAssertTrue(app.menuItems["Yellow"].waitForExistence(timeout: 5))
+        app.menuItems["Yellow"].tap()
+        app.buttons["destination-saved"].tap()
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "savedItem-")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        app.buttons["savedFilter"].tap()
+        app.buttons["Bookmarks"].tap()
+        XCTAssertTrue(app.staticTexts["No saved bookmarks."].waitForExistence(timeout: 5))
+        app.buttons["savedFilter"].tap()
+        app.buttons["Highlights"].tap()
+        app.buttons["savedSort"].tap()
+        app.buttons["Bible order"].tap()
+        row.tap()
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.buttons["savedFilter"].label.contains("Highlights"))
+        row.swipeLeft()
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
+        app.buttons["savedUndo"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        capture(app, name: "Saved — filters, Bible order, and restored deletion")
+    }
+
+    @MainActor
+    func testSavedFiltersAtLargestTypeInDarkAppearance() throws {
+        let app = testApplication()
+        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        app.buttons["Dark"].tap()
+        app.buttons["appearanceDoneButton"].tap()
+        app.buttons["destination-saved"].tap()
+        XCTAssertTrue(app.buttons["savedFilter"].waitForExistence(timeout: 5))
+        app.buttons["savedFilter"].tap()
+        app.buttons["Bookmarks"].tap()
+        app.buttons["savedSort"].tap()
+        app.buttons["Bible order"].tap()
+        XCTAssertTrue(app.buttons["savedFilter"].label.contains("Bookmarks"))
+        XCTAssertTrue(app.buttons["savedSort"].label.contains("Bible order"))
+        capture(app, name: "Saved — largest type and dark appearance")
+    }
+
+    @MainActor
     func testNativeSelectionMenu() throws {
         let app = testApplication()
         app.launch()
@@ -179,13 +231,14 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         capture(app, name: "Updated reader navigation")
         reader.swipeUp()
-        XCTAssertTrue(app.buttons["booksButton"].exists)
+        XCTAssertFalse(app.buttons["booksButton"].exists)
         XCTAssertEqual(app.tabBars.firstMatch.value as? String, "Collapsed")
         capture(app, name: "Navigation labels collapsed")
         reader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35))
             .press(forDuration: 0.05, thenDragTo: reader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
         XCTAssertEqual(app.tabBars.firstMatch.value as? String, "Expanded")
-        app.buttons["booksButton"].tap()
+        app.buttons["passageButton"].tap()
+        app.buttons["chapterBooksButton"].tap()
         XCTAssertTrue(app.buttons["book-MAT"].waitForExistence(timeout: 5))
         capture(app, name: "Books — New Testament")
         app.buttons["Old Testament"].tap()
@@ -281,14 +334,16 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["chapter-JHN-14"].isSelected)
         XCTAssertEqual(app.buttons["chapter-JHN-3"].value as? String, "Has highlights")
         capture(app, name: "Chapter picker — light glass and real highlight indicator")
-        app.buttons["Done"].tap()
+        app.buttons["chapterPickerClose"].tap()
+        XCTAssertFalse(app.buttons["chapter-JHN-14"].exists)
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 14"))
         app.buttons["appearanceButton"].tap()
         app.buttons["Dark"].tap()
         app.buttons["appearanceDoneButton"].tap()
         app.buttons["passageButton"].tap()
         XCTAssertTrue(app.buttons["chapter-JHN-14"].waitForExistence(timeout: 5))
         capture(app, name: "Chapter picker — dark glass and selected chapter")
-        app.buttons["Done"].tap()
+        app.buttons["chapterPickerClose"].tap()
     }
 
     @MainActor
@@ -301,15 +356,16 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["appearanceButton"].tap()
         app.buttons["Dark"].tap()
         app.buttons["appearanceDoneButton"].tap()
-        app.buttons["booksButton"].tap()
+        app.buttons["passageButton"].tap()
+        app.buttons["chapterBooksButton"].tap()
         XCTAssertTrue(app.navigationBars["Books"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["book-MAT"].waitForExistence(timeout: 5))
         capture(app, name: "Books — largest type and dark appearance")
         app.buttons["book-MAT"].tap()
         XCTAssertTrue(app.buttons["chapter-MAT-1"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Done"].isHittable)
+        XCTAssertTrue(app.buttons["chapterPickerClose"].isHittable)
         capture(app, name: "Chapters — largest type and dark appearance")
-        app.buttons["Done"].tap()
+        app.buttons["chapterPickerClose"].tap()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
     }
 
@@ -352,6 +408,7 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["askBookQuestion"].tap()
         let answer = app.staticTexts.matching(NSPredicate(format: "identifier IN %@", ["bookQuestionStatus", "bookAnswerText"])).firstMatch
         XCTAssertTrue(answer.waitForExistence(timeout: 90))
+        XCTAssertTrue(terminal.exists, "The overview remains in the conversation after a question")
         capture(app, name: "Book question — real model result")
         if app.staticTexts["bookAnswerText"].exists {
             let source = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "summarySource-")).firstMatch
@@ -572,17 +629,18 @@ final class BibleReaderUITests: XCTestCase {
     @MainActor
     private func choosePsalms(_ app: XCUIApplication) {
         app.buttons["chapterBooksButton"].tap()
-        app.buttons["Old Testament"].tap()
-        let psalms = app.buttons["book-PSA"]
+        let picker: XCUIElement = app.popovers.firstMatch.exists ? app.popovers.firstMatch : app
+        picker.buttons["Old Testament"].tap()
+        let psalms = picker.buttons["book-PSA"]
         for _ in 0..<8 {
             if psalms.isHittable { break }
-            app.swipeUp()
+            picker.swipeUp()
         }
         psalms.tap()
-        let chapter = app.buttons["chapter-PSA-119"]
+        let chapter = picker.buttons["chapter-PSA-119"]
         for _ in 0..<10 {
             if chapter.isHittable { break }
-            app.swipeUp()
+            picker.swipeUp()
         }
     }
 

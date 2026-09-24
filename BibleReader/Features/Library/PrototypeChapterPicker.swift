@@ -3,16 +3,22 @@ import SwiftUI
 struct PrototypeChapterPicker: View {
     @Bindable var state: ReaderState
     let didOpen: () -> Void
+    private let onClose: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
     @State private var showingBooks: Bool
     @State private var newTestament: Bool
     @State private var path: [String] = []
 
-    init(state: ReaderState, startsWithBooks: Bool = false, didOpen: @escaping () -> Void = {}) {
+    init(state: ReaderState, startsWithBooks: Bool = false, onClose: (() -> Void)? = nil, didOpen: @escaping () -> Void = {}) {
+        self.onClose = onClose
         self.didOpen = didOpen
         self.state = state
         _showingBooks = State(initialValue: startsWithBooks)
         _newTestament = State(initialValue: (state.books.first { $0.id == state.document?.bookID }?.ordinal ?? 0) >= 39)
+    }
+
+    private func close() {
+        if let onClose { onClose() } else { dismiss() }
     }
 
     var body: some View {
@@ -33,12 +39,12 @@ struct PrototypeChapterPicker: View {
                     }
                     .navigationTitle("Books")
                 } else {
-                    ChapterChoices(state: state, bookID: state.document?.bookID ?? "GEN") { didOpen(); dismiss() }
+                    ChapterChoices(state: state, bookID: state.document?.bookID ?? "GEN") { didOpen(); close() }
                         .navigationTitle("Chapters")
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button { showingBooks = true } label: {
-                                    HStack(spacing: 4) { Image(systemName: "chevron.left"); Text("Books") }
+                                    Label("Books", systemImage: "books.vertical")
                                 }
                                     .accessibilityIdentifier("chapterBooksButton")
                             }
@@ -48,14 +54,16 @@ struct PrototypeChapterPicker: View {
             .background(Color(.readingCanvas))
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: String.self) { bookID in
-                ChapterChoices(state: state, bookID: bookID) { didOpen(); dismiss() }
+                ChapterChoices(state: state, bookID: bookID) { didOpen(); close() }
                     .navigationTitle("Chapters")
                     .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                        ToolbarItem(placement: .confirmationAction) { Button(role: .close) { close() }
+                            .labelStyle(.iconOnly).accessibilityIdentifier("chapterPickerClose") }
                     }
             }
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(role: .close) { close() }
+                            .labelStyle(.iconOnly).accessibilityIdentifier("chapterPickerClose") }
             }
         }
         .onAppear {
@@ -84,25 +92,20 @@ struct ChapterChoices: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
-                GlassEffectContainer(spacing: 12) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: cellWidth, maximum: cellWidth), spacing: 12)],
+                Group {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: cellWidth), spacing: 12)],
                               alignment: .leading, spacing: 12) {
                         ForEach(chapters) { chapter in
                             chapterButton(chapter, highlighted: highlighted.contains(chapter.id))
                         }
                     }
                 }
-                ViewThatFits(in: .horizontal) {
-                    HStack { readingStatus; Spacer(minLength: 12); highlightLegend }
-                    VStack(alignment: .leading, spacing: 8) { readingStatus; highlightLegend }
-                }
-                .font(.footnote).foregroundStyle(Color(.readingSecondary))
                 VStack(alignment: .leading, spacing: 10) {
                     Text("GO TO").readerTypography(.eyebrow).tracking(0.6).foregroundStyle(Color(.readingSecondary))
                     ReferenceInputView(reader: state, didOpen: didOpen)
                 }
             }
-            .frame(maxWidth: 640, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(24).frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
@@ -131,17 +134,6 @@ struct ChapterChoices: View {
         Text(chapters.count == 1 ? "1 chapter" : "\(chapters.count) chapters")
             .font(.subheadline).foregroundStyle(Color(.readingSecondary))
     }
-    private var readingStatus: some View {
-        Text(state.document?.bookID == bookID ? "Reading chapter \(state.document?.label ?? "")" : "Choose a chapter")
-    }
-    private var highlightLegend: some View {
-        Label {
-            Text("Has highlights")
-        } icon: {
-            Circle().fill(Color(.chapterHighlightMarker)).frame(width: 9, height: 9)
-        }
-    }
-
     private func chapterButton(_ chapter: ChapterSummary, highlighted: Bool) -> some View {
         let selected = state.chapterID == chapter.id
         return Button {
@@ -159,7 +151,7 @@ struct ChapterChoices: View {
             }
                 .frame(width: cellWidth, height: cellWidth)
                 .background(selected ? Color(.accent) : (reduceTransparency ? Color(.chapterPickerCanvas) : .clear), in: .circle)
-                .glassEffect(.regular.interactive(), in: .circle)
+                .overlay { Circle().strokeBorder(Color(.readingSecondary).opacity(selected ? 0 : 0.3), lineWidth: 1) }
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)

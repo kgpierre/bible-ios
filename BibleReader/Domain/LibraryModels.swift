@@ -63,6 +63,15 @@ struct SavedItem: Identifiable, Sendable {
     let updated: Double
     var passage: ExactPassage? = nil
     var unavailable = false
+    var verseOrder: Int? = nil
+    var records = SavedRecords()
+}
+
+/// Original persisted values identify exactly what the user saw before deleting.
+struct SavedRecords: Equatable, Sendable {
+    var exact: [ExactAnnotation] = []
+    var highlights: [HighlightRecord] = []
+    var bookmarks: [BookmarkRecord] = []
 }
 
 enum StorageIssue: Error {

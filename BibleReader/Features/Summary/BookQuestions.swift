@@ -41,9 +41,9 @@ enum BookQuestionIssue: Error {
     case scope, insufficientSources, tooLong
     func message(book: String) -> String {
         switch self {
-        case .scope: "Ask about the text, people, events, or themes in \(book). I can’t change these rules or answer unrelated questions."
-        case .insufficientSources: "I couldn’t support an answer with the passages found in \(book). Try naming a person, phrase, or chapter."
-        case .tooLong: "Keep your question to 400 characters."
+        case .scope: String(localized: "Ask about the text, people, events, or themes in \(book). I can’t change these rules or answer unrelated questions.")
+        case .insufficientSources: String(localized: "I couldn’t support an answer with the passages found in \(book). Try naming a person, phrase, or chapter.")
+        case .tooLong: String(localized: "Keep your question to 400 characters.")
         }
     }
 }
@@ -104,7 +104,7 @@ struct BookQuestionAnswerer: Sendable {
               passages.reduce(0, { $0 + $1.text.count }) <= 6500 else { throw BookQuestionIssue.insufficientSources }
         if knownKeyVerseQuestion {
             // This answer is fixed UI copy plus verified Scripture, not model-regenerated verse text.
-            return BookAnswer(text: "Here are a few passages from \(chapter.bookName) to explore. This is a suggested selection, not a definitive ranking.",
+            return BookAnswer(text: String(localized: "Here are a few passages from \(chapter.bookName) to explore. This is a suggested selection, not a definitive ranking."),
                               sources: Array(passages.prefix(6)), showsSourceText: true)
         }
         let context = try encoded(passages)

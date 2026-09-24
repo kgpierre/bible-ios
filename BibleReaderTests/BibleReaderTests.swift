@@ -4,16 +4,21 @@ import UIKit
 
 struct ReadingColorTests {
     /// Protect actual asset readability, including the proposed dark highlight fills.
-    @Test(arguments: [UIUserInterfaceStyle.light, .dark])
+    @Test(arguments: [UIUserInterfaceStyle.light, .dark], [UIAccessibilityContrast.normal, .high])
     @MainActor
-    func scriptureContrastAcrossReadingSurfaces(style: UIUserInterfaceStyle) throws {
-        let traits = UITraitCollection(userInterfaceStyle: style)
+    func scriptureContrastAcrossReadingSurfaces(style: UIUserInterfaceStyle, contrast: UIAccessibilityContrast) throws {
+        let traits = UITraitCollection { $0.userInterfaceStyle = style; $0.accessibilityContrast = contrast }
         let foreground = try color(named: "ReadingPrimary", traits: traits)
         for name in ["ReadingCanvas", "HighlightYellow", "HighlightSage", "HighlightBlue", "HighlightRose"] {
             let background = try color(named: name, traits: traits)
             let ratio = (max(luminance(foreground), luminance(background)) + 0.05)
                 / (min(luminance(foreground), luminance(background)) + 0.05)
             #expect(ratio >= 4.5, "Insufficient text contrast over \(name)")
+            if name != "ReadingCanvas" {
+                let canvas = try color(named: "ReadingCanvas", traits: traits)
+                let distinction = (max(luminance(canvas), luminance(background)) + 0.05) / (min(luminance(canvas), luminance(background)) + 0.05)
+                #expect(distinction >= (contrast == .high ? 3 : 1.5), "Highlight must remain distinguishable from the canvas")
+            }
         }
     }
 

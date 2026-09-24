@@ -142,3 +142,21 @@ xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader \
 ```
 
 Use a fresh result-bundle path when rerunning.
+
+### Reader polish validation — 22 September 2026
+
+Successful unsigned app and test-target compilation:
+
+```sh
+xcodebuildmcp device build --project-path /Users/kyle/Developer/bible-ios/BibleReader.xcodeproj --scheme BibleReader --derived-data-path /Users/kyle/Developer/bible-ios/.build/RefinementDerivedData --extra-args CODE_SIGNING_ALLOWED=NO --build-for-testing
+```
+
+Three `ChapterSwipeIntentTests` scenarios also passed using the production intent struct and assertions in a temporary host Swift harness. This does not exercise UIKit recognizers. XcodeBuildMCP reported zero installed simulators, so native UI execution, visual review, resizing, and actual Apple Intelligence behavior remain unverified for this pass. The regression suite now covers retained summary content, picker dismissal, the chapter-picker Books route, and model refusal handling; those native tests were compiled, not executed.
+
+### Saved implementation validation
+
+Saved filters, canonical/recent ordering, record-specific deletion, Retry, and session Undo are implemented. The iPhone suite passed 62 tests; the corrected iPad mini Saved rotation and page lifecycle checks passed three tests. The separate first-visible-verse restoration mismatch remains open. See [Saved validation and exact commands](Docs/Validation/saved/README.md) and [decision 0011](Docs/Decisions/0011-saved-controls-and-deletion.md).
+
+### Release audit validation (22 September 2026)
+
+The audit pass adds an app privacy manifest, accessibility and localization corrections, stronger highlight variants, storage/Saved optimizations, streamed summary drafts, system Undo/commands, and stable reader resizing. See [decision 0012](Docs/Decisions/0012-release-audit.md) for implemented versus deferred items and [validation](Docs/Validation/release-audit/README.md) for exact commands and passing evidence (66 non-UI tests, focused iPhone/iPad UI flows, and an unsigned Release build). This does not establish release or physical-device acceptance.

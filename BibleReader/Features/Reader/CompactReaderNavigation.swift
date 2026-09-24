@@ -4,7 +4,6 @@ import UIKit
 struct CompactReaderNavigation: View {
     @Bindable var state: AppState
     @Environment(\.dynamicTypeSize) private var dynamicType
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -17,7 +16,6 @@ struct CompactReaderNavigation: View {
             ReaderNavigationLayout(stack: dynamicType.isAccessibilitySize) {
                 PassageButton(state: state, compact: true)
                 destinations
-                books
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: collapsed)
@@ -25,23 +23,6 @@ struct CompactReaderNavigation: View {
         .padding(.top, 8)
         .padding(.bottom, 4)
         .onChange(of: state.destination) { _, _ in state.reader.navigationCollapsed = false }
-    }
-
-    private var books: some View {
-        Button { state.isBooksPresented = true } label: {
-            VStack(spacing: 3) {
-                Image(systemName: "books.vertical").font(.system(size: 20))
-                if !collapsed { Text("Books").font(.caption2.weight(.medium)) }
-            }
-            .frame(minWidth: 52, minHeight: collapsed ? 52 : 64)
-            .contentShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color(.accent))
-        .background(reduceTransparency ? Color(.readingCanvas) : .clear, in: .capsule)
-        .glassEffect(.regular.interactive(), in: .capsule)
-        .accessibilityLabel("Books")
-        .accessibilityIdentifier("booksButton")
     }
 
     private var destinations: some View {
@@ -65,11 +46,11 @@ private struct NativeReaderTabs: UIViewRepresentable {
         bar.tintColor = UIColor(resource: .accent)
         bar.unselectedItemTintColor = UIColor(resource: .readingSecondary)
         bar.items = AppDestination.allCases.enumerated().map { index, destination in
-            let item = UITabBarItem(title: destination.rawValue.capitalized,
+            let item = UITabBarItem(title: destination.localizedTitle,
                 image: UIImage(systemName: destination.symbol),
                 selectedImage: UIImage(systemName: destination.symbol + (destination == .search ? "" : ".fill")))
             item.tag = index
-            item.accessibilityLabel = destination.rawValue.capitalized
+            item.accessibilityLabel = destination.localizedTitle
             item.accessibilityIdentifier = "destination-" + destination.rawValue
             return item
         }
@@ -79,8 +60,19 @@ private struct NativeReaderTabs: UIViewRepresentable {
         let bar = container.bar
         context.coordinator.parent = self
         bar.accessibilityValue = collapsed ? "Collapsed" : "Expanded"
-        for (index, item) in (bar.items ?? []).enumerated() {
-            item.title = collapsed ? nil : AppDestination.allCases[index].rawValue.capitalized
+        if container.collapsed != collapsed {
+            let update = {
+                for (index, item) in (bar.items ?? []).enumerated() {
+                    item.title = collapsed ? nil : AppDestination.allCases[index].localizedTitle
+                }
+                bar.layoutIfNeeded()
+            }
+            if container.collapsed != nil && !UIAccessibility.isReduceMotionEnabled {
+                UIView.transition(with: bar, duration: 0.22,
+                                  options: [.transitionCrossDissolve, .beginFromCurrentState, .allowUserInteraction],
+                                  animations: update)
+            } else { update() }
+            container.collapsed = collapsed
         }
         bar.selectedItem = bar.items?[AppDestination.allCases.firstIndex(of: selection) ?? 0]
     }
@@ -95,6 +87,7 @@ private struct NativeReaderTabs: UIViewRepresentable {
 
 private final class ReaderTabBarContainer: UIView {
     let bar = UITabBar()
+    var collapsed: Bool?
     override init(frame: CGRect) {
         super.init(frame: frame)
         addSubview(bar)
@@ -115,13 +108,11 @@ struct PassageButton: View {
     @Bindable var state: AppState
     let compact: Bool
 
-    private var passageLabel: String {
-        guard let document = state.reader.document else { return "Chapters" }
-        if compact, document.bookName.count > 8,
-           let book = state.reader.books.first(where: { $0.id == document.bookID }) {
-            return "\(book.shortName) \(document.label)"
-        }
-        return document.reference
+    private var passageLabel: String { state.reader.document?.reference ?? String(localized: "Chapters") }
+    private var shortPassageLabel: String {
+        guard let document = state.reader.document,
+              let book = state.reader.books.first(where: { $0.id == document.bookID }) else { return passageLabel }
+        return "\(book.shortName) \(document.label)"
     }
 
     var body: some View {
@@ -129,10 +120,13 @@ struct PassageButton: View {
             state.isChapterPickerPresented = true
         } label: {
             HStack(spacing: 6) {
-                Text(passageLabel)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .font(.body.weight(.semibold))
+                ViewThatFits(in: .horizontal) {
+                    Text(passageLabel).fixedSize()
+                    Text(shortPassageLabel).fixedSize()
+                    Text("Chapters").lineLimit(1)
+                }
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: compact ? 150 : nil)
                 Image(systemName: "chevron.down").font(.caption.weight(.semibold))
             }
             .padding(.horizontal, compact ? 16 : 8)
@@ -145,7 +139,7 @@ struct PassageButton: View {
         .accessibilityLabel("Choose chapter, \(state.reader.document?.reference ?? "Bible")")
         .accessibilityIdentifier("passageButton")
         .popover(isPresented: $state.isChapterPickerPresented) {
-            PrototypeChapterPicker(state: state.reader) { if compact { state.destination = .read } }
+            PrototypeChapterPicker(state: state.reader, onClose: { state.isChapterPickerPresented = false }) { if compact { state.destination = .read } }
                 .presentationCompactAdaptation(.sheet)
         }
     }
@@ -172,28 +166,26 @@ private struct ReaderNavigationLayout: Layout {
     var stack: Bool
     private func metrics(_ proposal: ProposedViewSize, _ views: Subviews) -> ([CGSize], CGFloat, Bool) {
         let sizes = views.map { $0.sizeThatFits(.unspecified) }
-        let ideal = sizes.reduce(20) { $0 + $1.width }
+        let ideal = sizes.reduce(10) { $0 + $1.width }
         let width = proposal.width ?? ideal
         return (sizes, width, stack || ideal > width)
     }
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let (sizes, width, stacked) = metrics(proposal, subviews)
-        let height = stacked ? max(64, max(sizes[0].height, sizes[2].height)) + 10 + max(64, sizes[1].height) : max(64, sizes.map(\.height).max() ?? 64)
-        return CGSize(width: width, height: height)
+        return CGSize(width: width, height: stacked ? sizes[0].height + 10 + 64 : 64)
     }
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let (sizes, _, stacked) = metrics(proposal, subviews)
         if stacked {
-            let topHeight = max(64, max(sizes[0].height, sizes[2].height))
-            let groupWidth = sizes[0].width + 10 + sizes[2].width
-            let start = bounds.midX - groupWidth / 2
-            subviews[0].place(at: CGPoint(x: start, y: bounds.minY + topHeight / 2), anchor: .leading, proposal: ProposedViewSize(sizes[0]))
-            subviews[2].place(at: CGPoint(x: start + sizes[0].width + 10, y: bounds.minY + topHeight / 2), anchor: .leading, proposal: ProposedViewSize(sizes[2]))
-            subviews[1].place(at: CGPoint(x: bounds.minX, y: bounds.minY + topHeight + 10), proposal: ProposedViewSize(width: bounds.width, height: max(64, sizes[1].height)))
+            subviews[0].place(at: CGPoint(x: bounds.midX, y: bounds.minY), anchor: .top,
+                              proposal: ProposedViewSize(sizes[0]))
+            subviews[1].place(at: CGPoint(x: bounds.minX, y: bounds.minY + sizes[0].height + 10),
+                              proposal: ProposedViewSize(width: bounds.width, height: 64))
         } else {
-            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(sizes[0]))
-            subviews[1].place(at: CGPoint(x: bounds.minX + sizes[0].width + 10, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(width: bounds.width - sizes[0].width - sizes[2].width - 20, height: sizes[1].height))
-            subviews[2].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing, proposal: ProposedViewSize(sizes[2]))
+            subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+                              proposal: ProposedViewSize(sizes[0]))
+            subviews[1].place(at: CGPoint(x: bounds.minX + sizes[0].width + 10, y: bounds.midY), anchor: .leading,
+                              proposal: ProposedViewSize(width: bounds.width - sizes[0].width - 10, height: 64))
         }
     }
 }

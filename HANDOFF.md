@@ -1,6 +1,32 @@
+## Latest continuation — 22 September 2026, release audit
+
+Implemented the privacy manifest, accessible chapter-turn fallback, full wrapped-verse accessibility geometry/actions, localization extraction, stronger/high-contrast highlights, plain chapter cells/native Close, storage scheduling and Saved-query improvements, cached annotation/Saved work, streaming overview drafts, semantic selection-menu colors, native UndoManager/scene commands, finite background position-write allowance, adaptive passage labels, and a stable split-view reader across resizing. The separate Books button remains removed. Removed duplicate wide About; retained owner-selected sidebar controls.
+
+66 non-UI tests pass. Focused iPhone selection/Saved/picker/Books/turn-and-relaunch checks pass. iPad Saved and Search resize flows pass. The prior Psalm 119 one-verse restoration mismatch is now fixed and its existing assertion passes: passive resizing must not recapture the semantic reading anchor. Unsigned Release compilation and bundled app privacy-manifest inspection pass. See [audit decision and remaining work](Docs/Decisions/0012-release-audit.md) and [validation evidence](Docs/Validation/release-audit/README.md).
+
+Outstanding audit proposals: measured WAL/pool migration, binary chapter payloads/external-content FTS/index cleanup, and useful retained-session model prewarming. Native sidebar tabs/multiwindow/searchable remain advisory product changes. Physical-device accessibility, keyboard/Undo, protected background timing, real-model quality, profiling, privacy/network capture, rights/canon, and release acceptance remain open. No Scripture, corpus schema, or user database migration changed.
+
 # Bible Reader — Development Handoff
 
-Updated 22 September 2026 after the owner-requested iPhone interaction/performance pass. Repository: `/Users/kyle/Developer/bible-app`.
+Updated 22 September 2026 after the owner-requested iPhone interaction/performance pass. Repository: `/Users/kyle/Developer/bible-ios`.
+
+## Latest implementation — Saved controls
+
+Saved now supports All/Highlights/Bookmarks, Most recent/Bible order, native swipe/context-menu deletion, accessible deletion, and session Undo. Filter/sort choices stay in AppState across destinations and compact/wide presentations. Deletion targets the original records represented by a row, including grouped legacy highlights and unresolved excerpts; failures retain the row and Retry intent. Existing exact/legacy Undo checks reject conflicting later edits. No schema or corpus changes. Pull-to-refresh explicitly reloads Saved.
+
+The iPhone suite passed 61 non-UI tests and the Saved UI flow. Final verification also passed the Saved flow and largest-type dark controls after the lifecycle fix. iPad live Saved testing uncovered a crash when returning to compact Saved: an inactive reader lacked the initial page UIKit requires. Fixed and covered by a new unit regression plus a passing iPad mini Saved/rotation flow. A separate broad rotation check still reports a one-verse first-visible mismatch in Psalm 119; retain it as follow-up, not passing evidence. See [Saved validation](Docs/Validation/saved/README.md) and [decision 0011](Docs/Decisions/0011-saved-controls-and-deletion.md).
+
+Simulator discovery now finds iOS 27 devices; the zero-simulator result in the earlier polish entry is historical. Next unfinished implementation includes source footnote presentation; device, accessibility, privacy, and release gates remain open. Saved filters/deletion are no longer pending.
+
+## Latest owner refinements — 22 September 2026, reader polish
+
+The owner explicitly removed the separate compact Books button. Books remains reachable through the passage/chapter picker; this supersedes earlier instructions to retain the separate button. Compact native tab titles now crossfade when collapsing/expanding (immediate with Reduce Motion). Reader heading top spacing is reduced by 12 points and trailing text margin increased by 8 points on compact layouts.
+
+Summary and follow-up questions now share one scrollable history. Follow-up copy uses Dynamic Type body sizing; Retry is a prominent labeled button; the redundant leading Intelligence symbol is removed. Chapter overview generation uses Apple's on-device `permissiveContentTransformations` setting specifically for supplied-text summaries. A default-guardrail classification checks for prose refusals before accepting the overview. Questions, retrieval, and answer review retain default guardrails. Refusals remain possible; this change has not been evaluated against a real model here.
+
+Chapter numbers distribute across the picker width. Removed the visual reading-status/highlight legend; semantic highlight indicators remain. Close is an accessible X, with the passage popover dismissal explicitly wired to its presentation binding. Horizontal turns accept shorter/slower gestures and moderate drift; vertically dominant movement permanently rejects a turn.
+
+Validation: unsigned app and test-target compilation succeeded with XcodeBuildMCP. Three pure Swift swipe-intent checks passed on the host. No simulator UI tests, screenshots, iPad resizing checks, or real-model evaluation were performed: `xcodebuildmcp simulator list` reported zero simulators after obtaining Simulator access. No signing settings or Scripture changed. See the README validation entry for the exact build command.
 
 ## Latest continuation — 22 September 2026
 
@@ -22,11 +48,11 @@ Read this document, `AGENTS.md`, and the relevant implementation before editing.
 
 ## Latest owner decisions
 
-1. **Books/navigation:** separate Books button to the right of Read/Saved/Search, SF Symbols, labels collapse on downward scrolling and return upward. Keep labels at accessibility sizes. Books uses Old/New Testament selection and native subtitle rows. Keep the passage/chapter control.
+1. **Books/navigation:** Books is reached through the chapter picker; the separate compact Books button was removed at the owner’s request. Native tab labels collapse on downward scrolling and return upward. Keep labels at accessibility sizes. Books uses Old/New Testament selection and native subtitle rows. Keep the passage/chapter control.
 2. **Annotations:** native selection → direct color or Bookmark → immediate durable save. **Exactly the selected words**, using semantic source anchors, not screen line numbers. Keep Undo/removal/recoloring and all prior annotations. The extra sheet/Done step was removed.
 3. **Typography:** system Dynamic Type baseline plus locally persisted serif/system sans, modest size adjustment, and line spacing in Appearance.
 4. **AI:** optional on-device **current chapter** overview using Apple Foundation Models. An **icon-only Apple Intelligence button between Appearance and More**, with an accessibility label. The Apple-provided `apple.intelligence` symbol is now used and resolves in native tests; no generic substitute/logo drawing.
-5. **Paper turn:** thin Bible-paper left/right turn inspired by old iBooks. Start with the isolated native experiment specified in `Docs/Decisions/0005-thin-paper-turn.md`; integration remains subject to interaction, visual, and physical-device gates.
+5. **Paper turn:** integrated native chapter curls now use explicit horizontal intent. The earlier Debug experiment is historical; physical-device feel and broader resize checks remain open.
 
 Ordinary reversible engineering and verification are authorized. No publishing, signing ownership changes, backend, or remote inference. Do not spawn agents unless explicitly authorized by the user or applicable instructions.
 
@@ -132,9 +158,9 @@ The intermediate `iPhone-selection-refinement/final/focus/inspect/layout/roundtr
 
 1. The focused iPhone selection/highlight pass is complete. Preserve owner-selected 2a and the icon-only summary button. Review `Docs/Validation/iPhone-selection/` with the owner; summary alignment polish is secondary.
 2. Continue **Text selection and highlights** on a physical iPhone: handle/magnifier feel, long selections in Psalm 119, exact native Copy/Share, dark fills, and larger Dynamic Type. Current automated coverage establishes current-color checkmarks, exact fills/excerpts, recolor/removal/Undo, Bookmark independence, source-range copy formatting, and persistence; it does not replace physical-device validation.
-3. Evaluate native curl visually in light/dark, cancellation, diagonal gestures, selection handles, Reduce Motion/Transparency, and first/last chapter boundaries. Keep it Debug-only until the plan’s integration gates pass.
+3. Evaluate native curl visually in light/dark, cancellation, diagonal gestures, selection handles, Reduce Motion/Transparency, and first/last chapter boundaries. The curl is already integrated; the Debug-only recommendation is superseded.
 4. Review chapter-overview accuracy, concision, refusals, long chapters (Psalm 119), cancellation, and latency on an eligible physical iPhone. Never replace Scripture or add a cloud fallback.
-5. Broader v1 work remains: Saved filters/deletion controls, source footnote presentation, complete VoiceOver/keyboard/pointer coverage, physical-device protection/performance, offline/network privacy audit, rights/canon/territories, minimum OS approval, app name/signing owner, and release materials.
+5. Broader v1 work remains: source footnote presentation, complete VoiceOver/keyboard/pointer coverage, physical-device protection/performance, offline/network privacy audit, rights/canon/territories, minimum OS approval, app name/signing owner, and release materials.
 
 ## Environment and commands
 
@@ -143,7 +169,7 @@ The intermediate `iPhone-selection-refinement/final/focus/inspect/layout/roundtr
 - iPhone simulator: `iPhone 18 Pro`, iOS 27.0.
 - Dependency checkout `.build/SourcePackages`; phone derived data `.build/ContentDerivedData`.
 - Xcode synchronized groups include new Swift files automatically. Preserve owner signing/project edits. Git is initialized on `main`; the owner requested committing and pushing to `https://github.com/kgpierre/bible-ios.git` (`origin`).
-- XcodeBuildMCP tools are unavailable. Xcode/simctl/xcresulttool CLI calls require sandbox escalation for cache and simulator access. No running process should be assumed from old documentation.
+- XcodeBuildMCP CLI is available; use it for builds, tests, and simulator control with the required sandbox permissions. No running process should be assumed from old documentation.
 
 ```sh
 xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader \

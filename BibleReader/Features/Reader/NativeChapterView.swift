@@ -33,6 +33,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private(set) var gutterPassCount = 0
     private(set) var accessibilityFrameUpdateCount = 0
     #endif
+    private var lastContrast: UIAccessibilityContrast?
     private var lastAnnotationsRevision = -1
     private struct ColoredPart: Equatable {
         let part: SavedTextPart
@@ -46,6 +47,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private var guttersDirty = true
     private var gutterViewport: Range<Int>?
     private var resolvedPalette: [(HighlightColor, UIColor)] = []
+    private var swatchImages: [String: UIImage] = [:]
     private var paletteTraits: UITraitCollection?
     private var appliedCue: Set<String> = []
     private var appliedHighlights: [String: HighlightColor] = [:]
@@ -92,7 +94,11 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         NotificationCenter.default.addObserver(self, selector: #selector(captureBeforeBackground),
             name: UIApplication.willResignActiveNotification, object: nil)
         accessibilityIdentifier = "chapterText"
-        // Preserve the native selection interaction; custom verse accessibility is installed only for VoiceOver.
+        NotificationCenter.default.addObserver(self, selector: #selector(accessibilityStatusChanged),
+            name: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(accessibilityStatusChanged),
+            name: UIAccessibility.switchControlStatusDidChangeNotification, object: nil)
+        // Semantic verse actions are available to every assistive technology.
         header.axis = .vertical
         header.spacing = 6
         [eyebrow, bookTitle, chapterTitle].forEach {
@@ -101,11 +107,13 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         }
         bookTitle.accessibilityTraits = .header
         addSubview(header)
-        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (view: ChapterTextView, _) in
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self, UITraitAccessibilityContrast.self]) { (view: ChapterTextView, _) in
             guard let document = view.document, let state = view.readerState else { return }
             view.configure(document: document, state: state, wide: view.wide, scheme: view.lastScheme ?? .light)
         }
     }
+
+    override var undoManager: UndoManager? { readerState?.systemUndoManager ?? super.undoManager }
 
     required init?(coder: NSCoder) { fatalError("Use the native reader initializer") }
 
@@ -168,11 +176,13 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         if self.document == nil, state.selection != nil { needsSelectionFocusRestore = true }
         let changedChapter = self.document?.id != document.id
         let changedNavigation = lastRevision != state.navigationRevision || readerState !== state
-        let changedStyle = self.wide != wide || lastCategory != traitCollection.preferredContentSizeCategory || lastScheme != scheme || lastTypography != state.typography
+        let changedStyle = self.wide != wide || lastCategory != traitCollection.preferredContentSizeCategory || lastScheme != scheme || lastTypography != state.typography || lastContrast != traitCollection.accessibilityContrast
         self.readerState = state
         let changedAnnotations = lastAnnotationsRevision != state.annotationsRevision || changedNavigation
         guard changedChapter || changedStyle || changedNavigation || changedAnnotations || appliedCue != state.navigationCue else { return }
-        if changedStyle && !changedChapter && !changedNavigation { capturePosition() }
+        // A width-mode transition may already have intermediate UIKit geometry.
+        // Keep the last settled semantic anchor instead of capturing that transient layout.
+        if changedStyle && !changedChapter && !changedNavigation && self.wide == wide { capturePosition() }
         applying = true
         defer { applying = false }
         self.document = document
@@ -180,6 +190,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         lastCategory = traitCollection.preferredContentSizeCategory
         lastScheme = scheme
         lastTypography = state.typography
+        lastContrast = traitCollection.accessibilityContrast
         lastRevision = state.navigationRevision
         lastAnnotationsRevision = state.annotationsRevision
         overrideUserInterfaceStyle = scheme == .dark ? .dark : .light
@@ -219,7 +230,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             bookTitle.text = document.bookName
             bookTitle.font = scaledFont(size: wide ? 46 : 40, style: .largeTitle, serif: true, weight: .semibold)
             bookTitle.textColor = UIColor(resource: .readingPrimary)
-            chapterTitle.text = "Chapter \(document.label)"
+            chapterTitle.text = String(localized: "Chapter \(document.label)")
             chapterTitle.font = scaledFont(size: wide ? 24 : 22, style: .title2, serif: true)
             chapterTitle.textColor = UIColor(resource: .readingSecondary)
             gutterLabels.values.forEach { $0.removeFromSuperview() }
@@ -288,13 +299,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         if widthChanged { needsAnchorRestore = true; accessibilityNeedsUpdate = true; guttersDirty = true; lastWidth = bounds.width }
         let column = min(max(0, bounds.width - 40), 640)
         let outer = max(20, (bounds.width - column) / 2)
-        let textWidth = max(1, column - gutterWidth)
+        let trailingExtra: CGFloat = wide ? 0 : 8
+        let textWidth = max(1, column - gutterWidth - trailingExtra)
         if measuredHeaderWidth != textWidth {
             measuredHeaderWidth = textWidth
             measuredHeaderHeight = header.systemLayoutSizeFitting(CGSize(width: textWidth, height: 0), withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel).height
         }
-        header.frame = CGRect(x: outer + gutterWidth, y: chromeInsets.top + 20, width: textWidth, height: measuredHeaderHeight)
-        let inset = UIEdgeInsets(top: header.frame.maxY + (wide ? 30 : 26), left: outer + gutterWidth, bottom: chromeInsets.bottom + 32, right: outer)
+        header.frame = CGRect(x: outer + gutterWidth, y: chromeInsets.top + (wide ? 20 : 8), width: textWidth, height: measuredHeaderHeight)
+        let inset = UIEdgeInsets(top: header.frame.maxY + (wide ? 30 : 26), left: outer + gutterWidth, bottom: chromeInsets.bottom + 32, right: outer + trailingExtra)
         if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true }
         verticalScrollIndicatorInsets = UIEdgeInsets(top: chromeInsets.top, left: 0, bottom: chromeInsets.bottom, right: 0)
         super.layoutSubviews()
@@ -328,12 +340,13 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             highlightVerseUpdateCount += 1
             #endif
             textStorage.removeAttribute(.backgroundColor, range: entry.range)
+            textStorage.removeAttribute(.readerHighlightColor, range: entry.range)
             if let color = highlights[id] {
-                textStorage.addAttribute(.backgroundColor, value: UIColor(named: color.assetName) ?? .clear, range: entry.range)
+                textStorage.addAttributes([.backgroundColor: UIColor(named: color.assetName) ?? .clear, .readerHighlightColor: color.rawValue], range: entry.range)
             }
             for colored in partsByVerse[id] ?? [] {
                 guard let local = colored.part.resolvedRange(in: entry.verse.text) else { continue }
-                textStorage.addAttribute(.backgroundColor, value: UIColor(named: colored.color.assetName) ?? .clear,
+                textStorage.addAttributes([.backgroundColor: UIColor(named: colored.color.assetName) ?? .clear, .readerHighlightColor: colored.color.rawValue],
                     range: NSRange(location: entry.range.location + local.location, length: local.length))
             }
         }
@@ -407,11 +420,11 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             }
             visibleGutterIDs = visible
         }
-        if UIAccessibility.isVoiceOverRunning, accessibilityNeedsUpdate || !accessibilityDirtyVerses.isEmpty { prepareVerseAccessibility() }
+        if accessibilityNeedsUpdate || !accessibilityDirtyVerses.isEmpty { prepareVerseAccessibility() }
     }
 
     func capturePosition() {
-        guard !applying, let state = readerState, state.chapterID == document?.id, let map, bounds.height > 0 else { return }
+        guard !applying, !needsAnchorRestore, abs(lastWidth - bounds.width) < 0.5, let state = readerState, state.chapterID == document?.id, let map, bounds.height > 0 else { return }
         state.selection = map.selection(for: selectedRange)
         if contentOffset.y < 4 { state.anchor = nil; return }
         let point = CGPoint(x: textContainerInset.left + 2, y: contentOffset.y + chromeInsets.top + 8)
@@ -454,7 +467,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     @objc private func captureBeforeBackground() {
         guard window != nil else { return }
         capturePosition()
-        readerState?.flushPosition()
+        readerState?.flushPosition(protectInBackground: true)
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -509,6 +522,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private func refreshPalette() {
         guard paletteTraits == nil || traitCollection.hasDifferentColorAppearance(comparedTo: paletteTraits) else { return }
         resolvedPalette = HighlightColor.allCases.map { ($0, (UIColor(named: $0.assetName) ?? .clear).resolvedColor(with: traitCollection)) }
+        swatchImages.removeAll()
         paletteTraits = traitCollection
     }
 
@@ -519,9 +533,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         var unhighlighted = false
         for entry in map.touched(by: range) {
             let selected = NSIntersectionRange(entry.range, range)
-            textStorage.enumerateAttribute(.backgroundColor, in: selected) { value, _, _ in
-                guard let fill = value as? UIColor,
-                      let color = resolvedPalette.first(where: { fill.resolvedColor(with: traitCollection).isEqual($0.1) })?.0 else { unhighlighted = true; return }
+            textStorage.enumerateAttribute(.readerHighlightColor, in: selected) { value, _, _ in
+                guard let name = value as? String, let color = HighlightColor(rawValue: name) else { unhighlighted = true; return }
                 colors.insert(color)
             }
         }
@@ -537,7 +550,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         let colors = HighlightColor.allCases.map { color in
             let tint = resolvedPalette.first { $0.0 == color }?.1 ?? .systemYellow
             let selected = highlightStatus.color == color
-            let image = UIGraphicsImageRenderer(size: CGSize(width: 22, height: 22)).image { _ in
+            let key = color.rawValue + (selected ? "-selected" : "")
+            let image = swatchImages[key] ?? UIGraphicsImageRenderer(size: CGSize(width: 22, height: 22)).image { _ in
                 let rect = CGRect(x: 0, y: 0, width: 22, height: 22)
                 UIImage(systemName: "circle.fill")?.withTintColor(tint, renderingMode: .alwaysOriginal).draw(in: rect)
                 UIImage(systemName: "circle")?.withTintColor(UIColor(resource: .readingSecondary), renderingMode: .alwaysOriginal).draw(in: rect)
@@ -547,27 +561,28 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                         .draw(in: CGRect(x: 5, y: 5, width: 12, height: 12))
                 }
             }.withRenderingMode(.alwaysOriginal)
+            swatchImages[key] = image
             // The edit menu derives its accessibility name from an image when the visible title is empty.
-            image.accessibilityLabel = (selected ? "✓ " : "") + color.rawValue.capitalized
+            image.accessibilityLabel = (selected ? "✓ " : "") + color.title
             let action = UIAction(title: "", image: image,
                             identifier: UIAction.Identifier("highlight-" + color.rawValue),
-                            discoverabilityTitle: color.rawValue.capitalized,
+                            discoverabilityTitle: color.title,
                             attributes: state.isSaving || !state.annotationEditingEnabled ? .disabled : [],
                             state: highlightStatus.color == color ? .on : .off) { _ in
                 Task { await state.saveExact(passage, color: color) }
             }
-            action.accessibilityLabel = color.rawValue.capitalized
+            action.accessibilityLabel = color.title
             return action
         }
-        let palette = UIMenu(title: "Highlight selected words", options: [.displayInline, .displayAsPalette], children: colors)
+        let palette = UIMenu(title: String(localized: "Highlight selected words"), options: [.displayInline, .displayAsPalette], children: colors)
         let bookmarked = state.isExactlyBookmarked(passage)
-        let bookmark = UIAction(title: bookmarked ? "Remove Bookmark" : "Bookmark", image: UIImage(systemName: bookmarked ? "bookmark.slash" : "bookmark"), attributes: state.isSaving || !state.annotationEditingEnabled ? .disabled : []) { _ in
+        let bookmark = UIAction(title: bookmarked ? String(localized: "Remove Bookmark") : String(localized: "Bookmark"), image: UIImage(systemName: bookmarked ? "bookmark.slash" : "bookmark"), attributes: state.isSaving || !state.annotationEditingEnabled ? .disabled : []) { _ in
             Task { await state.saveExact(passage, color: nil, bookmarkAction: !bookmarked) }
         }
-        let remove = UIAction(title: "Remove Highlight", image: UIImage(systemName: "highlighter"), attributes: state.isSaving || !state.annotationEditingEnabled ? .disabled : []) { _ in
+        let remove = UIAction(title: String(localized: "Remove Highlight"), image: UIImage(systemName: "highlighter"), attributes: state.isSaving || !state.annotationEditingEnabled ? .disabled : []) { _ in
             Task { await state.saveExact(passage, color: nil) }
         }
-        let share = UIAction(title: "Share Passage", image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
+        let share = UIAction(title: String(localized: "Share Passage"), image: UIImage(systemName: "square.and.arrow.up")) { [weak self] _ in
             guard let self, let text = map.copyText(range: range, document: document) else { return }
             let controller = UIActivityViewController(activityItems: [text], applicationActivities: nil)
             controller.popoverPresentationController?.sourceView = self
@@ -585,6 +600,12 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     }
 
 
+    @objc private func accessibilityStatusChanged() {
+        accessibilityNeedsUpdate = true
+        setNeedsLayout()
+        selectionDidChange?()
+    }
+
     func prepareVerseAccessibility() {
         guard let map, let document else { return }
         let rebuildGeometry = accessibilityNeedsUpdate
@@ -595,32 +616,36 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             guard let start = position(from: beginningOfDocument, offset: entry.range.location),
                   let end = position(from: start, offset: entry.range.length), let range = textRange(from: start, to: end) else { return nil }
             let existing = accessibilityByVerse[entry.verse.id]
-            let element = existing ?? UIAccessibilityElement(accessibilityContainer: self)
+            let element = existing ?? VerseAccessibilityElement(accessibilityContainer: self)
             element.accessibilityLabel = "\(document.reference):\(entry.verse.label). \(entry.verse.text)"
             var annotations: [String] = []
-            if let color = readerState?.highlights[entry.verse.id] { annotations.append("\(color.rawValue) highlight") }
-            if readerState?.bookmarks.contains(entry.verse.id) == true { annotations.append("Bookmarked") }
+            if let color = readerState?.highlights[entry.verse.id] { annotations.append(color.accessibilityDescription) }
+            if readerState?.bookmarks.contains(entry.verse.id) == true { annotations.append(String(localized: "Bookmarked")) }
             if appliedParts[entry.verse.id]?.isEmpty == false {
-                annotations.append("Contains highlighted words")
+                annotations.append(String(localized: "Contains highlighted words"))
             }
             element.accessibilityValue = annotations.joined(separator: ", ")
             element.accessibilityTraits = .staticText
             if rebuildGeometry || existing == nil {
-                element.accessibilityFrameInContainerSpace = firstRect(for: range)
+                (element as? VerseAccessibilityElement)?.rectProvider = { [weak self] in
+                    self?.selectionRects(for: range).reduce(CGRect.null) { rect, selection in
+                        selection.rect.isEmpty ? rect : rect.union(selection.rect)
+                    } ?? .zero
+                }
                 #if DEBUG
                 accessibilityFrameUpdateCount += 1
                 #endif
             }
             if let passage = map.exactPassage(range: entry.range, document: document), let state = readerState, state.annotationEditingEnabled {
                 element.accessibilityCustomActions = HighlightColor.allCases.map { color in
-                    UIAccessibilityCustomAction(name: "Highlight verse \(color.rawValue)") { _ in
+                    UIAccessibilityCustomAction(name: color.verseActionTitle) { _ in
                         Task { await state.saveExact(passage, color: color) }
                         return true
                     }
-                } + [UIAccessibilityCustomAction(name: state.isExactlyBookmarked(passage) ? "Remove verse bookmark" : "Bookmark verse") { _ in
+                } + [UIAccessibilityCustomAction(name: state.isExactlyBookmarked(passage) ? String(localized: "Remove verse bookmark") : String(localized: "Bookmark verse")) { _ in
                     Task { await state.saveExact(passage, color: nil, bookmarkAction: !state.isExactlyBookmarked(passage)) }
                     return true
-                }, UIAccessibilityCustomAction(name: "Remove verse highlights") { _ in
+                }, UIAccessibilityCustomAction(name: String(localized: "Remove verse highlights")) { _ in
                     Task { await state.saveExact(passage, color: nil) }
                     return true
                 }]
@@ -630,5 +655,26 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         }
         accessibilityDirtyVerses.removeAll()
         accessibilityElements = [header] + verseAccessibility
+    }
+}
+
+private extension NSAttributedString.Key {
+    static let readerHighlightColor = NSAttributedString.Key("BibleReader.HighlightColor")
+}
+
+/// Geometry is requested only for the verse an accessibility client inspects.
+/// Keeping semantic elements cheap avoids laying out an entire long chapter up front.
+private final class VerseAccessibilityElement: UIAccessibilityElement {
+    var rectProvider: (() -> CGRect)?
+    override var accessibilityFrameInContainerSpace: CGRect {
+        get { let rect = rectProvider?() ?? .zero; return rect.isNull ? .zero : rect }
+        set { }
+    }
+    override var accessibilityFrame: CGRect {
+        get {
+            guard let view = accessibilityContainer as? UIView else { return .zero }
+            return UIAccessibility.convertToScreenCoordinates(accessibilityFrameInContainerSpace, in: view)
+        }
+        set { }
     }
 }
