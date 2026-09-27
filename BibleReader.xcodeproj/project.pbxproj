@@ -384,7 +384,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Configuration/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bible Reader";
+				INFOPLIST_KEY_CFBundleDisplayName = Bible;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -420,7 +420,7 @@
 				EXCLUDED_SOURCE_FILE_NAMES = PrototypeChapters.json;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Configuration/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Bible Reader";
+				INFOPLIST_KEY_CFBundleDisplayName = Bible;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

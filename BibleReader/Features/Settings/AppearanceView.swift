@@ -12,6 +12,7 @@ struct AppearanceView: View {
                         ForEach(AppAppearance.allCases) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.inline)
+                    .labelsHidden()
                 }
                 Section {
                     Picker("Reading font", selection: $preferences.typography.face) {
@@ -33,11 +34,15 @@ struct AppearanceView: View {
                     Text("Follows your device’s Text Size setting. These adjustments change Scripture text on top of that setting and are saved on this device.")
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Color(.readingCanvas))
             .navigationTitle("Appearance")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }.accessibilityIdentifier("appearanceDoneButton")
+                    Button(role: .close) { dismiss() }
+                        .labelStyle(.iconOnly)
+                        .accessibilityIdentifier("appearanceDoneButton")
                 }
             }
         }

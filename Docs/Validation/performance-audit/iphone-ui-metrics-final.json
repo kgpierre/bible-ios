@@ -1,0 +1,72 @@
+[
+  {
+    "metric": "CPU Instructions Retired (BibleReader), kI",
+    "values": [
+      30486881.211,
+      30833321.809,
+      30900132.661,
+      30932375.53,
+      31092573.984
+    ]
+  },
+  {
+    "metric": "Duration (Scroll_DraggingAndDeceleration), s",
+    "values": [
+      2.58289,
+      2.566389,
+      2.583386,
+      2.583284,
+      2.58224
+    ]
+  },
+  {
+    "metric": "CPU Cycles (BibleReader), kC",
+    "values": [
+      10323610.207,
+      9975997.417,
+      10415106.52,
+      9563071.268,
+      10414519.213
+    ]
+  },
+  {
+    "metric": "Memory Physical (BibleReader), kB",
+    "values": [
+      4308.992,
+      2015.232,
+      2244.608,
+      2031.616,
+      2555.904
+    ]
+  },
+  {
+    "metric": "Memory Peak Physical (BibleReader), kB",
+    "values": [
+      67701.208,
+      67504.6,
+      67897.816,
+      67340.76,
+      67815.896
+    ]
+  },
+  {
+    "metric": "Absolute Memory Physical (BibleReader), kB",
+    "values": [
+      57739.736,
+      57690.584,
+      57821.656,
+      57739.736,
+      58182.104
+    ]
+  },
+  {
+    "metric": "CPU Time (BibleReader), s",
+    "values": [
+      2.405202,
+      2.478815,
+      2.506567,
+      2.35264,
+      2.499479
+    ]
+  }
+]

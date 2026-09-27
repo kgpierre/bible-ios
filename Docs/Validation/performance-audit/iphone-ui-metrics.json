@@ -1,0 +1,82 @@
+[
+  {
+    "metric": "Duration (ApplicationFirstFramePresentationResponsive), s",
+    "values": [
+      2.350468,
+      2.33602,
+      2.3599,
+      2.370221,
+      2.485042
+    ]
+  },
+  {
+    "metric": "CPU Instructions Retired (BibleReader), kI",
+    "values": [
+      30885375.269,
+      30992195.164,
+      31039703.277,
+      31165403.515,
+      31170874.754
+    ]
+  },
+  {
+    "metric": "Duration (Scroll_DraggingAndDeceleration), s",
+    "values": [
+      2.583352,
+      2.583397,
+      2.583506,
+      2.583328,
+      2.566088
+    ]
+  },
+  {
+    "metric": "CPU Cycles (BibleReader), kC",
+    "values": [
+      9615924.883,
+      8952219.987,
+      9060274.315,
+      10293986.406,
+      9917825.62
+    ]
+  },
+  {
+    "metric": "Memory Physical (BibleReader), kB",
+    "values": [
+      7749.632,
+      2605.056,
+      2326.528,
+      2375.68,
+      2277.376
+    ]
+  },
+  {
+    "metric": "Memory Peak Physical (BibleReader), kB",
+    "values": [
+      66980.312,
+      60393.944,
+      63818.2,
+      63703.512,
+      65833.432
+    ]
+  },
+  {
+    "metric": "Absolute Memory Physical (BibleReader), kB",
+    "values": [
+      57608.664,
+      58100.184,
+      58116.568,
+      58182.104,
+      58149.336
+    ]
+  },
+  {
+    "metric": "CPU Time (BibleReader), s",
+    "values": [
+      2.47121,
+      2.344603,
+      2.365574,
+      2.523605,
+      2.518413
+    ]
+  }
+]

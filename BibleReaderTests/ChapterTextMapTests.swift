@@ -192,20 +192,27 @@ struct ChapterTextMapTests {
         view.configure(document: doc, state: state, wide: false, scheme: .light)
         view.layoutIfNeeded()
         view.prepareVerseAccessibility()
+        // Work counters exist only in DEBUG builds; functional assertions below run in every configuration.
+        #if DEBUG
         let builds = view.documentBuildCount, frames = view.accessibilityFrameUpdateCount
         let gutters = view.gutterPassCount
+        #endif
         state.isSaving = true
         view.configure(document: doc, state: state, wide: false, scheme: .light)
         state.isSaving = false
         view.configure(document: doc, state: state, wide: false, scheme: .light)
         view.setNeedsLayout(); view.layoutIfNeeded()
+        #if DEBUG
         #expect(view.documentBuildCount == builds)
         #expect(view.gutterPassCount == gutters)
+        #endif
         state.highlights[doc.verses[0].id] = .sage
         view.configure(document: doc, state: state, wide: false, scheme: .light)
         view.prepareVerseAccessibility()
+        #if DEBUG
         #expect(view.highlightVerseUpdateCount == 1)
         #expect(view.accessibilityFrameUpdateCount == frames)
+        #endif
         let elements = try #require(view.accessibilityElements).compactMap { $0 as? UIAccessibilityElement }
         #expect(elements.first?.accessibilityValue == "sage highlight")
         state.navigationRevision += 1
@@ -213,11 +220,32 @@ struct ChapterTextMapTests {
         state.navigationCue = [doc.verses[1].id]
         view.configure(document: doc, state: state, wide: false, scheme: .light)
         view.layoutIfNeeded()
+        #if DEBUG
         #expect(view.documentBuildCount == builds)
         #expect(view.highlightVerseUpdateCount == 1)
+        #endif
         let map = try #require(view.map)
         #expect(view.textStorage.attribute(.underlineStyle, at: map.entries[1].range.location, effectiveRange: nil) != nil)
         #expect(view.textStorage.attribute(.backgroundColor, at: map.entries[0].range.location, effectiveRange: nil) != nil)
+    }
+
+    @Test @MainActor func italicOverhangSpacingIsPresentationOnly() throws {
+        let doc = ChapterDocument(id: "test:ABC:1", bookID: "ABC", bookName: "Test", eyebrow: "TEST", label: "1", editionLabel: "Fixture", verses: [
+            .init(id: "test:ABC:1:1", label: "1", runs: [.init(text: "born ", italic: false), .init(text: "of", italic: true),
+                                                          .init(text: " the Spirit", italic: false)], structure: "p", headings: [], notes: [])
+        ])
+        let state = ReaderState(), view = ChapterTextView()
+        state.chapters = [doc]; state.chapterID = doc.id
+        view.frame = CGRect(x: 0, y: 0, width: 390, height: 700)
+        view.configure(document: doc, state: state, wide: false, scheme: .light)
+        let map = try #require(view.map)
+        // Kerning restores the visual gap after an italic run without changing Scripture text or copy.
+        #expect(view.textStorage.string == map.text)
+        let lastItalic = map.entries[0].range.location + 6
+        #expect((view.textStorage.attribute(.kern, at: lastItalic, effectiveRange: nil) as? CGFloat ?? 0) > 0)
+        #expect(view.textStorage.attribute(.kern, at: lastItalic - 1, effectiveRange: nil) == nil)
+        view.selectedRange = map.entries[0].range
+        #expect(map.copyText(range: view.selectedRange, document: doc)?.hasPrefix("born of the Spirit\n") == true)
     }
 
     @Test @MainActor func pageContainerPassesSidebarAndChromeTouchesThrough() {

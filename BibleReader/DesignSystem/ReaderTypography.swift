@@ -59,3 +59,17 @@ extension View {
         modifier(ReaderTypography(role: role, wide: wide))
     }
 }
+
+/// In-content serif heading shared by compact destinations (Search, Saved).
+struct DestinationTitle: View {
+    let title: LocalizedStringKey
+    @ScaledMetric(relativeTo: .largeTitle) private var size = 38.0
+    init(_ title: LocalizedStringKey) { self.title = title }
+    var body: some View {
+        Text(title)
+            .font(.system(size: size, weight: .semibold, design: .serif))
+            .foregroundStyle(Color(.readingPrimary))
+            .textCase(nil)
+            .accessibilityAddTraits(.isHeader)
+    }
+}

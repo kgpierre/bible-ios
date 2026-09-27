@@ -92,7 +92,8 @@ struct BookRow: View {
             }
             Spacer(minLength: 0)
             if selected {
-                Image(systemName: "bookmark.fill").font(.caption).foregroundStyle(Color(.accent))
+                // A checkmark marks the reading location; bookmark symbols mean saved bookmarks elsewhere.
+                Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(Color(.accent))
                     .accessibilityLabel("Current book")
             }
         }

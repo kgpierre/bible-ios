@@ -160,3 +160,32 @@ Saved filters, canonical/recent ordering, record-specific deletion, Retry, and s
 ### Release audit validation (22 September 2026)
 
 The audit pass adds an app privacy manifest, accessibility and localization corrections, stronger highlight variants, storage/Saved optimizations, streamed summary drafts, system Undo/commands, and stable reader resizing. See [decision 0012](Docs/Decisions/0012-release-audit.md) for implemented versus deferred items and [validation](Docs/Validation/release-audit/README.md) for exact commands and passing evidence (66 non-UI tests, focused iPhone/iPad UI flows, and an unsigned Release build). This does not establish release or physical-device acceptance.
+
+### Visual and performance audit (25 September 2026)
+
+See [decision 0013](Docs/Decisions/0013-visual-and-performance-audit.md). Xcode's iOS 27.0 simulator runtime; Debug; derived data `.build/AuditDD`.
+
+```sh
+xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' -only-testing:BibleReaderTests -collect-test-diagnostics never
+xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' -only-testing:BibleReaderUITests -collect-test-diagnostics never
+xcodebuild test -project BibleReader.xcodeproj -scheme BibleReader -destination 'platform=iOS Simulator,name=iPad mini (A17 Pro),OS=27.0' -only-testing:BibleReaderUITests/BibleReaderUITests/testIPadWideAndNarrowRestoration -only-testing:BibleReaderUITests/BibleReaderUITests/testIPadSavedUpdatesAlongsideReader -only-testing:BibleReaderUITests/BibleReaderUITests/testSearchSurvivesIPadResize -collect-test-diagnostics never
+```
+
+Results: 67 unit tests passed (including the new italic-kerning regression). iPhone 18 Pro UI suite: 22 passed, 3 iPad-only tests skipped. The three iPad resize/Saved/Search tests passed on iPad mini. On iPad Pro 13-inch, two of them fail by design: portrait is already wide (1032 points, at least the 920-point breakpoint), so the compact tabs they wait for never appear. Build had no compiler warnings. Screenshots came from a temporary XCUITest tour that was not committed. No physical-device checks were run.
+
+### Compact corpus, About, and interactive paper turn (25 September 2026)
+
+See [decision 0013](Docs/Decisions/0013-visual-and-performance-audit.md) (compact corpus and About follow-up) and [decision 0014](Docs/Decisions/0014-interactive-paper-turn.md). The rebuilt corpus is 16 MB, down from 34 MB, with an identical logical revision. Rebuild and validate it with:
+
+```sh
+python3 Content/Tools/build_corpus.py
+python3 Content/Tools/validate_corpus.py
+```
+
+Results:
+
+- Corpus validation passed 9 of 9 checks with Python 3.13.14 and SQLite 3.53.1.
+- iPhone 18 Pro (iOS 27.0): 68 unit tests passed, and the UI suite passed 23 tests with 3 iPad-only skips.
+- iPad mini (A17 Pro): all four resize, Saved, Search, and turn tests passed.
+
+No physical-device checks were run.

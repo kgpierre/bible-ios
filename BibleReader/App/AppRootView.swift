@@ -55,9 +55,6 @@ struct AppRootView: View {
             .sheet(isPresented: $state.isAppearancePresented) {
                 AppearanceView(preferences: state.preferences)
             }
-            .sheet(isPresented: $state.isBooksPresented) {
-                PrototypeChapterPicker(state: state.reader, startsWithBooks: true) { state.destination = .read }
-            }
             .sheet(item: $state.summary) { summary in
                 ChapterSummaryView(state: summary) { source in
                     if let chapter = state.reader.catalogChapter(source.chapterID) {
@@ -66,10 +63,19 @@ struct AppRootView: View {
                     }
                 }
             }
-            .sheet(isPresented: $state.isPrototypeInfoPresented) { prototypeInfo }
+            .sheet(isPresented: $state.isAboutPresented) {
+                AboutView(editionNotice: state.reader.editionNotice) { state.isAboutPresented = false }
+            }
 
         }
         .task { await state.reader.load() }
+        .onChange(of: state.reader.document?.bookID, initial: true) { _, bookID in
+            // The wide sidebar's testament follows the reader's current book.
+            if let book = state.reader.books.first(where: { $0.id == bookID }) { state.newTestament = book.ordinal >= 39 }
+        }
+        .onChange(of: state.destination) { _, destination in
+            if destination == .search { state.reader.prewarmSearch() }
+        }
         .task(id: "\(state.destination.rawValue):\(state.reader.savedRevision)") {
             if state.destination == .saved { await state.reader.loadSavedItems() }
         }
@@ -101,7 +107,7 @@ struct AppRootView: View {
                 .accessibilityHidden(state.destination != .search)
             }
         }
-        .navigationTitle(!wide && state.destination == .saved ? String(localized: "Saved") : "")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(!wide)
     }
@@ -141,25 +147,26 @@ struct AppRootView: View {
             .accessibilityIdentifier("chapterSummaryButton")
             .disabled(state.reader.document == nil || state.reader.isLoading)
             Menu("More", systemImage: "ellipsis") {
-                Button("About this edition") { state.isPrototypeInfoPresented = true }
-                Button("Search", systemImage: "magnifyingglass") {
-                    state.destination = .search
-                    state.search.focusRequest += 1
+                Section {
+                    Button("Search", systemImage: "magnifyingglass") {
+                        state.destination = .search
+                        state.search.focusRequest += 1
+                    }
+                    Button("Previous chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
+                        .disabled(!state.reader.hasAdjacentChapter(-1))
+                    Button("Next chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
+                        .disabled(!state.reader.hasAdjacentChapter(1))
                 }
-
-                Button("Previous chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
-                    .disabled(!state.reader.hasAdjacentChapter(-1))
-
-                Button("Next chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
-                    .disabled(!state.reader.hasAdjacentChapter(1))
-
-                Button("Undo annotation", systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
-                    .disabled(!state.reader.canUndo || state.reader.isSaving)
-                if let document = state.reader.document {
-                    ShareLink(item: "\(document.reference) — \(document.editionLabel)") {
-                        Label("Share reference", systemImage: "square.and.arrow.up")
+                Section {
+                    Button("Undo annotation", systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
+                        .disabled(!state.reader.canUndo || state.reader.isSaving)
+                    if let document = state.reader.document {
+                        ShareLink(item: "\(document.reference) — \(document.editionLabel)") {
+                            Label("Share reference", systemImage: "square.and.arrow.up")
+                        }
                     }
                 }
+                Button("About \(AppInfo.name)", systemImage: "info.circle") { state.isAboutPresented = true }
             }
         }
     }
@@ -211,27 +218,6 @@ struct AppRootView: View {
     }
 
     private var saved: some View { SavedView(state: state) }
-
-    private var prototypeInfo: some View {
-        NavigationStack {
-            Form {
-                Section("Development build") {
-                    Text("King James Version, 66-book edition. All chapters are bundled for offline reading.")
-                    Text("Highlights, bookmarks, and reading position are saved on this device. No accounts, tracking, or app-operated sync. Device backups may include your saved data.")
-                }
-                Section("Source and notices") {
-                    Text(state.reader.editionNotice).font(.footnote)
-                    Text("Provider: eBible.org / Crosswire Bible Society. Source ID: eng-kjv. Downloaded 21 September 2026. Release rights and canon review remain open.")
-                }
-            }
-            .navigationTitle("About")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { state.isPrototypeInfoPresented = false }
-                }
-            }
-        }
-    }
 }
 
 #Preview { AppRootView() }

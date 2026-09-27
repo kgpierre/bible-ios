@@ -619,6 +619,25 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
+    func testAboutShowsIdentityCreditsAndAttributions() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["More"].tap()
+        app.buttons["About Bible"].tap()
+        XCTAssertTrue(app.staticTexts["Bible"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["donateButton"].exists)
+        XCTAssertTrue(app.links.matching(NSPredicate(format: "label CONTAINS %@", "Kyle Pierre")).firstMatch.exists)
+        app.swipeUp()
+        app.buttons["Edition notice"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Crosswire Bible Society")).firstMatch.waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["aboutCloseButton"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        capture(app, name: "About closed back to reader")
+    }
+
+    @MainActor
     private func testApplication() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["BIBLE_TEST_STORE"] = UUID().uuidString

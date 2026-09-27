@@ -1,5 +1,6 @@
 import Observation
 import Foundation
+import os
 
 @MainActor
 @Observable
@@ -125,6 +126,8 @@ final class ReaderState {
 
     func load() async {
         guard store == nil else { return }
+        let interval = ReaderPerformance.signposter.beginInterval("Reader load", id: ReaderPerformance.signposter.makeSignpostID())
+        defer { ReaderPerformance.signposter.endInterval("Reader load", interval) }
         isLoading = true
         do {
             let opened = try await makeStore()
@@ -203,6 +206,11 @@ final class ReaderState {
     func search(_ input: String, offset: Int = 0) async throws -> SearchResponse {
         guard let store else { throw StorageIssue.incompatibleCorpus }
         return try await store.search(input, offset: offset)
+    }
+
+    func prewarmSearch() {
+        guard let store else { return }
+        Task(priority: .utility) { await store.prewarmSearch() }
     }
 
     func lookupReference(_ input: String) async throws -> SearchResponse {

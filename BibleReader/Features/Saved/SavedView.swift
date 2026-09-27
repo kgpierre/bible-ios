@@ -30,10 +30,13 @@ struct SavedView: View {
                     .disabled(state.reader.isSaving)
                     .accessibilityIdentifier("savedUndo")
                 }
+            } header: {
+                DestinationTitle("Saved")
+                    .padding(.bottom, 8)
             }
             Section("Saved on this device") {
                 if let error = state.reader.savedError {
-                    Text(error).foregroundStyle(.secondary)
+                    Text(error).foregroundStyle(Color(.readingSecondary))
                     Button("Retry saved passages") { Task { await state.reader.loadSavedItems() } }
                 } else if state.reader.savedLoadedRevision < 0 {
                     ProgressView("Loading saved passages…")
@@ -41,20 +44,30 @@ struct SavedView: View {
                     Text(state.reader.savedItems.isEmpty
                          ? "Your highlights and bookmarks will appear here."
                          : state.savedFilter == .highlights ? "No saved highlights." : "No saved bookmarks.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(.readingSecondary))
                 }
                 ForEach(items) { item in
                     row(item)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(item) }
                         .contextMenu { deleteButton(item) }
                         .accessibilityAction(named: Text("Delete saved item")) { delete(item) }
-                        .listRowBackground(wide && state.savedSelection == item.id ? Color(.accent).opacity(0.12) : Color.clear)
+                        .listRowBackground(wide && state.savedSelection == item.id ? Color(.accent).opacity(0.12) : nil)
                 }
             }
         }
-        .onChange(of: listRevision, initial: true) { _, _ in
-            items = SavedOrdering.items(state.reader.savedItems, filter: state.savedFilter,
-                                        sort: state.savedSort, chapters: state.reader.catalogIndex)
+        .task(id: listRevision) {
+            let source = state.reader.savedItems, filter = state.savedFilter
+            let sort = state.savedSort, chapters = state.reader.catalogIndex
+            // Ordinary libraries sort inline (no empty-state flash). Large ones sort off the main
+            // actor; a newer revision cancels this task and its stale result is discarded.
+            guard source.count > 1_000 else {
+                items = SavedOrdering.items(source, filter: filter, sort: sort, chapters: chapters)
+                return
+            }
+            let ordered = await Task.detached(priority: .userInitiated) {
+                SavedOrdering.items(source, filter: filter, sort: sort, chapters: chapters)
+            }.value
+            if !Task.isCancelled { items = ordered }
         }
         .refreshable { await state.reader.loadSavedItems(force: true) }
         .scrollContentBackground(.hidden)
@@ -69,18 +82,32 @@ struct SavedView: View {
                 if !wide { state.destination = .read }
             }
         } label: {
+            // Matches Search results: accent reference, serif Scripture excerpt, labeled annotation kind.
             VStack(alignment: .leading, spacing: 6) {
-                Text(item.reference).font(.headline)
-                Text(item.text).font(.body).lineLimit(dynamicType.isAccessibilitySize ? nil : 3)
-                if let color = item.color {
-                    Label(color.title, systemImage: "highlighter").font(.caption)
+                Text(item.reference).font(.subheadline.weight(.semibold)).foregroundStyle(Color(.accent))
+                Text(item.text).font(.system(.body, design: .serif)).foregroundStyle(Color(.readingPrimary))
+                    .lineLimit(dynamicType.isAccessibilitySize ? nil : 3)
+                if item.color != nil || item.bookmark {
+                    HStack(spacing: 14) {
+                        if let color = item.color {
+                            Label {
+                                Text(color.title)
+                            } icon: {
+                                Circle().fill(Color(color.assetName))
+                                    .overlay { Circle().strokeBorder(Color(.readingSecondary).opacity(0.45), lineWidth: 1) }
+                                    .frame(width: 12, height: 12)
+                            }
+                        }
+                        if item.bookmark { Label("Bookmarked", systemImage: "bookmark.fill") }
+                    }
+                    .font(.caption).foregroundStyle(Color(.readingSecondary))
                 }
-                if item.bookmark { Label("Bookmarked", systemImage: "bookmark.fill").font(.caption) }
                 if item.unavailable {
                     Text("Saved words could not be located. Opens the chapter when available.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(Color(.readingSecondary))
                 }
             }
+            .padding(.vertical, 4)
         }
         .accessibilityIdentifier("savedItem-" + item.id)
         .accessibilityAddTraits(state.savedSelection == item.id ? .isSelected : [])

@@ -307,21 +307,30 @@ struct ExactAnnotationTests {
         let store = try BibleStore(corpusURL: corpus, userURL: url)
         for chapter in catalog.prefix(3) { _ = try await store.chapter(chapter.id) }
         #expect(try await store.savedItems().count == 12)
+        // Decode counters exist only in DEBUG builds; functional assertions run in every configuration.
+        #if DEBUG
         let decoded = await store.exactDecodeCount
         let readerDecoded = await store.chapterDecodeCount
         let savedDecoded = await store.savedChapterDecodeCount
+        #endif
         let doc = try await store.chapter(catalog[0].id)
+        #if DEBUG
         #expect(await store.chapterDecodeCount == readerDecoded)
+        #endif
         let middle = try passage(doc, range: NSRange(location: 1, length: 2))
         let change = try await store.editExact(middle, color: .blue)
         let items = try await store.savedItems()
         #expect(items.count == 13)
         #expect(items.contains { $0.color == .blue && $0.text == middle.text })
+        #if DEBUG
         #expect(await store.exactDecodeCount == decoded)
         #expect(await store.savedChapterDecodeCount == savedDecoded)
+        #endif
         try await store.undoExact(change)
         #expect(try await store.savedItems().count == 12)
+        #if DEBUG
         #expect(await store.exactDecodeCount == decoded)
+        #endif
         let reopened = try BibleStore(corpusURL: corpus, userURL: url)
         let rebuilt = try await reopened.savedItems()
         #expect(rebuilt.map(\.id) == (try await store.savedItems()).map(\.id))

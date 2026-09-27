@@ -58,7 +58,8 @@ struct ChapterSummaryView: View {
             .accessibilityElement(children: .combine)
         }
         ToolbarItem(placement: .confirmationAction) {
-            Button("Done") { generation?.cancel(); state.cancel(); dismiss() }
+            Button(role: .close) { generation?.cancel(); state.cancel(); dismiss() }
+                .labelStyle(.iconOnly)
                 .accessibilityIdentifier("chapterSummaryDone")
         }
     }

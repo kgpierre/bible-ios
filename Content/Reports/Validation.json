@@ -1,12 +1,12 @@
 {
   "passed": true,
-  "testsRun": 8,
+  "testsRun": 9,
   "failures": [],
   "errors": [],
-  "python": "3.13.3",
-  "sqlite": "3.49.1",
+  "python": "3.13.14",
+  "sqlite": "3.53.1",
   "archiveSHA256": "6d834ebe8bcf157587ce93b774615d9e9554f1201951a072cc379930d49bb6fb",
   "contentRevision": "221de95d272cfe6b1aa3088f2e82ba4f8589211aca296d33bedf7d6b61ed23e0",
-  "outputSHA256": "1ded42d91523b75ee621749f754a98fbb56efafced76e0d399bb5d72270c225a",
+  "outputSHA256": "88025b9e3853f83a9a79fb033fa2420c861d18a078be7ec93e7e1e84fb5d8840",
   "scope": "Offline structural, all-verse source fidelity, golden fixture, integrity, FTS, parser rejection and reproducibility checks; not rights clearance"
 }

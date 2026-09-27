@@ -9,9 +9,8 @@ final class AppState {
     var summary: ChapterSummaryState?
     var isAppearancePresented = false
     var isChapterPickerPresented = false
-    var isBooksPresented = false
     var newTestament = false
-    var isPrototypeInfoPresented = false
+    var isAboutPresented = false
     var savedSelection: String?
     var savedFilter: SavedFilter = .all
     var savedSort: SavedSort = .recent

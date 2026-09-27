@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import os
 
 /// A single TextKit 2 document. Never access `layoutManager`: that switches UITextView to TextKit 1.
 @MainActor
@@ -197,6 +198,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         backgroundColor = UIColor(resource: .readingCanvas)
         tintColor = UIColor(resource: .accent)
         if changedChapter || changedStyle {
+            let buildInterval = ReaderPerformance.signposter.beginInterval("Document build", id: ReaderPerformance.signposter.makeSignpostID())
+            defer { ReaderPerformance.signposter.endInterval("Document build", buildInterval) }
             #if DEBUG
             documentBuildCount += 1
             #endif
@@ -214,13 +217,22 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             for range in map.sourceHeadingRanges {
                 string.addAttributes([.font: scaledFont(size: 16 + state.typography.pointAdjustment, style: .subheadline, serif: state.typography.face == .serif), .foregroundColor: UIColor(resource: .readingSecondary)], range: range)
             }
+            let italic = font.fontDescriptor.withSymbolicTraits(.traitItalic).map { UIFont(descriptor: $0, size: font.pointSize) }
+            let storage = string.string as NSString
             for entry in map.entries {
                 var offset = entry.range.location
                 for run in entry.verse.runs {
-                    if run.italic, let descriptor = font.fontDescriptor.withSymbolicTraits(.traitItalic) {
-                        string.addAttribute(.font, value: UIFont(descriptor: descriptor, size: font.pointSize), range: NSRange(location: offset, length: run.text.utf16.count))
+                    let length = run.text.utf16.count
+                    if run.italic, let italic, length > 0 {
+                        string.addAttribute(.font, value: italic, range: NSRange(location: offset, length: length))
+                        // Serif italics overhang into a following roman space ("of the" reads as "ofthe").
+                        // Presentation-only kerning restores the gap; text, copy, and anchors are unchanged.
+                        if run.text.last?.isWhitespace == false {
+                            let last = storage.rangeOfComposedCharacterSequence(at: offset + length - 1)
+                            string.addAttribute(.kern, value: font.pointSize * 0.08, range: last)
+                        }
                     }
-                    offset += run.text.utf16.count
+                    offset += length
                 }
             }
             attributedText = string
@@ -315,6 +327,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             restorePosition()
             restoreSelection()
         }
+        if window != nil, map != nil, bounds.height > 0 { ReaderPerformance.markFirstScriptureLaidOut() }
         if needsSelectionFocusRestore, window != nil, selectedRange.length > 0 {
             // Restoring offsets alone leaves an inactive selection after a destination round trip.
             // Wait for attachment and layout before restoring native text-interaction focus.
@@ -342,11 +355,11 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             textStorage.removeAttribute(.backgroundColor, range: entry.range)
             textStorage.removeAttribute(.readerHighlightColor, range: entry.range)
             if let color = highlights[id] {
-                textStorage.addAttributes([.backgroundColor: UIColor(named: color.assetName) ?? .clear, .readerHighlightColor: color.rawValue], range: entry.range)
+                textStorage.addAttributes([.backgroundColor: color.fill, .readerHighlightColor: color.rawValue], range: entry.range)
             }
             for colored in partsByVerse[id] ?? [] {
                 guard let local = colored.part.resolvedRange(in: entry.verse.text) else { continue }
-                textStorage.addAttributes([.backgroundColor: UIColor(named: colored.color.assetName) ?? .clear, .readerHighlightColor: colored.color.rawValue],
+                textStorage.addAttributes([.backgroundColor: colored.color.fill, .readerHighlightColor: colored.color.rawValue],
                     range: NSRange(location: entry.range.location + local.location, length: local.length))
             }
         }
@@ -521,7 +534,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     /// A checkmark means every selected word has that color; mixed/partial coverage has no checkmark.
     private func refreshPalette() {
         guard paletteTraits == nil || traitCollection.hasDifferentColorAppearance(comparedTo: paletteTraits) else { return }
-        resolvedPalette = HighlightColor.allCases.map { ($0, (UIColor(named: $0.assetName) ?? .clear).resolvedColor(with: traitCollection)) }
+        resolvedPalette = HighlightColor.allCases.map { ($0, $0.fill.resolvedColor(with: traitCollection)) }
         swatchImages.removeAll()
         paletteTraits = traitCollection
     }
@@ -660,6 +673,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
 
 private extension NSAttributedString.Key {
     static let readerHighlightColor = NSAttributedString.Key("BibleReader.HighlightColor")
+}
+
+private extension HighlightColor {
+    private static let fills: [HighlightColor: UIColor] = Dictionary(uniqueKeysWithValues: allCases.map {
+        ($0, UIColor(named: $0.assetName) ?? .clear)
+    })
+    /// Dynamic asset colors, resolved once instead of per highlighted verse.
+    var fill: UIColor { Self.fills[self] ?? .clear }
 }
 
 /// Geometry is requested only for the verse an accessibility client inspects.

@@ -1,3 +1,21 @@
+## Latest continuation — 25 September 2026, corpus, About, page turn
+
+Performance-audit follow-ups are listed in `Docs/Validation/performance-audit/README.md`: signposts, off-main sorting for large Saved libraries, a real search prewarm, Release-compilable tests, and the launch tab-bar alignment fix. The shared scheme's Run action is currently set to Release by the owner.
+
+The app icon comes from the owner's exports, flattened to opaque. Fixed the first-swipe stall by building neighboring pages ahead of time. Opening the Search tab no longer auto-focuses the field, which forced the first keyboard presentation (a known device stall). Both still need confirmation on the physical device.
+
+Owner requests, all implemented:
+
+- **Smaller corpus:** 34 → 16 MB. Chapter payloads are compressed, search uses an external-content index, and a redundant index is gone. The Bible text is unchanged: the logical revision is identical and the verse and document comparisons match.
+- **About screen:** name "Bible", Kyle Pierre with kpierre.dev, a donation button, attributions, and an icon slot. The donation URL is still pending: set `AppInfo.donationURL`.
+- **Page turn:** the curl follows your finger, the back is thin paper with faint mirrored print, response is quicker, and a soft haptic plays on commit.
+
+Also fixed a turn state mismatch that could leave the screen on the previous chapter. See decisions [0013](Docs/Decisions/0013-visual-and-performance-audit.md) and [0014](Docs/Decisions/0014-interactive-paper-turn.md). On-device feel and haptic checks are still needed.
+
+## Latest continuation — 25 September 2026, visual and performance audit
+
+Fixed the compact passage capsule, which showed an abbreviation beside empty space ("Jhn 3") and stacked unnecessarily for long book names. Other fixes: italic overhang spacing (presentation-only kerning), the native top scroll edge effect behind the floating toolbar, Saved restyled to match Search, consistent close-role sheets on the reading canvas, the duplicate "Theme" label, a checkmark instead of a bookmark for the current book, the wide sidebar following the current testament, grouped More menu, and removal of the dead Books sheet. Performance measured fine except the first search of a session; Search now prewarms the parser and FTS pages once when opened. 67 unit tests, the iPhone UI suite, and the iPad mini resize tests pass. See [decision 0013](Docs/Decisions/0013-visual-and-performance-audit.md). No Scripture, corpus, schema, or signing changes.
+
 ## Latest continuation — 22 September 2026, release audit
 
 Implemented the privacy manifest, accessible chapter-turn fallback, full wrapped-verse accessibility geometry/actions, localization extraction, stronger/high-contrast highlights, plain chapter cells/native Close, storage scheduling and Saved-query improvements, cached annotation/Saved work, streaming overview drafts, semantic selection-menu colors, native UndoManager/scene commands, finite background position-write allowance, adaptive passage labels, and a stable split-view reader across resizing. The separate Books button remains removed. Removed duplicate wide About; retained owner-selected sidebar controls.

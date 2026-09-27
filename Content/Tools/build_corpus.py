@@ -6,6 +6,7 @@ import json
 import sqlite3
 import tempfile
 import zipfile
+import zlib
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 
@@ -14,12 +15,17 @@ ARCHIVE = ROOT / 'Content/Source/eng-kjv_usfx.zip'
 PIN = '6d834ebe8bcf157587ce93b774615d9e9554f1201951a072cc379930d49bb6fb'
 EDITION = 'eng-kjv-1769-protestant'
 BOOKS = 'GEN EXO LEV NUM DEU JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST JOB PSA PRO ECC SNG ISA JER LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL MAT MRK LUK JHN ACT ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM HEB JAS 1PE 2PE 1JN 2JN 3JN JUD REV'.split()
-CONFIG = {'editionID': EDITION, 'includedBooks': BOOKS, 'canonReview': 'Proposed engineering configuration; owner confirmation required before release', 'importerVersion': 1, 'documentVersion': 1}
+CONFIG = {'editionID': EDITION, 'includedBooks': BOOKS, 'canonReview': 'Proposed engineering configuration; owner confirmation required before release', 'importerVersion': 2, 'documentVersion': 2, 'payloadEncoding': 'raw-deflate-json'}
 
 
 def digest(data): return hashlib.sha256(data).hexdigest()
 def packed(value): return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
 def text(node): return ' '.join(''.join(node.itertext()).split())
+def deflate(data):
+    # Raw DEFLATE (RFC 1951, no zlib header), matching Apple's COMPRESSION_ZLIB decoder.
+    compressor = zlib.compressobj(9, zlib.DEFLATED, -15, 9)
+    return compressor.compress(data) + compressor.flush()
+def inflate(data): return zlib.decompress(data, -15)
 
 
 def safe_xml(xml):
@@ -159,17 +165,16 @@ def convert(output):
         db = sqlite3.connect(dbpath)
         db.executescript('''
 PRAGMA foreign_keys=ON;
-PRAGMA user_version=1;
+PRAGMA user_version=2;
 CREATE TABLE edition(id TEXT PRIMARY KEY,revision TEXT NOT NULL,documentVersion INTEGER NOT NULL);
 CREATE TABLE book(id TEXT PRIMARY KEY,name TEXT NOT NULL,shortName TEXT NOT NULL,ordinal INTEGER UNIQUE NOT NULL,metadata TEXT NOT NULL);
 CREATE TABLE chapter(id TEXT PRIMARY KEY,bookID TEXT NOT NULL REFERENCES book(id),label TEXT NOT NULL,ordinal INTEGER UNIQUE NOT NULL,UNIQUE(bookID,label));
-CREATE TABLE chapter_document(chapterID TEXT PRIMARY KEY REFERENCES chapter(id),payload TEXT NOT NULL);
+CREATE TABLE chapter_document(chapterID TEXT PRIMARY KEY REFERENCES chapter(id),payload BLOB NOT NULL);
 CREATE TABLE verse(id TEXT PRIMARY KEY,chapterID TEXT NOT NULL REFERENCES chapter(id),label TEXT NOT NULL,ordinal INTEGER UNIQUE NOT NULL,text TEXT NOT NULL,UNIQUE(chapterID,label));
-CREATE INDEX verse_chapter ON verse(chapterID);
 CREATE TABLE reference_alias(alias TEXT NOT NULL,bookID TEXT NOT NULL REFERENCES book(id),PRIMARY KEY(alias,bookID));
-CREATE VIRTUAL TABLE verse_search USING fts5(verseID UNINDEXED,text,tokenize='unicode61');
+CREATE VIRTUAL TABLE verse_search USING fts5(text,content='verse',content_rowid='ordinal',tokenize='unicode61');
 ''')
-        db.execute('INSERT INTO edition VALUES(?,?,1)',(EDITION,logical))
+        db.execute('INSERT INTO edition VALUES(?,?,?)',(EDITION,logical,CONFIG['documentVersion']))
         for i,b in enumerate(books):
             db.execute('INSERT INTO book VALUES(?,?,?,?,?)',(b['id'],b['name'],b['shortName'],i,packed(b)))
             for alias in sorted({b['id'].lower(),b['name'].lower(),b['shortName'].lower()}):
@@ -177,12 +182,16 @@ CREATE VIRTUAL TABLE verse_search USING fts5(verseID UNINDEXED,text,tokenize='un
         ordinal=0
         for i,c in enumerate(documents):
             db.execute('INSERT INTO chapter VALUES(?,?,?,?)',(c['id'],c['bookID'],c['label'],i))
-            db.execute('INSERT INTO chapter_document VALUES(?,?)',(c['id'],packed(c)))
+            db.execute('INSERT INTO chapter_document VALUES(?,?)',(c['id'],deflate(packed(c).encode())))
             for v in c['verses']:
                 wording=''.join(r['text'] for r in v['runs'])
-                db.execute('INSERT INTO verse VALUES(?,?,?,?,?)',(v['id'],c['id'],v['label'],ordinal,wording))
-                db.execute('INSERT INTO verse_search VALUES(?,?)',(v['id'],wording));ordinal+=1
+                db.execute('INSERT INTO verse VALUES(?,?,?,?,?)',(v['id'],c['id'],v['label'],ordinal,wording));ordinal+=1
+        # External-content FTS indexes verse.text in place (FTS rowid = verse.ordinal) instead of a second copy.
+        db.execute("INSERT INTO verse_search(verse_search) VALUES('rebuild')")
+        db.execute("INSERT INTO verse_search(verse_search) VALUES('optimize')")
+        db.execute("INSERT INTO verse_search(verse_search,rank) VALUES('integrity-check',1)")
         db.commit()
+        db.execute('VACUUM')
         if db.execute('PRAGMA integrity_check').fetchone()[0]!='ok' or db.execute('PRAGMA foreign_key_check').fetchall():
             raise ValueError('Corpus integrity failure')
         db.close()

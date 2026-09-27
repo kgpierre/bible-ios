@@ -5,13 +5,10 @@ struct SearchView: View {
     var active = true
     let open: (ResolvedPassage) -> Void
     @FocusState private var focused: Bool
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 38.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Search")
-                .font(.system(size: titleSize, weight: .semibold, design: .serif))
-                .accessibilityAddTraits(.isHeader)
+            DestinationTitle("Search")
             HStack(spacing: 8) {
                 HStack(spacing: 4) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Color(.readingSecondary))
@@ -51,7 +48,9 @@ struct SearchView: View {
         .tint(Color(.accent))
         .background(Color(.readingCanvas))
         .task(id: "\(state.query)|\(state.retryToken)|\(active)") { if active { await state.run() } }
-        .onChange(of: active, initial: true) { _, active in focused = active && state.query.isEmpty }
+        // Opening the tab must not summon the keyboard: its first presentation after launch
+        // stalls the main thread on device. Tapping the field, ⌘F, or More → Search focuses it.
+        .onChange(of: active) { _, active in if !active { focused = false } }
         .onChange(of: state.focusRequest) { _,_ in focused = active }
     }
 

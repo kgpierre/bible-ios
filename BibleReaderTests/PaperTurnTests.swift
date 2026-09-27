@@ -16,8 +16,29 @@ struct PaperTurnTests {
         coordinator.controller = controller
         coordinator.update(view)
         #expect(controller.viewControllers?.count == 1)
+        #expect(controller.isDoubleSided)
         #expect(!coordinator.turnGesture.isEnabled)
         #expect(state.document?.id == document.id)
+    }
+
+    @Test @MainActor func doubleSidedCurlAcceptsPageAndThinPaperBack() async throws {
+        let documents = try await PrototypeLibrary.load()
+        let controller = ReaderCurlController(transitionStyle: .pageCurl, navigationOrientation: .horizontal,
+            options: [.spineLocation: UIPageViewController.SpineLocation.min.rawValue])
+        let scene = try #require(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 400, height: 800)
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+        let first = ChapterPageController(document: documents[0]), second = ChapterPageController(document: documents[1])
+        controller.setViewControllers([first], direction: .forward, animated: false)
+        for (page, direction) in [(second, UIPageViewController.NavigationDirection.forward), (first, .reverse)] {
+            await withCheckedContinuation { done in
+                controller.setViewControllers([page, PaperBackController(front: page)], direction: direction, animated: true) { _ in done.resume() }
+            }
+            #expect(controller.viewControllers?.first === page)
+        }
     }
 
     @Test @MainActor func preparedCancelledAndStaleTurnsPreserveReaderAndAnnotations() async throws {

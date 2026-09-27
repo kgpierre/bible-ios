@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -19,6 +20,21 @@ class CorpusTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls): cls.db.close()
+
+    def document(self,chapter):
+        return json.loads(corpus.inflate(self.db.execute('SELECT payload FROM chapter_document WHERE chapterID=?',(chapter,)).fetchone()[0]))
+
+    def test_compact_storage_matches_importer_representation(self):
+        # Every compressed chapter decodes to the importer's exact JSON document; FTS indexes verse text in place.
+        by_id={b.attrib['id']:b for b in self.source.findall('book')}
+        documents={c['id']:corpus.packed(c) for code in corpus.BOOKS for c in corpus.parse_book(by_id[code])[1]}
+        stored={cid:corpus.inflate(payload).decode() for cid,payload in self.db.execute('SELECT chapterID,payload FROM chapter_document')}
+        self.assertEqual(stored,documents)
+        whole_word={r[0] for r in self.db.execute('SELECT id,text FROM verse') if re.search(r'\bbeginning\b',r[1],re.I)}
+        indexed={r[0] for r in self.db.execute("SELECT verse.id FROM verse_search JOIN verse ON verse.ordinal=verse_search.rowid WHERE verse_search MATCH 'beginning'")}
+        self.assertEqual(indexed,whole_word)
+        self.assertIsNone(self.db.execute("SELECT name FROM sqlite_master WHERE name='verse_search_content'").fetchone())
+        self.assertEqual(self.db.execute('PRAGMA user_version').fetchone()[0],2)
 
     def test_inventory_and_integrity(self):
         manifest=json.loads((ROOT/'BibleReader/Resources/CorpusManifest.json').read_text())
@@ -58,11 +74,11 @@ class CorpusTests(unittest.TestCase):
         fixtures=json.loads((ROOT/'BibleReader/Resources/PrototypeChapters.json').read_text())
         for fixture in fixtures:
             chapter=f'{corpus.EDITION}:{fixture["bookID"]}:{fixture["label"]}'
-            document=json.loads(self.db.execute('SELECT payload FROM chapter_document WHERE chapterID=?',(chapter,)).fetchone()[0])
+            document=self.document(chapter)
             for old,new in zip(fixture['verses'],document['verses'],strict=True):
                 for key in ['label','runs','headings','notes']: self.assertEqual(old[key],new[key])
         for book,chapter in [('GEN','1'),('PSA','23'),('PSA','119'),('JHN','3'),('JUD','1'),('REV','22')]:
-            doc=json.loads(self.db.execute('SELECT payload FROM chapter_document WHERE chapterID=?',(f'{corpus.EDITION}:{book}:{chapter}',)).fetchone()[0])
+            doc=self.document(f'{corpus.EDITION}:{book}:{chapter}')
             for verse in doc['verses']:
                 wording=self.db.execute('SELECT text FROM verse WHERE id=?',(verse['id'],)).fetchone()[0]
                 self.assertEqual(wording,''.join(r['text'] for r in verse['runs']))
@@ -70,7 +86,7 @@ class CorpusTests(unittest.TestCase):
 
     def test_search_first_last_and_negative(self):
         for term,verse in [('"In the beginning"',f'{corpus.EDITION}:GEN:1:1'),('"grace of our Lord"',f'{corpus.EDITION}:REV:22:21')]:
-            found={r[0] for r in self.db.execute('SELECT verseID FROM verse_search WHERE verse_search MATCH ?',(term,))}
+            found={r[0] for r in self.db.execute('SELECT verse.id FROM verse_search JOIN verse ON verse.ordinal=verse_search.rowid WHERE verse_search MATCH ?',(term,))}
             self.assertIn(verse,found)
         self.assertEqual(self.db.execute('SELECT count(*) FROM verse_search WHERE verse_search MATCH ?',('zxqvnonexistent',)).fetchone()[0],0)
 

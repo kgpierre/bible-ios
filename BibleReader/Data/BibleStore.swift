@@ -18,6 +18,7 @@ actor BibleStore {
     private let user: DatabaseQueue
     private let userURL: URL
     private var cachedReferenceParser: ReferenceParser?
+    private var searchPrewarmed = false
     private var chapterCache: [String: ChapterDocument] = [:]
     private var chapterRecency: [String] = []
     private let chapterCacheLimit = 6
@@ -75,9 +76,10 @@ actor BibleStore {
         corpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
         searchCorpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
         let identity = try corpus.read { db -> (String, String) in
-            guard try Int.fetchOne(db, sql: "PRAGMA user_version") == 1,
+            // Schema 2: external-content FTS keyed by verse.ordinal. Document 2: raw-DEFLATE JSON chapter payloads.
+            guard try Int.fetchOne(db, sql: "PRAGMA user_version") == 2,
                   let row = try Row.fetchOne(db, sql: "SELECT * FROM edition"),
-                  (row["documentVersion"] as Int) == 1 else { throw StorageIssue.incompatibleCorpus }
+                  (row["documentVersion"] as Int) == 2 else { throw StorageIssue.incompatibleCorpus }
             return (row["id"], row["revision"])
         }
         editionID = identity.0
@@ -184,8 +186,8 @@ actor BibleStore {
             let rows = try Row.fetchAll(db, sql: """
                 SELECT verse.id, verse.chapterID, verse.label AS verseLabel, verse.text,
                        chapter.label AS chapterLabel, book.name,
-                       snippet(verse_search,1,char(30),char(31),'…',28) AS excerpt
-                FROM verse_search JOIN verse ON verse.id=verse_search.verseID
+                       snippet(verse_search,0,char(30),char(31),'…',28) AS excerpt
+                FROM verse_search JOIN verse ON verse.ordinal=verse_search.rowid
                 JOIN chapter ON chapter.id=verse.chapterID JOIN book ON book.id=chapter.bookID
                 WHERE verse_search MATCH ? ORDER BY bm25(verse_search), verse.ordinal
                 LIMIT 50 OFFSET ?
@@ -199,6 +201,20 @@ actor BibleStore {
         }
         searchCount = (query.expression, page.total)
         return .results(page)
+    }
+
+    /// Builds the reference parser and runs one representative ranked query on the search
+    /// connection, off the main thread. `length(block)` would not do: SQLite answers it from
+    /// record headers without reading BLOB content. Ranking the most common term reads its full
+    /// posting list plus the bm25 document-size table and prepares the search statements.
+    /// Bounded, idempotent, and read-only.
+    func prewarmSearch() async {
+        guard !searchPrewarmed else { return }
+        searchPrewarmed = true
+        _ = try? parser()
+        _ = try? await searchCorpus.read { db in
+            try Int.fetchOne(db, sql: "SELECT rowid FROM verse_search WHERE verse_search MATCH 'the' ORDER BY bm25(verse_search) LIMIT 1")
+        }
     }
 
     func editionNotice() throws -> String {
@@ -241,14 +257,20 @@ actor BibleStore {
             return cached
         }
         let document = try corpus.read { db in
-            guard let payload = try Data.fetchOne(db, sql: "SELECT CAST(payload AS BLOB) FROM chapter_document WHERE chapterID=?", arguments: [id]) else { throw StorageIssue.invalidPassage }
-            return try decoder.decode(ChapterDocument.self, from: payload)
+            guard let payload = try Data.fetchOne(db, sql: "SELECT payload FROM chapter_document WHERE chapterID=?", arguments: [id]) else { throw StorageIssue.invalidPassage }
+            return try decoder.decode(ChapterDocument.self, from: Self.inflate(payload))
         }
         #if DEBUG
         chapterDecodeCount += 1
         #endif
         remember(document)
         return document
+    }
+
+    /// Chapter payloads are raw DEFLATE (COMPRESSION_ZLIB); a corrupt payload is a corpus error, never placeholder text.
+    private static func inflate(_ payload: Data) throws -> Data {
+        do { return try (payload as NSData).decompressed(using: .zlib) as Data }
+        catch { throw StorageIssue.incompatibleCorpus }
     }
 
     func summarySources(bookID: String, chapterID: String, question: String, preferred: [SummarySource.Reference] = [], preferredOnly: Bool = false) throws -> [SummarySource] {

@@ -1,0 +1,152 @@
+[
+  {
+    "testIdentifier": "PerformanceAuditUITests/testPsalmScrollingPerformance()",
+    "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderUITests/PerformanceAuditUITests/testPsalmScrollingPerformance",
+    "testRuns": [
+      {
+        "device": {
+          "deviceName": "iPhone 18 Pro"
+        },
+        "metrics": [
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "CPU Instructions Retired (BibleReader)",
+            "identifier": "com.apple.dt.XCTMetric_CPU-org.example.BibleReader.instructions_retired",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              30486881.211,
+              30833321.809,
+              30900132.661,
+              30932375.53,
+              31092573.984
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "kI"
+          },
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "Duration (Scroll_DraggingAndDeceleration)",
+            "identifier": "com.apple.dt.XCTMetric_OSSignpost-Scroll_DraggingAndDeceleration.duration",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              2.582889541,
+              2.566388958,
+              2.583385834,
+              2.5832845,
+              2.5822399160000002
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "s"
+          },
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "CPU Cycles (BibleReader)",
+            "identifier": "com.apple.dt.XCTMetric_CPU-org.example.BibleReader.cycles",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              10323610.207,
+              9975997.417,
+              10415106.52,
+              9563071.268,
+              10414519.213
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "kC"
+          },
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "Memory Physical (BibleReader)",
+            "identifier": "com.apple.dt.XCTMetric_Memory-org.example.BibleReader.physical",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              4308.992,
+              2015.232,
+              2244.608,
+              2031.616,
+              2555.904
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "kB"
+          },
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "Memory Peak Physical (BibleReader)",
+            "identifier": "com.apple.dt.XCTMetric_Memory-org.example.BibleReader.physical_peak",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              67701.208,
+              67504.6,
+              67897.816,
+              67340.76,
+              67815.896
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "kB"
+          },
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "Absolute Memory Physical (BibleReader)",
+            "identifier": "com.apple.dt.XCTMetric_Memory-org.example.BibleReader.physical_absolute",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              57739.736,
+              57690.584,
+              57821.656,
+              57739.736,
+              58182.104
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "kB"
+          },
+          {
+            "baselineAverage": 0,
+            "baselineName": "",
+            "displayName": "CPU Time (BibleReader)",
+            "identifier": "com.apple.dt.XCTMetric_CPU-org.example.BibleReader.time",
+            "maxPercentRegression": 10,
+            "maxPercentRelativeStandardDeviation": 10,
+            "maxRegression": 0,
+            "maxStandardDeviation": 10,
+            "measurements": [
+              2.4052024750000003,
+              2.478815228,
+              2.506566898,
+              2.352639983,
+              2.4994794330000003
+            ],
+            "polarity": "prefers smaller",
+            "unitOfMeasurement": "s"
+          }
+        ],
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ]
+  }
+]
