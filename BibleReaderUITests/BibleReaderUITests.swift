@@ -40,17 +40,17 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["destination-saved"].tap()
         let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "savedItem-")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5))
-        app.buttons["savedFilter"].tap()
+        // Filters are one-tap segments at ordinary sizes; sort is a labeled menu button.
         app.buttons["Bookmarks"].tap()
         XCTAssertTrue(app.staticTexts["No saved bookmarks."].waitForExistence(timeout: 5))
-        app.buttons["savedFilter"].tap()
         app.buttons["Highlights"].tap()
         app.buttons["savedSort"].tap()
         app.buttons["Bible order"].tap()
+        XCTAssertEqual(app.buttons["savedSort"].value as? String, "Bible order")
         row.tap()
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
         app.buttons["destination-saved"].tap()
-        XCTAssertTrue(app.buttons["savedFilter"].label.contains("Highlights"))
+        XCTAssertTrue(app.buttons["Highlights"].isSelected)
         row.swipeLeft()
         app.buttons["Delete"].tap()
         XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
@@ -635,6 +635,43 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["aboutCloseButton"].tap()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
         capture(app, name: "About closed back to reader")
+    }
+
+    @MainActor
+    func testChapterSourceNotesOpenFromMore() throws {
+        let app = testApplication()
+        app.launchEnvironment["BIBLE_TEST_CHAPTER"] = "GEN:1"
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["More"].tap()
+        app.buttons["Chapter notes"].tap()
+        XCTAssertTrue(app.staticTexts["Verse 4"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "between the light and between the darkness")).firstMatch.exists)
+        capture(app, name: "Chapter source notes")
+        app.buttons["sourceNotesCloseButton"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testVerseNoteSheetFitsShortNote() throws {
+        let app = testApplication()
+        app.launchEnvironment["BIBLE_TEST_CHAPTER"] = "GEN:1"
+        app.launch()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let verse = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "And God saw the light")).firstMatch
+        XCTAssertTrue(verse.waitForExistence(timeout: 5))
+        // The marker's target sits in the gutter, left of the verse's first line.
+        reader.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: verse.frame.minX - reader.frame.minX - 20, dy: verse.frame.minY - reader.frame.minY + 14)).tap()
+        let close = app.buttons["sourceNotesCloseButton"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "between the light and between the darkness")).firstMatch.exists)
+        // A one-note sheet opens at its content height: the header sits well below mid-screen.
+        XCTAssertGreaterThan(close.frame.minY, app.windows.firstMatch.frame.height * 0.55)
+        capture(app, name: "Verse note sheet fitted to content")
+        close.tap()
+        XCTAssertTrue(reader.waitForExistence(timeout: 5))
     }
 
     @MainActor

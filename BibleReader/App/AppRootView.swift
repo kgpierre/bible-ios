@@ -4,6 +4,10 @@ struct AppRootView: View {
     @State private var state = AppState()
     @Environment(\.undoManager) private var undoManager
     @Environment(\.scenePhase) private var scenePhase
+    #if DEBUG
+    @State private var lockProbe: LockProbe?
+    @State private var lockProbeReport: String?
+    #endif
 
     var body: some View {
         Group {
@@ -26,6 +30,16 @@ struct AppRootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { state.reader.flushPosition(protectInBackground: true) }
         }
+        #if DEBUG
+        .onAppear {
+            if LockProbe.enabled, lockProbe == nil {
+                lockProbe = LockProbe(reader: state.reader) { lockProbeReport = $0 }
+            }
+        }
+        .alert("Lock probe", isPresented: Binding(get: { lockProbeReport != nil }, set: { if !$0 { lockProbeReport = nil } })) {
+            Button("OK", role: .cancel) { lockProbeReport = nil }
+        } message: { Text(lockProbeReport ?? "") }
+        #endif
     }
 
     private var prototype: some View {
@@ -62,6 +76,10 @@ struct AppRootView: View {
                         state.destination = .read
                     }
                 }
+            }
+            .sheet(item: Binding(get: { state.reader.notesRequest }, set: { state.reader.notesRequest = $0 })) { request in
+                SourceNotesView(request: request)
+                    .preferredColorScheme(state.preferences.theme.colorScheme)
             }
             .sheet(isPresented: $state.isAboutPresented) {
                 AboutView(editionNotice: state.reader.editionNotice) { state.isAboutPresented = false }
@@ -161,6 +179,10 @@ struct AppRootView: View {
                     Button("Undo annotation", systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
                         .disabled(!state.reader.canUndo || state.reader.isSaving)
                     if let document = state.reader.document {
+                        Button("Chapter notes", systemImage: "note.text") {
+                            state.reader.notesRequest = .chapter(document)
+                        }
+                        .disabled(!document.verses.contains { !$0.notes.isEmpty })
                         ShareLink(item: "\(document.reference) — \(document.editionLabel)") {
                             Label("Share reference", systemImage: "square.and.arrow.up")
                         }

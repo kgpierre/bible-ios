@@ -13,16 +13,40 @@ struct SavedView: View {
     var body: some View {
         List {
             Section {
-                Picker("Show", selection: $state.savedFilter) {
-                    ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
+                if dynamicType.isAccessibilitySize {
+                    // Segments truncate at accessibility sizes; full-width menus keep every label readable.
+                    Picker("Show", selection: $state.savedFilter) {
+                        ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("savedFilter")
+                    Picker("Sort", selection: $state.savedSort) {
+                        ForEach(SavedSort.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("savedSort")
+                } else {
+                    HStack(spacing: 12) {
+                        Picker("Show", selection: $state.savedFilter) {
+                            ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("savedFilterSegments")
+                        Menu {
+                            Picker("Sort", selection: $state.savedSort) {
+                                ForEach(SavedSort.allCases) { Text($0.title).tag($0) }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Sort")
+                        .accessibilityValue(state.savedSort.title)
+                        .accessibilityIdentifier("savedSort")
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 8))
                 }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("savedFilter")
-                Picker("Sort", selection: $state.savedSort) {
-                    ForEach(SavedSort.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("savedSort")
                 if state.reader.canUndo {
                     Button("Undo last annotation change", systemImage: "arrow.uturn.backward") {
                         Task { await state.reader.undo() }

@@ -28,6 +28,7 @@ final class ReaderState {
         }
         set {
             exactByChapter = Dictionary(grouping: newValue, by: { $0.passage.chapterID })
+            highlightedExactChapters = Set(newValue.filter { $0.color != nil }.map(\.passage.chapterID))
             flattenedExact = nil
             annotationsRevision += 1
         }
@@ -35,7 +36,11 @@ final class ReaderState {
     private(set) var annotationsRevision = 0
     @ObservationIgnored private var flattenedExact: [ExactAnnotation]?
     @ObservationIgnored private var highlightedChaptersCache: (revision: Int, ids: Set<String>)?
+    /// Exact records for loaded chapters only (current, neighbors, recently read). A missing key means
+    /// "not loaded", never "no annotations"; the full library is never decoded for reading.
     @ObservationIgnored private var exactByChapter: [String: [ExactAnnotation]] = [:]
+    /// Chapters with exact highlights across the whole library, from the store's chapter index.
+    @ObservationIgnored private var highlightedExactChapters: Set<String> = []
     @ObservationIgnored private var legacyHighlights: [HighlightRecord] = []
     @ObservationIgnored private var bookmarkCache: [String: (Int, Set<String>)] = [:]
 
@@ -85,6 +90,8 @@ final class ReaderState {
     var navigationRevision = 0
     var navigationCollapsed = false
     var navigationCue: Set<String> = []
+    /// Source notes to present, from a verse marker, a VoiceOver action, or More.
+    var notesRequest: SourceNotesRequest?
     @ObservationIgnored private var cueTask: Task<Void, Never>?
     var canUndo = false
     @ObservationIgnored weak var systemUndoManager: UndoManager?
@@ -105,7 +112,7 @@ final class ReaderState {
     var highlightedChapterIDs: Set<String> {
         _ = annotationsRevision
         if let cached = highlightedChaptersCache, cached.revision == annotationsRevision { return cached.ids }
-        var ids = Set(exactByChapter.compactMap { key, records in records.contains { $0.color != nil } ? key : nil })
+        var ids = highlightedExactChapters
         // Legacy verse IDs follow the edition:book:chapter:verse identity contract.
         for verseID in highlights.keys {
             if let separator = verseID.lastIndex(of: ":") { ids.insert(String(verseID[..<separator])) }
@@ -175,6 +182,7 @@ final class ReaderState {
             defer { if request == navigationRequest { isNavigating = false } }
             do {
                 let document = try await store.chapter(chapter.id)
+                try await ensureAnnotations(for: [document.id])
                 try Task.checkCancellation()
                 guard request == navigationRequest else { return }
                 holdUnresolvedPosition = false
@@ -225,7 +233,35 @@ final class ReaderState {
 
     func chapterForTurn(_ id: String) async throws -> ChapterDocument {
         guard let store else { throw StorageIssue.incompatibleCorpus }
-        return try await store.chapter(id)
+        let document = try await store.chapter(id)
+        // A neighbor page renders its annotations; load them before the page is built.
+        try await ensureAnnotations(for: [id])
+        return document
+    }
+
+    /// Loads exact annotations for chapters not yet loaded. Records already loaded are kept, so a
+    /// pending (optimistic) edit is never overwritten by an older read.
+    private func ensureAnnotations(for chapterIDs: [String]) async throws {
+        guard let store else { return }
+        let missing = chapterIDs.filter { exactByChapter[$0] == nil }
+        guard !missing.isEmpty else { return }
+        let loaded = try await store.exactAnnotations(in: missing)
+        var changed = false
+        for (id, records) in loaded where exactByChapter[id] == nil {
+            exactByChapter[id] = records
+            changed = true
+        }
+        guard changed else { return }
+        pruneLoadedAnnotations()
+        flattenedExact = nil
+        annotationsRevision += 1
+    }
+
+    /// Keeps the loaded set bounded during long sessions: current chapter and neighbors stay.
+    private func pruneLoadedAnnotations() {
+        guard exactByChapter.count > 24, let index = chapterID.flatMap({ catalogIndex[$0] }) else { return }
+        let keep = Set((index - 1...index + 1).compactMap { catalog.indices.contains($0) ? catalog[$0].id : nil })
+        exactByChapter = exactByChapter.filter { keep.contains($0.key) }
     }
 
     /// Commit only a completed native turn; a cancelled or stale turn never changes the store.
@@ -280,9 +316,7 @@ final class ReaderState {
             let change = try await store.editExact(passage, color: color, bookmarkAction: bookmarkAction)
             if let pending { apply(pending, reversed: true) }
             apply(change)
-            undoHistory.append(.exact(change))
-            canUndo = true
-            registerSystemUndo()
+            recordUndo(.exact(change))
             savedRevision += 1
             annotationRetry = nil
         } catch {
@@ -300,9 +334,7 @@ final class ReaderState {
         do {
             let change = try await store.deleteSaved(item)
             apply(change)
-            undoHistory.append(.exact(change))
-            canUndo = true
-            registerSystemUndo()
+            recordUndo(.exact(change))
             savedItems.removeAll { $0.id == item.id }
             savedRevision += 1
             annotationRetry = nil
@@ -317,11 +349,19 @@ final class ReaderState {
         let inserting = reversed ? change.before : change.after
         let removed = Set(removing.map(\.id))
         let chapterID = ScriptureID.chapter(containing: change.verseIDs[0])
-        var records = exactByChapter[chapterID] ?? []
-        records.removeAll { removed.contains($0.id) }
-        records.append(contentsOf: inserting)
+        if var records = exactByChapter[chapterID] {
+            records.removeAll { removed.contains($0.id) }
+            records.append(contentsOf: inserting)
+            exactByChapter[chapterID] = records.sorted { $0.id < $1.id }
+            if records.contains(where: { $0.color != nil }) { highlightedExactChapters.insert(chapterID) }
+            else { highlightedExactChapters.remove(chapterID) }
+        } else {
+            // A Saved deletion can touch an unloaded chapter; the change holds only its scope,
+            // so ask the store's index instead of guessing the chapter's remaining highlights.
+            if inserting.contains(where: { $0.color != nil }) { highlightedExactChapters.insert(chapterID) }
+            refreshHighlightedChapters()
+        }
         flattenedExact = nil
-        exactByChapter[chapterID] = records.sorted { $0.id < $1.id }
         annotationsRevision += 1
         let legacy = reversed ? change.legacyBefore : change.legacyAfter
         let ids = Set(change.verseIDs)
@@ -376,6 +416,18 @@ final class ReaderState {
         for _ in undoHistory { registerSystemUndo() }
     }
 
+    /// Session Undo keeps the most recent edits only. Each entry retains before/after records,
+    /// so an uncapped history grows for as long as the app stays open.
+    static let undoLimit = 100
+
+    private func recordUndo(_ change: ReaderAnnotationChange) {
+        undoHistory.append(change)
+        if undoHistory.count > Self.undoLimit { undoHistory.removeFirst(undoHistory.count - Self.undoLimit) }
+        systemUndoManager?.levelsOfUndo = Self.undoLimit
+        canUndo = true
+        registerSystemUndo()
+    }
+
     private func registerSystemUndo() {
         guard let manager = systemUndoManager else { return }
         manager.registerUndo(withTarget: self) { reader in
@@ -418,10 +470,24 @@ final class ReaderState {
         }
     }
 
+    private func refreshHighlightedChapters() {
+        guard let store else { return }
+        Task {
+            guard let ids = try? await store.highlightedExactChapterIDs(), ids != highlightedExactChapters else { return }
+            highlightedExactChapters = ids
+            annotationsRevision += 1
+        }
+    }
+
     private func refreshAnnotations() async throws {
         guard let store else { return }
-        let (snapshot, exact) = try await store.readerAnnotations()
-        exactAnnotations = exact
+        let loaded = Set(exactByChapter.keys).union(chapterID.map { [$0] } ?? [])
+        let annotations = try await store.readerAnnotations(chapterIDs: loaded.sorted())
+        let snapshot = annotations.legacy
+        exactByChapter = annotations.exact
+        highlightedExactChapters = annotations.highlightedChapterIDs
+        flattenedExact = nil
+        annotationsRevision += 1
         legacyHighlights = snapshot.highlights
         highlights = Dictionary(uniqueKeysWithValues: snapshot.highlights.map { ($0.verseID,$0.color) })
         bookmarkRanges = snapshot.bookmarks
@@ -467,6 +533,24 @@ final class ReaderState {
             }
         }
     }
+
+    #if DEBUG
+    /// Lock probe step: one user-store read, one position write, and an integrity check.
+    /// Outcomes only; error descriptions come from SQLite codes, not stored content.
+    func lockProbeCheck() async -> String {
+        guard let store, let chapterID else { return "store not open" }
+        var parts: [String] = []
+        do { _ = try await store.position(); parts.append("read ok") } catch { parts.append("read failed \(Self.probeCode(error))") }
+        do { try await store.savePosition(chapterID: chapterID, anchor: anchor); parts.append("write ok") } catch { parts.append("write failed \(Self.probeCode(error))") }
+        parts.append("integrity \((try? await store.quickCheck()) ?? "check failed")")
+        return parts.joined(separator: ", ")
+    }
+
+    private static func probeCode(_ error: Error) -> String {
+        let text = String(describing: error)
+        return text.firstMatch(of: #/SQLite error \d+/#).map { String($0.output) } ?? String(describing: type(of: error))
+    }
+    #endif
 
     func flushPosition(protectInBackground: Bool = false) {
         positionTask?.cancel()

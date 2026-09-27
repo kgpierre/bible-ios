@@ -125,23 +125,33 @@ final class PerformanceAuditTests: XCTestCase {
         defer { sqlite3_close(db) }
         XCTAssertEqual(sqlite3_exec(db, "BEGIN", nil, nil, nil), SQLITE_OK)
         var statement: OpaquePointer?
-        XCTAssertEqual(sqlite3_prepare_v2(db, "INSERT INTO exact_annotation VALUES(?,?,?)", -1, &statement, nil), SQLITE_OK)
+        XCTAssertEqual(sqlite3_prepare_v2(db, "INSERT INTO exact_annotation(id, editionID, payload, chapterID, highlighted) VALUES(?,?,?,?,1)", -1, &statement, nil), SQLITE_OK)
         let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         for annotation in records {
             let payload = try JSONEncoder().encode(annotation)
             sqlite3_bind_text(statement, 1, annotation.id, -1, transient)
             sqlite3_bind_text(statement, 2, annotation.editionID, -1, transient)
             _ = payload.withUnsafeBytes { sqlite3_bind_blob(statement, 3, $0.baseAddress, Int32($0.count), transient) }
+            sqlite3_bind_text(statement, 4, annotation.passage.chapterID, -1, transient)
             XCTAssertEqual(sqlite3_step(statement), SQLITE_DONE)
             sqlite3_reset(statement)
         }
         sqlite3_finalize(statement)
         XCTAssertEqual(sqlite3_exec(db, "COMMIT", nil, nil, nil), SQLITE_OK)
+        // The reader decodes only the open chapter's records plus the highlighted-chapter index.
+        let firstChapter = records[0].passage.chapterID
         t = CACurrentMediaTime()
-        let annotations = try await store.readerAnnotations()
-        record("annotations_load_10000", t)
-        XCTAssertEqual(annotations.1.count, 10000)
-        t = CACurrentMediaTime(); state.exactAnnotations = annotations.1; record("annotations_main_assignment_10000", t)
+        let annotations = try await store.readerAnnotations(chapterIDs: [firstChapter])
+        record("annotations_reader_load_10000", t)
+        XCTAssertEqual(annotations.exact[firstChapter]?.count, records.filter { $0.passage.chapterID == firstChapter }.count)
+        XCTAssertEqual(annotations.highlightedChapterIDs.count, Set(records.map(\.passage.chapterID)).count)
+        t = CACurrentMediaTime(); _ = try await store.exactAnnotations(); record("annotations_full_decode_10000", t)
+        // A chapter load issued while Saved resolves must not wait for the whole resolution.
+        let resolving = Task { try await store.savedItems() }
+        await Task.yield()
+        t = CACurrentMediaTime(); _ = try await store.chapter(bootstrap.catalog[900].id); record("chapter_during_saved_10000", t)
+        _ = try await resolving.value
+        await store.clearSavedCacheForTesting()
         t = CACurrentMediaTime(); let items = try await store.savedItems(); record("saved_first_10000", t)
         XCTAssertEqual(items.count, 10000)
         for _ in 0..<5 {

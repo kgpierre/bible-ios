@@ -27,6 +27,10 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private var lastRevision = -1
     private var appliedBookmarks: Set<String> = []
     private var bookmarkIndicators: [String: UIImageView] = [:]
+    /// Source-note markers: a small dot beside the verse number and a gutter-only tap target.
+    /// Neither is part of the text, so selection, copy, and anchors never include them.
+    private var noteMarkers: [String: (dot: UIView, button: UIButton)] = [:]
+    private var showsNotes = true
     private var accessibilityNeedsUpdate = true
     #if DEBUG
     private(set) var documentBuildCount = 0
@@ -249,6 +253,9 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             gutterLabels.removeAll()
             bookmarkIndicators.values.forEach { $0.removeFromSuperview() }
             bookmarkIndicators.removeAll()
+            noteMarkers.values.forEach { $0.dot.removeFromSuperview(); $0.button.removeFromSuperview() }
+            noteMarkers.removeAll()
+            showsNotes = state.typography.showsNotes
             appliedHighlights = [:]
             appliedParts = [:]
             appliedBookmarks = []
@@ -425,15 +432,49 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                     let frame = CGRect(x: self.textContainerInset.left - self.gutterWidth - 13, y: baseline - font.ascender + 2, width: 10, height: 12)
                     if indicator.frame != frame { indicator.frame = frame }
                 } else if let indicator = self.bookmarkIndicators[id], !indicator.isHidden { indicator.isHidden = true }
+                if self.showsNotes, !entry.verse.notes.isEmpty {
+                    let marker = self.noteMarkers[id] ?? self.makeNoteMarker(verseID: id)
+                    marker.dot.isHidden = false
+                    marker.button.isHidden = false
+                    let dot = CGRect(x: frame.maxX + 2, y: frame.minY + 1, width: 5, height: 5)
+                    if marker.dot.frame != dot { marker.dot.frame = dot }
+                    // A 44-point target over the number and dot only; it stops short of the text column.
+                    let target = CGRect(x: frame.minX - 4, y: frame.midY - 22, width: self.textContainerInset.left - 2 - (frame.minX - 4), height: 44)
+                    if marker.button.frame != target { marker.button.frame = target }
+                }
                 return true
             }
             for id in visibleGutterIDs.subtracting(visible) {
                 gutterLabels[id]?.isHidden = true
                 bookmarkIndicators[id]?.isHidden = true
+                noteMarkers[id]?.dot.isHidden = true
+                noteMarkers[id]?.button.isHidden = true
             }
             visibleGutterIDs = visible
         }
         if accessibilityNeedsUpdate || !accessibilityDirtyVerses.isEmpty { prepareVerseAccessibility() }
+    }
+
+    private func makeNoteMarker(verseID: String) -> (dot: UIView, button: UIButton) {
+        let dot = UIView()
+        dot.backgroundColor = UIColor(resource: .accent)
+        dot.layer.cornerRadius = 2.5
+        dot.isUserInteractionEnabled = false
+        dot.isAccessibilityElement = false
+        let button = UIButton(type: .custom)
+        // Assistive technologies reach notes through the verse element's "Show notes" action.
+        button.isAccessibilityElement = false
+        button.addAction(UIAction { [weak self] _ in self?.showNotes(verseID: verseID) }, for: .touchUpInside)
+        addSubview(dot)
+        addSubview(button)
+        let marker = (dot: dot, button: button)
+        noteMarkers[verseID] = marker
+        return marker
+    }
+
+    private func showNotes(verseID: String) {
+        guard let document, let verse = document.verses.first(where: { $0.id == verseID }), !verse.notes.isEmpty else { return }
+        readerState?.notesRequest = .verse(verse, in: document)
     }
 
     func capturePosition() {
@@ -637,6 +678,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             if appliedParts[entry.verse.id]?.isEmpty == false {
                 annotations.append(String(localized: "Contains highlighted words"))
             }
+            if !entry.verse.notes.isEmpty { annotations.append(String(localized: "Has source notes")) }
             element.accessibilityValue = annotations.joined(separator: ", ")
             element.accessibilityTraits = .staticText
             if rebuildGeometry || existing == nil {
@@ -662,6 +704,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                     Task { await state.saveExact(passage, color: nil) }
                     return true
                 }]
+            }
+            if !entry.verse.notes.isEmpty {
+                let verseID = entry.verse.id
+                element.accessibilityCustomActions = (element.accessibilityCustomActions ?? []).filter { $0.name != String(localized: "Show notes") } + [
+                    UIAccessibilityCustomAction(name: String(localized: "Show notes")) { [weak self] _ in
+                        self?.showNotes(verseID: verseID)
+                        return true
+                    }]
             }
             accessibilityByVerse[entry.verse.id] = element
             return element

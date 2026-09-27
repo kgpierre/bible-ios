@@ -78,7 +78,11 @@ struct PaperTurnTests {
         await reopened.load()
         #expect(state.errorMessage == nil)
         #expect(reopened.document?.id == next.id)
-        #expect(reopened.exactAnnotations == originalAnnotations)
+        // Relaunch loads only the open chapter's records; the saved ones persist and stay indexed.
+        #expect(try await store.exactAnnotations() == originalAnnotations)
+        #expect(reopened.highlightedChapterIDs.contains(original.id))
+        _ = try await reopened.chapterForTurn(original.id)
+        #expect(reopened.exactAnnotations(in: original.id) == originalAnnotations)
     }
 }
 

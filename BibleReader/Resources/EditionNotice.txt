@@ -2,7 +2,7 @@ King James Version
 
 King James Version (standardized 1769 source), provided by CrossWire Bible Society and eBible.org. Original source includes Apocrypha; this configured corpus includes 66 books.
 
-Unresolved; do not publish until edition, canon, and territories are reviewed
+The King James Version is in the public domain outside the United Kingdom. In the United Kingdom, rights in the Authorized Version are vested in the Crown; this app is not distributed there.
 
 Source: https://ebible.org/find/show.php?id=eng-kjv
 

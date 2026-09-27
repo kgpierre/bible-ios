@@ -1,3 +1,45 @@
+## Latest continuation — 26 September 2026, release decisions, summaries, notes, Saved, search
+
+**Owner decisions** (recorded in [0015](Docs/Decisions/0015-release-identity-and-scripture-rights.md)):
+
+- minimum iOS/iPadOS 26.0;
+- app name "Bible";
+- bundle ID `dev.kpierre.bible`, with test targets `.tests` and `.uitests` on the owner's team;
+- a delegated rights and canon review. The KJV is public domain outside the UK and Crown-restricted in the UK, so the release excludes the United Kingdom storefront unless Cambridge University Press grants permission. The 66-book canon is adopted.
+
+About's edition notice no longer shows the internal "Unresolved" line. The corpus database is byte-identical.
+
+**Summary refusals fixed** ([0016](Docs/Decisions/0016-continuation-summaries-notes-saved-search.md)). A real-model probe showed that the *post-generation refusal check*, not the summary itself, caused 12 of 20 failures on difficult chapters. The check was a second model pass under default guardrails. It is replaced by a wording check, and the probe now passes 20 of 20. Question review is unchanged; 4 of 5 difficult questions were answered.
+
+**Implemented:**
+
+- **Source notes (6,959):** a dot marker by the verse number, tap to read; More → Chapter notes; a VoiceOver action; an Appearance toggle. Notes are never in copy or search.
+- **Large libraries:** additive migration v3 (chapter-indexed annotations, with a protected pre-migration backup); the reader decodes only nearby chapters; Saved resolves off the store queue.
+- **Search:** ranked once per query, so deep pages dropped from about 68 ms to 3 ms.
+- **Session Undo:** capped at 100.
+- **Saved controls:** segmented filters and an icon sort button, pending owner review.
+- **Lock probe:** a Debug-only locked-device probe.
+
+**Validation.** The iPhone 18 Pro (iOS 27) simulator passed 77 unit tests and 24 UI tests (3 iPad-only skips), with no warnings. The corpus rebuild passed 9 of 9 checks. See the README entry for the commands.
+
+**Needs the owner's device:**
+
+- the probe on the phone's own model;
+- page-turn and selection feel.
+
+**Locked-device test passed** on the owner's iPhone 17 Pro Max on 27 September ([results](Docs/Validation/locked-device/README.md)). **Notes sheet** now fits its content.
+
+**App icon:** `Bible.icon` (Icon Composer, layered) is now the app icon; the flattened PNG set was removed.
+
+**Owner to-dos:**
+
+- choose the donation mechanism (guideline 3.1.1);
+- in App Store Connect, exclude the United Kingdom.
+
+The earlier "iPhone only" focus below is historical; iPad was out of scope again for this pass by the owner's instruction.
+
+Earlier development installs used `org.example.BibleReader`. The new bundle ID starts with an empty local store; old installs keep their data separately.
+
 ## Latest continuation — 25 September 2026, corpus, About, page turn
 
 Performance-audit follow-ups are listed in `Docs/Validation/performance-audit/README.md`: signposts, off-main sorting for large Saved libraries, a real search prewarm, Release-compilable tests, and the launch tab-bar alignment fix. The shared scheme's Run action is currently set to Release by the owner.
@@ -58,7 +100,7 @@ The final iOS 27 pass also passed **35 non-UI and four UI tests** after the last
 
 Read [decision 0007](Docs/Decisions/0007-iphone-reader-interactions.md) for implementation, current evidence, and remaining device gates. The older continuation sections below are historical; this latest section and decision 0007 take precedence.
 
-## Current owner priority
+## Current owner priority (historical, 22 September)
 
 **Focus on refining the iPhone version for now, specifically text selection and highlights.** The owner gave this steering during the continuation. Do not expand into further iPad refinement without a new request. The last running iPad batch was stopped when this instruction arrived; its partial results are not a complete pass.
 

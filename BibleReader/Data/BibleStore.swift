@@ -14,7 +14,8 @@ actor BibleStore {
     let revision: String
     private let corpus: DatabaseQueue
     private let searchCorpus: DatabaseQueue
-    private var searchCount: (expression: String, total: Int)?
+    /// Ranked verse ordinals for the latest text query; the corpus is immutable, so they stay valid.
+    private var rankedSearch: (expression: String, ordinals: [Int64])?
     private let user: DatabaseQueue
     private let userURL: URL
     private var cachedReferenceParser: ReferenceParser?
@@ -24,40 +25,57 @@ actor BibleStore {
     private let chapterCacheLimit = 6
     private let decoder = JSONDecoder()
     #if DEBUG
+    func clearSavedCacheForTesting() { cachedSavedItems = nil }
+    func quickCheck() throws -> String { try user.read { try String.fetchOne($0, sql: "PRAGMA quick_check") ?? "no result" } }
     private(set) var exactDecodeCount = 0
     private(set) var chapterDecodeCount = 0
     private(set) var savedChapterDecodeCount = 0
     #endif
-    private var exactByChapter: [String: [ExactAnnotation]]?
+    /// Decoded exact annotations for chapters that have been requested. Only touched chapters are
+    /// decoded, using the v3 `chapterID` column, so library size does not scale reader work.
+    private var exactByChapter: [String: [ExactAnnotation]] = [:]
     private var annotationDataVersion: Int?
     private var cachedSavedItems: [SavedItem]?
-    private var dirtySavedChapters = Set<String>()
+    /// Chapter → generation of its latest change, so a Saved rebuild that finishes after a later
+    /// edit leaves that chapter dirty.
+    private var dirtySavedChapters: [String: Int] = [:]
+    private var savedGeneration = 0
+    private let savedCorpus: DatabaseQueue
 
-    private func cachedExact(_ db: Database) throws -> [String: [ExactAnnotation]] {
+    /// Another connection's commit changes `data_version`; our own commits do not.
+    private func synchronizeAnnotationVersion(_ db: Database) throws {
         let version = try Int.fetchOne(db, sql: "PRAGMA data_version")
         if annotationDataVersion != version {
-            exactByChapter = nil
+            exactByChapter = [:]
             cachedSavedItems = nil
             annotationDataVersion = version
         }
-        if let exactByChapter { return exactByChapter }
-        let records = try Data.fetchAll(db, sql: "SELECT payload FROM exact_annotation WHERE editionID=? ORDER BY id", arguments: [editionID])
-            .map { try decoder.decode(ExactAnnotation.self, from: $0) }
+    }
+
+    private func exactRecords(in chapterID: String, _ db: Database) throws -> [ExactAnnotation] {
+        try synchronizeAnnotationVersion(db)
+        if let cached = exactByChapter[chapterID] { return cached }
+        let records = try Data.fetchAll(db, sql: "SELECT payload FROM exact_annotation WHERE editionID=? AND chapterID=? ORDER BY id",
+                                        arguments: [editionID, chapterID]).map { try decoder.decode(ExactAnnotation.self, from: $0) }
         #if DEBUG
         exactDecodeCount += records.count
         #endif
-        let grouped = Dictionary(grouping: records, by: { $0.passage.chapterID })
-        exactByChapter = grouped
-        return grouped
+        exactByChapter[chapterID] = records
+        return records
     }
 
     private func replaceCachedExact(chapterID: String, removing: [ExactAnnotation], inserting: [ExactAnnotation]) {
+        markSavedDirty([chapterID])
+        guard var records = exactByChapter[chapterID] else { return }
         let removed = Set(removing.map(\.id))
-        var records = exactByChapter?[chapterID] ?? []
         records.removeAll { removed.contains($0.id) }
         records.append(contentsOf: inserting)
-        exactByChapter?[chapterID] = records.sorted { $0.id < $1.id }
-        dirtySavedChapters.insert(chapterID)
+        exactByChapter[chapterID] = records.sorted { $0.id < $1.id }
+    }
+
+    private func markSavedDirty(_ chapterIDs: some Sequence<String>) {
+        savedGeneration += 1
+        for id in chapterIDs { dirtySavedChapters[id] = savedGeneration }
     }
 
 
@@ -75,6 +93,7 @@ actor BibleStore {
         config.readonly = true
         corpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
         searchCorpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
+        savedCorpus = try DatabaseQueue(path: corpusURL.path, configuration: config)
         let identity = try corpus.read { db -> (String, String) in
             // Schema 2: external-content FTS keyed by verse.ordinal. Document 2: raw-DEFLATE JSON chapter payloads.
             guard try Int.fetchOne(db, sql: "PRAGMA user_version") == 2,
@@ -91,12 +110,14 @@ actor BibleStore {
         var writable = Configuration()
         writable.busyMode = .timeout(2)
         user = try DatabaseQueue(path: userURL.path, configuration: writable)
-        try user.read { db in
-            if try db.tableExists("grdb_migrations") {
-                let known = try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations")
-                guard known.allSatisfy({ ["v1_local_reader", "v2_exact_annotations"].contains($0) }) else { throw StorageIssue.incompatibleUserStore }
-            }
+        let migrations = ["v1_local_reader", "v2_exact_annotations", "v3_exact_chapter_index"]
+        let applied = try user.read { db -> [String] in
+            guard try db.tableExists("grdb_migrations") else { return [] }
+            return try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations")
         }
+        guard applied.allSatisfy(migrations.contains) else { throw StorageIssue.incompatibleUserStore }
+        // An existing store gets a consistent, protected copy before any pending migration.
+        if !applied.isEmpty, applied.count < migrations.count { try Self.backupBeforeMigration(user, userURL: userURL) }
         var migrator = DatabaseMigrator()
         migrator.registerMigration("v1_local_reader") { db in
             try db.execute(sql: """
@@ -112,8 +133,42 @@ actor BibleStore {
             try db.execute(sql: "CREATE TABLE exact_annotation(id TEXT PRIMARY KEY, editionID TEXT NOT NULL, payload BLOB NOT NULL)")
             try db.execute(sql: "CREATE INDEX exact_annotation_edition ON exact_annotation(editionID)")
         }
+        // Additive: chapter and highlight columns let the reader decode one chapter's records and
+        // list highlighted chapters without decoding the whole library. Payloads are unchanged.
+        migrator.registerMigration("v3_exact_chapter_index") { db in
+            try db.execute(sql: "ALTER TABLE exact_annotation ADD COLUMN chapterID TEXT")
+            try db.execute(sql: "ALTER TABLE exact_annotation ADD COLUMN highlighted INTEGER NOT NULL DEFAULT 0")
+            let decoder = JSONDecoder()
+            for row in try Row.fetchAll(db, sql: "SELECT id, payload FROM exact_annotation") {
+                let record = try decoder.decode(ExactAnnotation.self, from: row["payload"] as Data)
+                try db.execute(sql: "UPDATE exact_annotation SET chapterID=?, highlighted=? WHERE id=?",
+                               arguments: [record.passage.chapterID, record.color != nil, row["id"] as String])
+            }
+            try db.execute(sql: "CREATE INDEX exact_annotation_chapter ON exact_annotation(editionID, chapterID)")
+        }
         try migrator.migrate(user)
         try Self.protectFiles(at: userURL)
+    }
+
+    /// Online backup API copy, so pending journal/WAL state is included. One file is retained and
+    /// replaced by the next migration's copy; it is excluded from device backup because the live
+    /// store already is backed up. Low space fails before migrating instead of risking the original.
+    private static func backupBeforeMigration(_ source: DatabaseQueue, userURL: URL) throws {
+        let backupURL = userURL.deletingLastPathComponent().appendingPathComponent("User-before-migration.sqlite")
+        let size = (try? FileManager.default.attributesOfItem(atPath: userURL.path)[.size] as? Int) ?? 0
+        if let free = try? userURL.deletingLastPathComponent().resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage,
+           free < Int64(size * 2 + 1_000_000) {
+            throw StorageIssue.insufficientSpace
+        }
+        try? FileManager.default.removeItem(at: backupURL)
+        let destination = try DatabaseQueue(path: backupURL.path)
+        try source.backup(to: destination)
+        try destination.close()
+        try protectFiles(at: backupURL)
+        var excluded = URLResourceValues()
+        excluded.isExcludedFromBackup = true
+        var url = backupURL
+        try url.setResourceValues(excluded)
     }
 
     private static func protectFiles(at url: URL) throws {
@@ -180,26 +235,32 @@ actor BibleStore {
             query = parsed
         } catch let error as SearchInputError { return .invalid(error.message) }
         guard offset >= 0, offset <= 100_000 else { return .invalid(String(localized: "This result page is unavailable. Search again.")) }
-        let knownTotal = offset > 0 && searchCount?.expression == query.expression ? searchCount?.total : nil
-        let page = try await searchCorpus.read { db in
-            let total = try knownTotal ?? Int.fetchOne(db, sql: "SELECT count(*) FROM verse_search WHERE verse_search MATCH ?", arguments: [query.expression]) ?? 0
+        // Rank every match once per query (bm25, then canonical order) and keep the ordinals. Later
+        // pages fetch 50 known rows instead of re-scoring and sorting all matches past an OFFSET.
+        let cached = rankedSearch?.expression == query.expression ? rankedSearch?.ordinals : nil
+        let expression = query.expression
+        let (ordinals, page) = try await searchCorpus.read { db -> ([Int64], SearchPage) in
+            let ordinals = try cached ?? Int64.fetchAll(db, sql: "SELECT rowid FROM verse_search WHERE verse_search MATCH ? ORDER BY bm25(verse_search), rowid",
+                                                        arguments: [expression])
+            let slice = offset < ordinals.count ? Array(ordinals[offset..<min(offset + 50, ordinals.count)]) : []
+            guard !slice.isEmpty else { return (ordinals, SearchPage(hits: [], total: ordinals.count)) }
             let rows = try Row.fetchAll(db, sql: """
-                SELECT verse.id, verse.chapterID, verse.label AS verseLabel, verse.text,
+                SELECT verse.ordinal, verse.id, verse.chapterID, verse.label AS verseLabel, verse.text,
                        chapter.label AS chapterLabel, book.name,
                        snippet(verse_search,0,char(30),char(31),'…',28) AS excerpt
                 FROM verse_search JOIN verse ON verse.ordinal=verse_search.rowid
                 JOIN chapter ON chapter.id=verse.chapterID JOIN book ON book.id=chapter.bookID
-                WHERE verse_search MATCH ? ORDER BY bm25(verse_search), verse.ordinal
-                LIMIT 50 OFFSET ?
-                """, arguments: [query.expression,offset])
-            let hits = rows.map { row -> SearchHit in
+                WHERE verse_search MATCH ? AND verse_search.rowid IN (\(Array(repeating: "?", count: slice.count).joined(separator: ",")))
+                """, arguments: StatementArguments([expression.databaseValue] + slice.map(\.databaseValue)))
+            let byOrdinal = Dictionary(uniqueKeysWithValues: rows.map { ($0["ordinal"] as Int64, $0) })
+            let hits = slice.compactMap { byOrdinal[$0] }.map { row -> SearchHit in
                 let name: String = row["name"], chapter: String = row["chapterLabel"], verse: String = row["verseLabel"]
                 return SearchHit(id: row["id"], chapterID: row["chapterID"], reference: "\(name) \(chapter):\(verse)",
                                  excerpt: SearchExcerpt.fragments(row["excerpt"], source: row["text"]))
             }
-            return SearchPage(hits: hits,total: total)
+            return (ordinals, SearchPage(hits: hits, total: ordinals.count))
         }
-        searchCount = (query.expression, page.total)
+        rankedSearch = (expression, ordinals)
         return .results(page)
     }
 
@@ -325,11 +386,38 @@ actor BibleStore {
         }
     }
 
-    func readerAnnotations() throws -> (AnnotationSnapshot, [ExactAnnotation]) {
+    struct ReaderAnnotations: Sendable {
+        let legacy: AnnotationSnapshot
+        /// Exact records only for the requested chapters; every requested chapter has an entry.
+        let exact: [String: [ExactAnnotation]]
+        let highlightedChapterIDs: Set<String>
+    }
+
+    func readerAnnotations(chapterIDs: [String]) throws -> ReaderAnnotations {
         let edition = editionID
         return try user.read { db in
-            (try Self.snapshot(db, edition: edition), try cachedExact(db).values.flatMap { $0 }.sorted { $0.id < $1.id })
+            var exact: [String: [ExactAnnotation]] = [:]
+            for id in chapterIDs { exact[id] = try exactRecords(in: id, db) }
+            return ReaderAnnotations(legacy: try Self.snapshot(db, edition: edition), exact: exact,
+                                     highlightedChapterIDs: try highlightedExactChapters(db))
         }
+    }
+
+    func exactAnnotations(in chapterIDs: [String]) throws -> [String: [ExactAnnotation]] {
+        try user.read { db in
+            var exact: [String: [ExactAnnotation]] = [:]
+            for id in chapterIDs { exact[id] = try exactRecords(in: id, db) }
+            return exact
+        }
+    }
+
+    func highlightedExactChapterIDs() throws -> Set<String> {
+        try user.read { db in try highlightedExactChapters(db) }
+    }
+
+    private func highlightedExactChapters(_ db: Database) throws -> Set<String> {
+        Set(try String.fetchAll(db, sql: "SELECT DISTINCT chapterID FROM exact_annotation WHERE editionID=? AND highlighted=1",
+                                arguments: [editionID]))
     }
 
     func annotations() throws -> AnnotationSnapshot {
@@ -392,7 +480,7 @@ actor BibleStore {
             let after = try Self.snapshot(db, edition: edition, ids: verseIDs)
             return AnnotationChange(verseIDs: verseIDs, before: before, after: after)
         }
-        dirtySavedChapters.formUnion(verseIDs.map { ScriptureID.chapter(containing: $0) })
+        markSavedDirty(verseIDs.map { ScriptureID.chapter(containing: $0) })
         return change
     }
 
@@ -412,16 +500,20 @@ actor BibleStore {
                 try db.execute(sql: "INSERT INTO bookmark VALUES(?,?,?,?,?,?)", arguments: [b.id,edition,b.startID,b.endID,b.created,b.updated])
             }
         }
-        dirtySavedChapters.formUnion(change.verseIDs.map { ScriptureID.chapter(containing: $0) })
+        markSavedDirty(change.verseIDs.map { ScriptureID.chapter(containing: $0) })
     }
 
+    /// Every exact record, decoded without caching. Tests and diagnostics only; the reader loads by chapter.
     func exactAnnotations() throws -> [ExactAnnotation] {
-        try user.read { db in try cachedExact(db).values.flatMap { $0 }.sorted { $0.id < $1.id } }
+        try user.read { db in
+            try Data.fetchAll(db, sql: "SELECT payload FROM exact_annotation WHERE editionID=? ORDER BY id", arguments: [editionID])
+                .map { try decoder.decode(ExactAnnotation.self, from: $0) }
+        }
     }
 
     private static func putExact(_ record: ExactAnnotation, db: Database) throws {
-        try db.execute(sql: "INSERT OR REPLACE INTO exact_annotation VALUES(?,?,?)",
-                       arguments: [record.id, record.editionID, try JSONEncoder().encode(record)])
+        try db.execute(sql: "INSERT OR REPLACE INTO exact_annotation(id, editionID, payload, chapterID, highlighted) VALUES(?,?,?,?,?)",
+                       arguments: [record.id, record.editionID, try JSONEncoder().encode(record), record.passage.chapterID, record.color != nil])
     }
 
     private static func exactScope(_ records: [ExactAnnotation], ids: [String], recordIDs: Set<String> = []) -> [ExactAnnotation] {
@@ -439,7 +531,7 @@ actor BibleStore {
         let edition = editionID, revision = revision
         // The cache is checked inside the transaction so another connection cannot make Undo stale.
         let change = try user.write { db in
-            let chapterRecords = try cachedExact(db)[passage.chapterID] ?? []
+            let chapterRecords = try exactRecords(in: passage.chapterID, db)
             let before = Self.exactScope(chapterRecords, ids: passage.verseIDs)
             let legacyBefore = try Self.snapshot(db, edition: edition, ids: passage.verseIDs)
             let change = try ExactAnnotationEditor.change(passage: passage, document: document, before: before,
@@ -463,7 +555,7 @@ actor BibleStore {
         let edition = editionID
         try user.write { db in
             let chapterID = ScriptureID.chapter(containing: change.verseIDs[0])
-            let current = Self.exactScope(try cachedExact(db)[chapterID] ?? [], ids: change.verseIDs,
+            let current = Self.exactScope(try exactRecords(in: chapterID, db), ids: change.verseIDs,
                                           recordIDs: Set((change.before + change.after).map(\.id)))
             let legacy = try Self.snapshot(db, edition: edition, ids: change.verseIDs)
             guard current == change.after, legacy == change.legacyAfter else { throw StorageIssue.undoConflict }
@@ -497,7 +589,7 @@ actor BibleStore {
             throw StorageIssue.invalidPassage
         }
         let change = try user.write { db in
-            let before = Self.exactScope(try cachedExact(db)[item.chapterID] ?? [], ids: ids)
+            let before = Self.exactScope(try exactRecords(in: item.chapterID, db), ids: ids)
             let legacy = try Self.snapshot(db, edition: editionID, ids: ids)
             guard selected.exact.allSatisfy({ before.contains($0) }),
                   selected.highlights.allSatisfy({ legacy.highlights.contains($0) }),
@@ -523,23 +615,57 @@ actor BibleStore {
         return change
     }
 
-    func savedItems() throws -> [SavedItem] {
+    /// Raw rows are read on the store queue (cheap). Decoding annotations and resolving verse text run
+    /// off it on a dedicated read-only corpus connection, so chapter loads and position saves are not
+    /// queued behind a large library. Only chapters changed since the last pass are rebuilt.
+    func savedItems() async throws -> [SavedItem] {
         let interval = ReaderPerformance.signposter.beginInterval("Saved resolution", id: ReaderPerformance.signposter.makeSignpostID())
         defer { ReaderPerformance.signposter.endInterval("Saved resolution", interval) }
         try Task.checkCancellation()
-        let edition = editionID
-        let data = try user.read { db -> (AnnotationSnapshot, [ExactAnnotation], Set<String>?)? in
-            let exact = try cachedExact(db)
-            let rebuilding = cachedSavedItems == nil ? nil : dirtySavedChapters
-            if rebuilding?.isEmpty == true { return nil }
-            let records = rebuilding.map { ids in ids.flatMap { exact[$0] ?? [] } } ?? exact.values.flatMap { $0 }
-            return (try Self.snapshot(db, edition: edition, chapters: rebuilding), records, rebuilding)
+        let input = try savedInput()
+        guard let (snapshot, payloads, rebuilding) = input else { return cachedSavedItems ?? [] }
+        let generation = savedGeneration
+        var items = try await Self.resolveSaved(snapshot: snapshot, payloads: payloads, corpus: savedCorpus)
+        if let rebuilding {
+            // Another connection invalidated the cache while resolving: rebuild everything.
+            guard let cached = cachedSavedItems else { return try await savedItems() }
+            items.append(contentsOf: cached.filter { !rebuilding.contains($0.chapterID) })
         }
-        guard let (snapshot, exactRecords, rebuilding) = data else { return cachedSavedItems ?? [] }
+        let sorted = items.sorted { $0.updated == $1.updated ? $0.id < $1.id : $0.updated > $1.updated }
+        cachedSavedItems = sorted
+        dirtySavedChapters = dirtySavedChapters.filter { $0.value > generation }
+        return sorted
+    }
+
+    /// Synchronous on the store queue: raw payloads and legacy rows for a full or incremental rebuild.
+    private func savedInput() throws -> (AnnotationSnapshot, [Data], Set<String>?)? {
+        let edition = editionID
+        return try user.read { db -> (AnnotationSnapshot, [Data], Set<String>?)? in
+            try synchronizeAnnotationVersion(db)
+            let rebuilding: Set<String>? = cachedSavedItems == nil ? nil : Set(dirtySavedChapters.keys)
+            if rebuilding?.isEmpty == true { return nil }
+            var payloads: [Data] = []
+            if let rebuilding {
+                let ids = rebuilding.sorted()
+                for start in stride(from: 0, to: ids.count, by: 200) {
+                    let chunk = Array(ids[start..<min(start + 200, ids.count)])
+                    payloads += try Data.fetchAll(db, sql: "SELECT payload FROM exact_annotation WHERE editionID=? AND chapterID IN (\(Array(repeating: "?", count: chunk.count).joined(separator: ",")))",
+                                                  arguments: StatementArguments([edition] + chunk))
+                }
+            } else {
+                payloads = try Data.fetchAll(db, sql: "SELECT payload FROM exact_annotation WHERE editionID=?", arguments: [edition])
+            }
+            return (try Self.snapshot(db, edition: edition, chapters: rebuilding), payloads, rebuilding)
+        }
+    }
+
+    @concurrent private static func resolveSaved(snapshot: AnnotationSnapshot, payloads: [Data], corpus: DatabaseQueue) async throws -> [SavedItem] {
+        let decoder = JSONDecoder()
+        let exactRecords = try payloads.map { try decoder.decode(ExactAnnotation.self, from: $0) }
         // Saved needs canonical verse text and order, not chapter runs, notes, or typography.
         let verseIDs = snapshot.highlights.map(\.verseID) + snapshot.bookmarks.flatMap { [$0.startID, $0.endID] }
         let chapterIDs = Array(Set(verseIDs.map { ScriptureID.chapter(containing: $0) } + exactRecords.map { $0.passage.chapterID })).sorted()
-        struct Verse {
+        struct Verse: Sendable {
             let id: String
             let label: String
             let text: String
@@ -554,18 +680,21 @@ actor BibleStore {
             try Task.checkCancellation()
             let chunk = Array(chapterIDs[start..<min(start + 200, chapterIDs.count)])
             let placeholders = Array(repeating: "?", count: chunk.count).joined(separator: ",")
-            let rows = try corpus.read { db in
+            let rows = try await corpus.read { db in
                 try Row.fetchAll(db, sql: """
                     SELECT verse.id, verse.chapterID, verse.label, verse.text,
                            book.name || ' ' || chapter.label AS reference
                     FROM verse JOIN chapter ON chapter.id=verse.chapterID JOIN book ON book.id=chapter.bookID
                     WHERE verse.chapterID IN (\(placeholders)) ORDER BY verse.ordinal
-                    """, arguments: StatementArguments(chunk))
+                    """, arguments: StatementArguments(chunk)).map {
+                        (chapterID: $0["chapterID"] as String, reference: $0["reference"] as String,
+                         verse: Verse(id: $0["id"], label: $0["label"], text: $0["text"]))
+                    }
             }
             for row in rows {
-                let chapterID: String = row["chapterID"]
-                if documents[chapterID] == nil { documents[chapterID] = Chapter(reference: row["reference"]) }
-                let verse = Verse(id: row["id"], label: row["label"], text: row["text"])
+                let chapterID = row.chapterID
+                if documents[chapterID] == nil { documents[chapterID] = Chapter(reference: row.reference) }
+                let verse = row.verse
                 let index = documents[chapterID]?.verses.count ?? 0
                 documents[chapterID]?.index[verse.id] = index
                 documents[chapterID]?.verses.append(verse)
@@ -631,10 +760,6 @@ actor BibleStore {
                 color: record.color, bookmark: record.isBookmark, updated: record.updated, passage: unavailable ? nil : resolved, unavailable: unavailable,
                 verseOrder: doc?.index[first.verseID], records: SavedRecords(exact: [record])))
         }
-        if let rebuilding { items.append(contentsOf: (cachedSavedItems ?? []).filter { !rebuilding.contains($0.chapterID) }) }
-        let sorted = items.sorted { $0.updated == $1.updated ? $0.id < $1.id : $0.updated > $1.updated }
-        cachedSavedItems = sorted
-        dirtySavedChapters.removeAll()
-        return sorted
+        return items
     }
 }

@@ -83,7 +83,7 @@ struct ExactAnnotationTests {
             passage: ExactPassage(chapterID: "\(edition):MISSING:1", reference: "Missing 1:1", parts: [part]),
             color: nil, created: 1, updated: 1)
         let hex = try JSONEncoder().encode(record).map { String(format: "%02x", $0) }.joined()
-        try sql("INSERT INTO exact_annotation VALUES('unresolved','\(edition)',X'\(hex)')", at: url)
+        try sql("INSERT INTO exact_annotation(id, editionID, payload, chapterID, highlighted) VALUES('unresolved','\(edition)',X'\(hex)','\(edition):MISSING:1',0)", at: url)
         let row = try #require(await store.savedItems().first)
         #expect(row.unavailable)
         #expect(row.text == "Retained")
@@ -206,7 +206,7 @@ struct ExactAnnotationTests {
         let record = ExactAnnotation(id: "unresolved", editionID: "eng-kjv-1769-protestant", revision: "older",
             passage: ExactPassage(chapterID: doc.id, reference: "John 3:1", parts: [part]), color: .sage, created: 1, updated: 1)
         let bytes = try JSONEncoder().encode(record).map { String(format: "%02x", $0) }.joined()
-        try sql("INSERT INTO exact_annotation VALUES('unresolved','eng-kjv-1769-protestant',X'\(bytes)')", at: url)
+        try sql("INSERT INTO exact_annotation(id, editionID, payload, chapterID, highlighted) VALUES('unresolved','eng-kjv-1769-protestant',X'\(bytes)','\(doc.id)',1)", at: url)
         let item = try #require(try await store.savedItems().first)
         #expect(item.unavailable)
         #expect(item.passage == nil)
@@ -323,13 +323,15 @@ struct ExactAnnotationTests {
         #expect(items.count == 13)
         #expect(items.contains { $0.color == .blue && $0.text == middle.text })
         #if DEBUG
-        #expect(await store.exactDecodeCount == decoded)
+        // The edit decodes only the touched chapter's one record, never the 12-record library.
+        let afterEdit = await store.exactDecodeCount
+        #expect(afterEdit - decoded == 1)
         #expect(await store.savedChapterDecodeCount == savedDecoded)
         #endif
         try await store.undoExact(change)
         #expect(try await store.savedItems().count == 12)
         #if DEBUG
-        #expect(await store.exactDecodeCount == decoded)
+        #expect(await store.exactDecodeCount == afterEdit)
         #endif
         let reopened = try BibleStore(corpusURL: corpus, userURL: url)
         let rebuilt = try await reopened.savedItems()
@@ -374,6 +376,51 @@ struct ExactAnnotationTests {
         #expect(state.errorMessage != nil)
         #expect(!state.isSaving)
         #expect(try await store.exactAnnotations().isEmpty)
+    }
+
+    @Test func v2StoreMigratesToChapterIndexWithProtectedBackup() async throws {
+        let (seed, corpus, seedURL) = try fixture()
+        let doc = try await seed.chapter("eng-kjv-1769-protestant:JHN:3")
+        let record = ExactAnnotation(id: "v2-record", editionID: "eng-kjv-1769-protestant", revision: await seed.revision,
+                                     passage: try passage(doc, verse: 15, range: NSRange(location: 4, length: 3)),
+                                     color: .blue, created: 1, updated: 1)
+        let hex = try JSONEncoder().encode(record).map { String(format: "%02x", $0) }.joined()
+        let url = seedURL.deletingLastPathComponent().appendingPathComponent("V2.sqlite")
+        // The exact v2 schema, with v3 never applied.
+        try sql("""
+            CREATE TABLE grdb_migrations(identifier TEXT NOT NULL PRIMARY KEY);
+            INSERT INTO grdb_migrations VALUES('v1_local_reader');
+            INSERT INTO grdb_migrations VALUES('v2_exact_annotations');
+            CREATE TABLE highlight(id TEXT PRIMARY KEY, editionID TEXT NOT NULL, verseID TEXT NOT NULL,
+                color TEXT NOT NULL CHECK(color IN ('yellow','sage','blue','rose')), operationID TEXT NOT NULL,
+                created REAL NOT NULL, updated REAL NOT NULL, UNIQUE(editionID,verseID));
+            CREATE TABLE bookmark(id TEXT PRIMARY KEY, editionID TEXT NOT NULL, startID TEXT NOT NULL,
+                endID TEXT NOT NULL, created REAL NOT NULL, updated REAL NOT NULL, UNIQUE(editionID,startID,endID));
+            CREATE TABLE reading_position(editionID TEXT PRIMARY KEY, payload BLOB NOT NULL);
+            CREATE TABLE exact_annotation(id TEXT PRIMARY KEY, editionID TEXT NOT NULL, payload BLOB NOT NULL);
+            CREATE INDEX exact_annotation_edition ON exact_annotation(editionID);
+            INSERT INTO exact_annotation VALUES('v2-record','eng-kjv-1769-protestant',X'\(hex)');
+            """, at: url)
+        let store = try BibleStore(corpusURL: corpus, userURL: url)
+        #expect(try await store.exactAnnotations() == [record])
+        let reader = try await store.readerAnnotations(chapterIDs: [doc.id, "eng-kjv-1769-protestant:JHN:4"])
+        #expect(reader.exact[doc.id] == [record])
+        #expect(reader.exact["eng-kjv-1769-protestant:JHN:4"] == [])
+        #expect(reader.highlightedChapterIDs == [doc.id])
+        #expect(try await store.savedItems().map(\.id) == ["v2-record"])
+        let backup = url.deletingLastPathComponent().appendingPathComponent("User-before-migration.sqlite")
+        #expect(FileManager.default.fileExists(atPath: backup.path))
+        #expect(try backup.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true)
+        var db: OpaquePointer?
+        #expect(sqlite3_open(backup.path, &db) == SQLITE_OK)
+        defer { sqlite3_close(db) }
+        var statement: OpaquePointer?
+        #expect(sqlite3_prepare_v2(db, "SELECT count(*) FROM exact_annotation WHERE id='v2-record'", -1, &statement, nil) == SQLITE_OK)
+        #expect(sqlite3_step(statement) == SQLITE_ROW)
+        #expect(sqlite3_column_int(statement, 0) == 1)
+        sqlite3_finalize(statement)
+        // Reopening a migrated store makes no further backup-worthy change and keeps the record.
+        #expect(try await BibleStore(corpusURL: corpus, userURL: url).exactAnnotations() == [record])
     }
 
 }

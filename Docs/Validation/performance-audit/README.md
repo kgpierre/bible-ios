@@ -88,3 +88,13 @@ These changes were made in response to the findings above and have not been re-m
 - **Finding 4 (prewarm).** Replaced `sum(length(block))` with one ranked `MATCH 'the' … ORDER BY bm25 LIMIT 1` on the search connection. This reads the largest posting list and the document-size table and exercises the real statement shape, all bounded. Cold-device benefit is still to be measured.
 - **Finding 5 (Release testing).** Debug-only counter assertions in `ChapterTextMapTests` and `ExactAnnotationTests` are now inside `#if DEBUG`, and their functional assertions still run. `build-for-testing -configuration Release ENABLE_TESTABILITY=YES` now succeeds. The deprecated `UIWindow(frame:)` in `PaperTurnTests` now uses the host window scene and hides its window afterward.
 - **Also fixed.** At launch, the selected tab item was laid out with provisional geometry (Read rode higher than Saved/Search). The tab container re-applies titles and selection once it joins a window.
+
+## Second follow-up (26 September 2026)
+
+Findings 2 and 3 are now addressed; see [decision 0016](../../Decisions/0016-continuation-summaries-notes-saved-search.md). The same optimized harness was run on iPhone 18 Pro with iOS 27.0, one sample unless noted:
+
+- The reader's annotation load is **2.0 ms**: the open chapter plus the highlighted-chapter index. A full decode of 10,000 records takes 51.5 ms, but the reader no longer does it.
+- A chapter load issued while the first Saved resolution runs takes **3.3 ms**, and no longer waits for it. The resolution itself took 132.5 ms, off the store queue.
+- `the` at offset 50, 1,000, and 10,000: 29.3 ms (a re-rank, because other queries ran in between), then 3.8 and **3.2 ms**. The audit's figures were 18.8, 28.9, and 67.7 ms. The cached ranking holds only the latest query.
+
+The harness now seeds v3 rows, which include the chapter column, and records `annotations_reader_load_10000`, `annotations_full_decode_10000`, and `chapter_during_saved_10000` in place of the old whole-library load.

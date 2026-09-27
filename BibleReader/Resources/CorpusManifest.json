@@ -68,12 +68,12 @@
     "JUD",
     "REV"
   ],
-  "canonReview": "Proposed engineering configuration; owner confirmation required before release",
+  "canonReview": "66-book Protestant canon adopted 2026-09-26 under owner delegation (Docs/Decisions/0015)",
   "importerVersion": 2,
   "documentVersion": 2,
   "payloadEncoding": "raw-deflate-json",
   "contentRevision": "221de95d272cfe6b1aa3088f2e82ba4f8589211aca296d33bedf7d6b61ed23e0",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "providerID": "eng-kjv",
   "versificationID": "eng-kjv-1769-source-labels",
   "language": "en",
@@ -83,8 +83,8 @@
   "sourceDateInArchiveNotice": "2026-09-17",
   "archiveSHA256": "6d834ebe8bcf157587ce93b774615d9e9554f1201951a072cc379930d49bb6fb",
   "outputSHA256": "88025b9e3853f83a9a79fb033fa2420c861d18a078be7ec93e7e1e84fb5d8840",
-  "configurationSHA256": "281eaa9b06dc9731a942a8f97c45769c44d8e946f24de9c6cc029c4c8a548e16",
-  "importerSHA256": "b57e7e66db21b1b45a679d793ab983b5ebb51cc9c51e5818648f2d989ab9a4b8",
+  "configurationSHA256": "9d5057470e3a5f5ba05792a6d4f27dc39ce2093638467a1c0dfc9e3ab9792f6e",
+  "importerSHA256": "770d876f5ea300e4c86bbb73d58084630148fc87b96c29eadc2ba337865c8e6c",
   "excludedBooks": [
     "FRT",
     "TOB",
@@ -105,7 +105,14 @@
   "bookCount": 66,
   "chapterCount": 1189,
   "verseCount": 31102,
-  "rightsReview": "Unresolved; do not publish until edition, canon, and territories are reviewed",
+  "rightsReview": "Reviewed 2026-09-26 (Docs/Decisions/0015): public domain outside the United Kingdom; UK Crown rights administered by Cambridge University Press. Exclude the United Kingdom App Store storefront unless written permission is obtained. Engineering review, not legal advice.",
+  "distribution": {
+    "excludedStorefronts": [
+      "GBR"
+    ],
+    "reason": "Crown rights in the Authorized Version (Letters Patent)"
+  },
+  "rightsStatement": "The King James Version is in the public domain outside the United Kingdom. In the United Kingdom, rights in the Authorized Version are vested in the Crown; this app is not distributed there.",
   "normalization": "Collapse XML formatting whitespace only; retain add italics, source headings, notes and structural metadata; lexical IDs remain in pinned raw source.",
   "attribution": "King James Version (standardized 1769 source), provided by CrossWire Bible Society and eBible.org. Original source includes Apocrypha; this configured corpus includes 66 books."
 }

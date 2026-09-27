@@ -75,5 +75,5 @@ struct SavedRecords: Equatable, Sendable {
 }
 
 enum StorageIssue: Error {
-    case incompatibleCorpus, incompatibleUserStore, invalidPassage, undoConflict
+    case incompatibleCorpus, incompatibleUserStore, invalidPassage, undoConflict, insufficientSpace
 }

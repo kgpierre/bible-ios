@@ -24,7 +24,25 @@ struct ReadingTypography: Codable, Equatable, Sendable {
     var face: ReadingFace = .serif
     var sizeAdjustment = 0
     var spacing: ReadingSpacing = .standard
+    /// Marks verses that have source-edition notes. Added after v1 preferences shipped, so a
+    /// stored payload without it decodes with the default instead of discarding the others.
+    var showsNotes = true
     var pointAdjustment: Double { Double(min(4, max(-2, sizeAdjustment))) * 2 }
+
+    init(face: ReadingFace = .serif, sizeAdjustment: Int = 0, spacing: ReadingSpacing = .standard, showsNotes: Bool = true) {
+        self.face = face
+        self.sizeAdjustment = sizeAdjustment
+        self.spacing = spacing
+        self.showsNotes = showsNotes
+    }
+
+    init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        face = try values.decodeIfPresent(ReadingFace.self, forKey: .face) ?? .serif
+        sizeAdjustment = try values.decodeIfPresent(Int.self, forKey: .sizeAdjustment) ?? 0
+        spacing = try values.decodeIfPresent(ReadingSpacing.self, forKey: .spacing) ?? .standard
+        showsNotes = try values.decodeIfPresent(Bool.self, forKey: .showsNotes) ?? true
+    }
 }
 
 @MainActor @Observable

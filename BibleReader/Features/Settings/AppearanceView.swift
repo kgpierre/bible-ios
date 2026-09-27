@@ -27,11 +27,13 @@ struct AppearanceView: View {
                         ForEach(ReadingSpacing.allCases) { Text($0.title).tag($0) }
                     }
                     .accessibilityIdentifier("readingSpacingPicker")
+                    Toggle("Show source notes", isOn: $preferences.typography.showsNotes)
+                        .accessibilityIdentifier("sourceNotesToggle")
                     Button("Reset reading style") { preferences.resetReadingStyle() }
                 } header: {
                     Text("Reading")
                 } footer: {
-                    Text("Follows your device’s Text Size setting. These adjustments change Scripture text on top of that setting and are saved on this device.")
+                    Text("Follows your device’s Text Size setting. These adjustments change Scripture text on top of that setting and are saved on this device. Source notes mark verses that have marginal notes from the source edition; tap a marked verse number to read them.")
                 }
             }
             .scrollContentBackground(.hidden)

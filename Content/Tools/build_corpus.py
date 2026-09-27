@@ -15,7 +15,7 @@ ARCHIVE = ROOT / 'Content/Source/eng-kjv_usfx.zip'
 PIN = '6d834ebe8bcf157587ce93b774615d9e9554f1201951a072cc379930d49bb6fb'
 EDITION = 'eng-kjv-1769-protestant'
 BOOKS = 'GEN EXO LEV NUM DEU JOS JDG RUT 1SA 2SA 1KI 2KI 1CH 2CH EZR NEH EST JOB PSA PRO ECC SNG ISA JER LAM EZK DAN HOS JOL AMO OBA JON MIC NAM HAB ZEP HAG ZEC MAL MAT MRK LUK JHN ACT ROM 1CO 2CO GAL EPH PHP COL 1TH 2TH 1TI 2TI TIT PHM HEB JAS 1PE 2PE 1JN 2JN 3JN JUD REV'.split()
-CONFIG = {'editionID': EDITION, 'includedBooks': BOOKS, 'canonReview': 'Proposed engineering configuration; owner confirmation required before release', 'importerVersion': 2, 'documentVersion': 2, 'payloadEncoding': 'raw-deflate-json'}
+CONFIG = {'editionID': EDITION, 'includedBooks': BOOKS, 'canonReview': '66-book Protestant canon adopted 2026-09-26 under owner delegation (Docs/Decisions/0015)', 'importerVersion': 2, 'documentVersion': 2, 'payloadEncoding': 'raw-deflate-json'}
 
 
 def digest(data): return hashlib.sha256(data).hexdigest()
@@ -197,18 +197,20 @@ CREATE VIRTUAL TABLE verse_search USING fts5(text,content='verse',content_rowid=
         db.close()
         binary=digest(dbpath.read_bytes())
         dbpath.replace(output/'BibleCorpus.sqlite')
-    manifest={**CONFIG,'contentRevision':logical,'schemaVersion':1,'providerID':'eng-kjv', 'versificationID':'eng-kjv-1769-source-labels', 'language':'en',
+    manifest={**CONFIG,'contentRevision':logical,'schemaVersion':2,'providerID':'eng-kjv', 'versificationID':'eng-kjv-1769-source-labels', 'language':'en',
               'sourcePage':'https://ebible.org/find/show.php?id=eng-kjv','sourceURL':'https://ebible.org/Scriptures/eng-kjv_usfx.zip',
               'retrieved':'2026-09-21','sourceDateInArchiveNotice':'2026-09-17','archiveSHA256':PIN,'outputSHA256':binary,
               'configurationSHA256':digest(packed(CONFIG).encode()),'importerSHA256':digest(Path(__file__).read_bytes()),
               'excludedBooks':[x for x in by_id if x not in BOOKS], 'bookCount':len(books),'chapterCount':len(documents),'verseCount':len(ids),
-              'rightsReview':'Unresolved; do not publish until edition, canon, and territories are reviewed',
+              'rightsReview':'Reviewed 2026-09-26 (Docs/Decisions/0015): public domain outside the United Kingdom; UK Crown rights administered by Cambridge University Press. Exclude the United Kingdom App Store storefront unless written permission is obtained. Engineering review, not legal advice.',
+              'distribution':{'excludedStorefronts':['GBR'],'reason':'Crown rights in the Authorized Version (Letters Patent)'},
+              'rightsStatement':'The King James Version is in the public domain outside the United Kingdom. In the United Kingdom, rights in the Authorized Version are vested in the Crown; this app is not distributed there.',
               'normalization':'Collapse XML formatting whitespace only; retain add italics, source headings, notes and structural metadata; lexical IDs remain in pinned raw source.',
               'attribution':'King James Version (standardized 1769 source), provided by CrossWire Bible Society and eBible.org. Original source includes Apocrypha; this configured corpus includes 66 books.'}
     (output/'CorpusManifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     notice_parser=NoticeText();notice_parser.feed(notice.decode('utf-8-sig'))
     provider_notice=''.join(notice_parser.parts).strip()
-    (output/'EditionNotice.txt').write_text('King James Version\n\n'+manifest['attribution']+'\n\n'+manifest['rightsReview']+'\n\nSource: '+manifest['sourcePage']+'\n\nOriginal provider notice:\n'+provider_notice+'\n')
+    (output/'EditionNotice.txt').write_text('King James Version\n\n'+manifest['attribution']+'\n\n'+manifest['rightsStatement']+'\n\nSource: '+manifest['sourcePage']+'\n\nOriginal provider notice:\n'+provider_notice+'\n')
     (ROOT/'Content/Source/edition-counts.json').write_text(json.dumps(counts,indent=2)+'\n')
     (ROOT/'Content/Source/copr.htm').write_bytes(notice)
     print(f'{len(books)} books, {len(documents)} chapters, {len(ids)} verses; logical SHA-256 {logical}')
