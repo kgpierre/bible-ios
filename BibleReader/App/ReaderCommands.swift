@@ -25,10 +25,6 @@ struct ReaderCommands: Commands {
             Button("Next chapter") { state?.reader.moveChapter(by: 1) }
                 .keyboardShortcut("]", modifiers: .command)
                 .disabled(state?.reader.hasAdjacentChapter(1) != true)
-            Button("Toggle sidebar") {
-                guard let state else { return }
-                state.sidebarVisibility = state.sidebarVisibility == .detailOnly ? .all : .detailOnly
-            }.keyboardShortcut("s", modifiers: [.command, .shift])
         }
     }
 }

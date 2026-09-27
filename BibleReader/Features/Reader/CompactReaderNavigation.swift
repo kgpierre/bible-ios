@@ -14,7 +14,7 @@ struct CompactReaderNavigation: View {
     var body: some View {
         GlassEffectContainer(spacing: 8) {
             ReaderNavigationLayout(stack: dynamicType.isAccessibilitySize) {
-                PassageButton(state: state, compact: true)
+                PassageButton(state: state)
                 destinations
             }
         }
@@ -127,7 +127,6 @@ private final class ReaderTabBarContainer: UIView {
 
 struct PassageButton: View {
     @Bindable var state: AppState
-    let compact: Bool
 
     private var passageLabel: String { state.reader.document?.reference ?? String(localized: "Chapters") }
     private var shortPassageLabel: String {
@@ -156,7 +155,7 @@ struct PassageButton: View {
         .accessibilityLabel("Choose chapter, \(state.reader.document?.reference ?? "Bible")")
         .accessibilityIdentifier("passageButton")
         .popover(isPresented: $state.isChapterPickerPresented) {
-            PrototypeChapterPicker(state: state.reader, onClose: { state.isChapterPickerPresented = false }) { if compact { state.destination = .read } }
+            PrototypeChapterPicker(state: state.reader, onClose: { state.isChapterPickerPresented = false }) { state.destination = .read }
                 .presentationCompactAdaptation(.sheet)
         }
     }
@@ -168,8 +167,8 @@ extension PassageButton {
             title.font(.body.weight(.semibold))
             Image(systemName: "chevron.down").font(.caption.weight(.semibold))
         }
-        .padding(.horizontal, compact ? 16 : 8)
-        .frame(minHeight: compact ? 56 : 44)
+        .padding(.horizontal, 16)
+        .frame(minHeight: 56)
     }
 }
 

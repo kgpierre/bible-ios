@@ -21,6 +21,26 @@ struct ReaderPreferencesTests {
         #expect(reset.theme == .dark)
     }
 
+    @Test @MainActor func pageLayoutPersistsAndOlderPayloadsReadAsScroll() throws {
+        let name = "BibleReader.Tests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        // A payload written before the page layout existed keeps its other values.
+        defaults.set(Data(#"{"version":1,"theme":"dark","typography":{"face":"sans","sizeAdjustment":2,"spacing":"relaxed"}}"#.utf8),
+                     forKey: "reader.appearance.v1")
+        let legacy = ReaderPreferences(defaults: defaults)
+        #expect(legacy.pageLayout == .scroll)
+        #expect(legacy.automaticBookLayout)
+        #expect(legacy.theme == .dark)
+        #expect(legacy.typography.face == .sans)
+        legacy.pageLayout = .twoPages
+        legacy.automaticBookLayout = false
+        #expect(ReaderPreferences(defaults: defaults).pageLayout == .twoPages)
+        #expect(!ReaderPreferences(defaults: defaults).automaticBookLayout)
+        legacy.resetReadingStyle()
+        #expect(ReaderPreferences(defaults: defaults).pageLayout == .twoPages)
+    }
+
     @Test @MainActor func typographyReflowsAndPreservesSemanticSelection() async throws {
         let doc = try #require(try await PrototypeLibrary.load().first { $0.bookID == "JHN" })
         let state = ReaderState()

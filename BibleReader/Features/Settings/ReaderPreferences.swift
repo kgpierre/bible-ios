@@ -20,6 +20,14 @@ enum ReadingSpacing: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Wide landscape presentation, including regular-width phones. Stored beside typography: switching layouts must not
+/// rebuild the reader's attributed text the way a typography change does.
+enum ReadingPageLayout: String, Codable, CaseIterable, Identifiable, Sendable {
+    case scroll, twoPages
+    var id: Self { self }
+    var title: String { self == .scroll ? String(localized: "Scroll") : String(localized: "Two Pages") }
+}
+
 struct ReadingTypography: Codable, Equatable, Sendable {
     var face: ReadingFace = .serif
     var sizeAdjustment = 0
@@ -49,11 +57,16 @@ struct ReadingTypography: Codable, Equatable, Sendable {
 final class ReaderPreferences {
     var theme: AppAppearance { didSet { save() } }
     var typography: ReadingTypography { didSet { save() } }
+    var pageLayout: ReadingPageLayout { didSet { save() } }
+    var automaticBookLayout: Bool { didSet { save() } }
     @ObservationIgnored private let defaults: UserDefaults
     private struct Payload: Codable {
         var version = 1
         var theme: AppAppearance
         var typography: ReadingTypography
+        /// Added after v1 shipped; absent in older payloads, which read as scroll.
+        var pageLayout: ReadingPageLayout?
+        var automaticBookLayout: Bool?
     }
     private static let key = "reader.appearance.v1"
 
@@ -70,13 +83,16 @@ final class ReaderPreferences {
            let stored = try? JSONDecoder().decode(Payload.self, from: data), stored.version == 1 {
             theme = stored.theme
             typography = stored.typography
+            pageLayout = stored.pageLayout ?? .scroll
+            automaticBookLayout = stored.automaticBookLayout ?? true
             typography.sizeAdjustment = min(4, max(-2, typography.sizeAdjustment))
-        } else { theme = .system; typography = ReadingTypography() }
+        } else { theme = .system; typography = ReadingTypography(); pageLayout = .scroll; automaticBookLayout = true }
     }
 
     func resetReadingStyle() { typography = ReadingTypography() }
     private func save() {
-        guard let data = try? JSONEncoder().encode(Payload(theme: theme, typography: typography)) else { return }
+        guard let data = try? JSONEncoder().encode(Payload(theme: theme, typography: typography, pageLayout: pageLayout,
+                                                         automaticBookLayout: automaticBookLayout)) else { return }
         defaults.set(data, forKey: Self.key)
     }
 }

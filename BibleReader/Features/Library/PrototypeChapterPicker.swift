@@ -80,7 +80,6 @@ struct ChapterChoices: View {
     @Bindable var state: ReaderState
     let bookID: String
     let didOpen: () -> Void
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ScaledMetric(relativeTo: .title2) private var cellWidth = 60.0
     @ScaledMetric(relativeTo: .title2) private var numberSize = 26.0
 
@@ -92,7 +91,8 @@ struct ChapterChoices: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
-                Group {
+                // Zero spacing keeps each chapter its own glass circle rather than merging neighbors.
+                GlassEffectContainer(spacing: 0) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: cellWidth), spacing: 12)],
                               alignment: .leading, spacing: 12) {
                         ForEach(chapters) { chapter in
@@ -150,11 +150,11 @@ struct ChapterChoices: View {
                 }
             }
                 .frame(width: cellWidth, height: cellWidth)
-                .background(selected ? Color(.accent) : (reduceTransparency ? Color(.chapterPickerCanvas) : .clear), in: .circle)
-                .overlay { Circle().strokeBorder(Color(.readingSecondary).opacity(selected ? 0 : 0.3), lineWidth: 1) }
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
+        // System glass adapts to Reduce Transparency and Increase Contrast on its own.
+        .glassEffect(selected ? .regular.tint(Color(.accent)).interactive() : .regular.interactive(), in: .circle)
         .accessibilityLabel("\(chapter.bookName), chapter \(chapter.label)")
         .accessibilityValue(highlighted ? "Has highlights" : "")
         .accessibilityIdentifier("chapter-\(chapter.bookID)-\(chapter.label)")

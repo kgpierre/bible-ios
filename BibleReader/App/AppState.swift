@@ -9,13 +9,13 @@ final class AppState {
     var summary: ChapterSummaryState?
     var isAppearancePresented = false
     var isChapterPickerPresented = false
-    var newTestament = false
     var isAboutPresented = false
+    /// Whether this device reports a hinge (a foldable); fold-only settings appear only then.
+    var hasHinge = false
     var savedSelection: String?
     var savedFilter: SavedFilter = .all
     var savedSort: SavedSort = .recent
     var destination: AppDestination = .read
-    var sidebarVisibility: NavigationSplitViewVisibility = .all
     let reader: ReaderState
     let search: SearchState
 

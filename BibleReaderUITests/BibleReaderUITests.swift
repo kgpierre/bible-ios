@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class BibleReaderUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
@@ -21,8 +22,8 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["chapter-PSA-119"].tap()
         XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
         app.textViews["chapterText"].swipeUp()
-        app.buttons["destination-saved"].tap()
-        app.buttons["destination-read"].tap()
+        destination(app, "Saved").tap()
+        destination(app, "Read").tap()
         XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
         capture(app, name: "Long chapter after destination round trip")
     }
@@ -123,64 +124,320 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
-    func testIPadWideAndNarrowRestoration() throws {
+    func testIPadTopTabsAndRotationRestoration() throws {
         let app = testApplication()
         app.launch()
-        guard app.frame.width > 600 else { throw XCTSkip("iPad-specific adaptive layout check") }
+        guard app.frame.width > 600 else { throw XCTSkip("Regular-width iPad tab check") }
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
-        app.buttons["passageButton"].tap()
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        // The system top tab bar replaces 2a's bottom chrome; the passage capsule sits bottom trailing.
+        XCTAssertTrue(tab(app, "Read").isSelected)
+        XCTAssertFalse(app.buttons["destination-read"].exists)
+        let passage = app.buttons["passageButton"]
+        XCTAssertGreaterThan(passage.frame.midX, app.frame.midX)
+        XCTAssertGreaterThan(passage.frame.midY, app.frame.midY)
+        passage.tap()
         choosePsalms(app)
         app.buttons["chapter-PSA-119"].tap()
-        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(passage.label.contains("119"))
         reader.swipeUp()
         let firstVisible = reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label
+        capture(app, name: "iPad — top tab bar reader")
         XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.navigationBars["Library"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
-        XCTAssertFalse(app.buttons["destination-read"].exists)
-        capture(app, name: "3a — wide sidebar reader")
-        let sidebarToggle = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "sidebar")).firstMatch
-        XCTAssertTrue(sidebarToggle.exists)
-        sidebarToggle.tap()
-        capture(app, name: "3b — focused reader")
+        XCTAssertTrue(passage.label.contains("119"))
         XCUIDevice.shared.orientation = .portrait
-        XCTAssertTrue(app.buttons["destination-read"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["passageButton"].label.contains("119"))
+        XCTAssertTrue(passage.waitForExistence(timeout: 5))
         let restored = reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label
-        capture(app, name: "3d — compact layout restored")
+        XCTAssertNotNil(firstVisible)
         XCTAssertEqual(restored, firstVisible)
+        // Top tab bar only: no sidebar in either orientation.
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(tab(app, "Saved").waitForExistence(timeout: 5))
+        XCTAssertFalse(app.cells["Saved"].exists)
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier ==[c] %@", "ToggleSidebar")).firstMatch.exists)
+        capture(app, name: "iPad — landscape top tab bar")
     }
 
     @MainActor
-    func testIPadSavedUpdatesAlongsideReader() throws {
-        XCUIDevice.shared.orientation = .portrait
-        defer { XCUIDevice.shared.orientation = .portrait }
+    func testIPadSavedTabOpensReader() throws {
         let app = testApplication()
         app.launch()
-        guard min(app.frame.width, app.frame.height) > 600 else { throw XCTSkip("Wide iPad sidebar check") }
+        guard app.frame.width > 600 else { throw XCTSkip("Regular-width iPad Saved check") }
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
-        XCUIDevice.shared.orientation = .landscapeRight
-        XCTAssertTrue(app.buttons["sidebar-saved"].waitForExistence(timeout: 5))
-        app.buttons["sidebar-saved"].tap()
+        tab(app, "Saved").tap()
         XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
+        tab(app, "Read").tap()
         let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
-        for color in ["Sage", "Blue"] {
-            first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15, dy: 8)).press(forDuration: 0.4)
-            XCTAssertTrue(app.menuItems[color].waitForExistence(timeout: 5))
-            app.menuItems[color].tap()
-            let saved = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", color, "John 3:1 (excerpt)")).firstMatch
-            XCTAssertTrue(saved.waitForExistence(timeout: 5))
-            XCTAssertTrue(saved.label.contains("There"))
-            XCTAssertTrue(reader.exists)
-        }
-        let blue = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "Blue", "John 3:1 (excerpt)")).firstMatch
-        blue.tap()
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        first.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: 15, dy: 8)).press(forDuration: 0.4)
+        XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
+        app.menuItems["Blue"].tap()
+        tab(app, "Saved").tap()
+        let saved = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "Blue", "John 3:1 (excerpt)")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 5))
+        capture(app, name: "iPad — Saved tab")
+        saved.tap()
+        XCTAssertTrue(app.buttons["passageButton"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
-        XCTAssertTrue(blue.isSelected)
-        capture(app, name: "iPad — live Saved recolor and same-chapter navigation")
+        XCTAssertTrue(tab(app, "Read").isSelected)
+    }
+
+    @MainActor
+    func testWideTwoPageSpreadTurnsIntoNextChapterAndRestoresScroll() throws {
+        let app = testApplication()
+        app.launch()
+        guard app.frame.width > 600 else { throw XCTSkip("Requires a regular-width inner display or iPad window") }
+        let fixedDuoPose = ProcessInfo.processInfo.environment["BIBLE_DUO_POSE_TEST"] == "flat"
+        defer { if !fixedDuoPose { XCUIDevice.shared.orientation = .portrait } }
+        // Device Hub supplies the wide, fully open pose for Duo; XCTest orientation/window
+        // queries are unreliable on its secondary display. iPad still tests native rotation.
+        if !fixedDuoPose { XCUIDevice.shared.orientation = .landscapeLeft }
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        let layout = app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch
+        XCTAssertTrue(layout.waitForExistence(timeout: 5))
+        layout.tap()
+        let twoPages = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@ AND elementType IN %@", "Two Pages",
+                                  [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue])).firstMatch
+        XCTAssertTrue(twoPages.waitForExistence(timeout: 5))
+        twoPages.tap()
+        app.buttons["appearanceDoneButton"].tap()
+        let left = app.textViews["spreadPageLeft"], right = app.textViews["spreadPageRight"]
+        XCTAssertTrue(left.waitForExistence(timeout: 5))
+        XCTAssertTrue(right.exists)
+        XCTAssertFalse(app.textViews["chapterText"].exists)
+        // The chapter opens on a left page under its title.
+        capture(app, name: "Wide reader — two-page spread")
+        XCTAssertTrue(left.textViews.firstMatch.label.hasPrefix("There was a man of the Pharisees"))
+        // Facing pages must keep the same exact-word annotation behavior as the scroll reader.
+        left.textViews.firstMatch.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 15, dy: 8)).press(forDuration: 0.6)
+        XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
+        app.menuItems["Blue"].tap()
+        tab(app, "Saved").tap()
+        let savedWord = app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@",
+            "Blue", "John 3:1 (excerpt)")).firstMatch
+        XCTAssertTrue(savedWord.waitForExistence(timeout: 5))
+        XCTAssertTrue(savedWord.label.contains("There"))
+        XCTAssertFalse(savedWord.label.contains("was a man"))
+        savedWord.tap()
+        XCTAssertTrue(left.waitForExistence(timeout: 5))
+        let passage = app.buttons["passageButton"]
+        XCTAssertTrue(passage.label.contains("John 3"))
+        // Drag across the outer half of a page; a chapter's last right page may be blank paper.
+        let spread = app.otherElements["spreadContainer"]
+        func drag(from: CGFloat, to: CGFloat) {
+            spread.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.5))
+                .press(forDuration: 0.05, thenDragTo: spread.coordinate(withNormalizedOffset: CGVector(dx: to, dy: 0.5)))
+        }
+        var turns = 0
+        while !passage.label.contains("John 4"), turns < 8 {
+            let before = left.textViews.firstMatch.label
+            drag(from: 0.92, to: 0.2)
+            let turned = expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: left.textViews.firstMatch)
+            wait(for: [turned], timeout: 5)
+            turns += 1
+        }
+        XCTAssertTrue(passage.label.contains("John 4"))
+        XCTAssertTrue(left.textViews.firstMatch.label.hasPrefix("When therefore the Lord knew"))
+        capture(app, name: "Wide reader — spread turned into next chapter")
+        // Turning back crosses to the previous chapter's last spread.
+        drag(from: 0.08, to: 0.8)
+        let back = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 3"), evaluatedWith: passage)
+        wait(for: [back], timeout: 5)
+        let lastSpreadVerse = left.textViews.firstMatch.label
+        XCTAssertFalse(lastSpreadVerse.hasPrefix("There was a man of the Pharisees"))
+        // Rotation labels do not identify the inner display's aspect ratio. A tall window
+        // must scroll; if the window remains wide, explicitly choose Scroll and verify the anchor.
+        if !fixedDuoPose { XCUIDevice.shared.orientation = .portrait }
+        let windowFrame = app.windows.firstMatch.frame
+        if fixedDuoPose || windowFrame.width > windowFrame.height {
+            app.buttons["appearanceButton"].tap()
+            app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch.tap()
+            app.descendants(matching: .any).matching(NSPredicate(
+                format: "label == %@ AND elementType IN %@", "Scroll",
+                [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue])).firstMatch.tap()
+            app.buttons["appearanceDoneButton"].tap()
+        }
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 5))
+        XCTAssertTrue(passage.label.contains("John 3"))
+        let resumed = reader.textViews.matching(NSPredicate(format: "label == %@", lastSpreadVerse)).firstMatch
+        XCTAssertTrue(resumed.waitForExistence(timeout: 5))
+        XCTAssertTrue(resumed.isHittable)
+        capture(app, name: "Wide reader — scrolling resumes spread position")
+    }
+
+    @MainActor
+    func testPagePreferenceRemainsAvailableInCompactLayoutAndPersists() throws {
+        guard !isPhoneWithoutHinge else { throw XCTSkip("Page layouts are offered only on iPad and foldables") }
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        let picker = app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        picker.tap()
+        let twoPages = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label == %@ AND elementType IN %@", "Two Pages",
+            [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue])).firstMatch
+        XCTAssertTrue(twoPages.waitForExistence(timeout: 5))
+        twoPages.tap()
+        app.buttons["appearanceDoneButton"].tap()
+        // Choosing the preference in a narrow/portrait window must leave a usable scrolling reader.
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.label.contains("Two Pages") || (picker.value as? String)?.contains("Two Pages") == true)
+        capture(app, name: "Adaptive page preference persists")
+    }
+
+    /// Opt-in Device Hub test: an operator closes, then reopens, the actual Duo while this
+    /// test waits for each display transition. Never substitute a synthetic window resize.
+    @MainActor
+    func testDuoFoldUnfoldKeepsSearchAndReadingPosition() throws {
+        guard ProcessInfo.processInfo.environment["BIBLE_DUO_FOLD_TEST"] == "1" else {
+            throw XCTSkip("Requires an operator at Device Hub's Duo fold controls")
+        }
+        let app = testApplication()
+        app.launch()
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertGreaterThan(app.frame.width, 600, "Begin fully open on the inner display")
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        reader.swipeUp()
+        let visibleVerse = try XCTUnwrap(reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label)
+        tab(app, "Search").tap()
+        let field = app.textFields["searchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("light\n")
+        let count = app.staticTexts["searchCount"]
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+        let resultCount = count.label
+        print("DUO_FOLD_READY: Close the Duo; keep it closed until DUO_UNFOLD_READY.")
+        let folded = expectation(for: NSPredicate { _, _ in app.frame.width < 600 }, evaluatedWith: app)
+        wait(for: [folded], timeout: 120)
+        XCTAssertEqual(field.value as? String, "light")
+        XCTAssertEqual(count.label, resultCount)
+        XCTAssertTrue(app.buttons["destination-read"].exists)
+        capture(app, name: "Duo — closed display retains search")
+        print("DUO_UNFOLD_READY: Reopen the Duo fully.")
+        let unfolded = expectation(for: NSPredicate { _, _ in app.frame.width > 600 }, evaluatedWith: app)
+        wait(for: [unfolded], timeout: 120)
+        XCTAssertEqual(field.value as? String, "light")
+        XCTAssertEqual(count.label, resultCount)
+        tab(app, "Read").tap()
+        XCTAssertTrue(reader.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        XCTAssertEqual(reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label, visibleVerse)
+        capture(app, name: "Duo — reopened display restores reading position")
+    }
+
+    @MainActor
+    func testDuoBookPoseAutomaticallyTurnsPages() throws {
+        guard ProcessInfo.processInfo.environment["BIBLE_DUO_POSE_TEST"] == "book" else {
+            throw XCTSkip("Requires Device Hub in partially folded book pose")
+        }
+        let app = testApplication() // Fresh preferences default to Scroll; book pose overrides temporarily.
+        app.launch()
+        let left = app.textViews["spreadPageLeft"]
+        XCTAssertTrue(left.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.textViews["spreadPageRight"].exists)
+        XCTAssertFalse(app.textViews["chapterText"].exists)
+        let before = left.textViews.firstMatch.label
+        let spread = app.otherElements["spreadContainer"]
+        spread.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5))
+            .press(forDuration: 0.05, thenDragTo: spread.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5)))
+        let turned = expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: left.textViews.firstMatch)
+        wait(for: [turned], timeout: 5)
+        capture(app, name: "Duo — automatic book pose after page turn")
+        app.buttons["appearanceButton"].tap()
+        let automatic = app.switches["automaticBookLayoutToggle"]
+        XCTAssertTrue(automatic.waitForExistence(timeout: 5))
+        XCTAssertEqual(automatic.value as? String, "1")
+        automatic.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        XCTAssertEqual(automatic.value as? String, "0")
+        app.buttons["appearanceDoneButton"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+    }
+
+    @MainActor
+    func testDuoTabletopKeepsChapterControlsBelowReader() throws {
+        guard ProcessInfo.processInfo.environment["BIBLE_DUO_POSE_TEST"] == "tabletop" else {
+            throw XCTSkip("Requires Device Hub in tabletop pose")
+        }
+        let app = testApplication()
+        app.launch()
+        // A partially folded Duo can expose a horizontal division after rotation even
+        // when Device Hub has no separately named tabletop preset.
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let reader = app.textViews["chapterText"]
+        XCTAssertTrue(reader.waitForExistence(timeout: 10))
+        let next = app.buttons["Next chapter"].firstMatch
+        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(next.frame.minY, reader.frame.maxY)
+        next.tap()
+        let passage = app.buttons["passageButton"]
+        let navigated = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 4"), evaluatedWith: passage)
+        wait(for: [navigated], timeout: 5)
+        capture(app, name: "Duo — tabletop reading and chapter controls")
+    }
+
+    @MainActor
+    func testIPadSpreadSurvivesRapidTurnsAndToolbarTaps() throws {
+        let app = testApplication()
+        app.launchEnvironment["BIBLE_TEST_CHAPTER"] = "JUD:1"
+        app.launch()
+        guard app.frame.width > 600 else { throw XCTSkip("iPad landscape two-page check") }
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        enableTwoPages(app)
+        let spread = app.otherElements["spreadContainer"]
+        XCTAssertTrue(spread.waitForExistence(timeout: 5))
+        // Short chapters (Jude, 3 John) put a chapter boundary on nearly every turn, before neighbors finish paginating.
+        func flick(from: CGFloat, to: CGFloat, hold: TimeInterval = 0) {
+            spread.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.5))
+                .press(forDuration: 0.01, thenDragTo: spread.coordinate(withNormalizedOffset: CGVector(dx: to, dy: 0.52)),
+                       withVelocity: .fast, thenHoldForDuration: hold)
+        }
+        for round in 0..<6 {
+            flick(from: 0.08, to: 0.9)                 // back across the spine
+            tab(app, "Saved").tap()
+            tab(app, "Read").tap()
+            flick(from: 0.92, to: 0.1)                 // forward
+            app.buttons["appearanceButton"].tap()
+            app.buttons["appearanceDoneButton"].tap()
+            flick(from: 0.92, to: 0.7)                 // partial drag that cancels
+            tab(app, "Search").tap()
+            tab(app, "Read").tap()
+            XCTAssertTrue(spread.waitForExistence(timeout: 5), "round \(round)")
+        }
+        XCTAssertTrue(app.buttons["passageButton"].exists)
+        capture(app, name: "iPad — spread after rapid turns")
+    }
+
+    @MainActor
+    private func enableTwoPages(_ app: XCUIApplication) {
+        app.buttons["appearanceButton"].tap()
+        let layout = app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch
+        XCTAssertTrue(layout.waitForExistence(timeout: 5))
+        layout.tap()
+        app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@ AND elementType IN %@", "Two Pages",
+                                  [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue])).firstMatch.tap()
+        app.buttons["appearanceDoneButton"].tap()
     }
 
     @MainActor
@@ -289,27 +546,28 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
-    func testSearchSurvivesIPadResize() throws {
+    func testSearchSurvivesIPadTabsAndRotation() throws {
         let app = testApplication()
         app.launch()
         guard app.frame.width > 600 else { throw XCTSkip("iPad-specific search check") }
         defer { XCUIDevice.shared.orientation = .portrait }
         XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.buttons["sidebar-search"].waitForExistence(timeout: 10))
-        app.buttons["sidebar-search"].tap()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        tab(app, "Search").tap()
         let field = app.textFields["searchField"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("John 3:16\n")
         XCTAssertTrue(app.buttons["openReference"].waitForExistence(timeout: 10))
+        capture(app, name: "iPad Search tab")
         app.buttons["openReference"].tap()
-        XCTAssertTrue(app.textViews["chapterText"].exists)
-        XCTAssertEqual(field.value as? String, "John 3:16")
-        capture(app, name: "iPad Search beside reader")
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        XCTAssertTrue(tab(app, "Read").isSelected)
         XCUIDevice.shared.orientation = .portrait
-        XCTAssertTrue(app.buttons["destination-search"].waitForExistence(timeout: 5))
+        tab(app, "Search").tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
         XCTAssertEqual(field.value as? String, "John 3:16")
-        capture(app, name: "Search preserved in narrow iPad")
+        capture(app, name: "Search preserved after rotation")
     }
 
     @MainActor
@@ -491,7 +749,11 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["appearanceButton"].tap()
         app.buttons["readingFacePicker"].tap()
         app.buttons["System Sans"].tap()
-        app.buttons["readingSizeStepper-Increment"].tap()
+        let size = app.sliders["readingSizeSlider"]
+        XCTAssertEqual(size.value as? String, "Default")
+        size.adjust(toNormalizedSliderPosition: 0.6)
+        let chosenSize = size.value as? String
+        XCTAssertNotEqual(chosenSize, "Default")
         app.buttons["readingSpacingPicker"].tap()
         app.buttons["Relaxed"].tap()
         capture(app, name: "Persisted reading style controls")
@@ -504,7 +766,7 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["appearanceButton"].tap()
         XCTAssertTrue(app.buttons["readingFacePicker"].label.contains("System Sans"))
         XCTAssertTrue(app.buttons["readingSpacingPicker"].label.contains("Relaxed"))
-        XCTAssertEqual(app.steppers["readingSizeStepper"].value as? String, "1")
+        XCTAssertEqual(app.sliders["readingSizeSlider"].value as? String, chosenSize)
         app.buttons["appearanceDoneButton"].tap()
     }
 
@@ -631,7 +893,8 @@ final class BibleReaderUITests: XCTestCase {
         app.swipeUp()
         app.buttons["Edition notice"].tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Crosswire Bible Society")).firstMatch.waitForExistence(timeout: 5))
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        // The reader's own bar stays in the hierarchy behind the sheet; go back in the sheet.
+        app.navigationBars["Edition notice"].buttons.element(boundBy: 0).tap()
         app.buttons["aboutCloseButton"].tap()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
         capture(app, name: "About closed back to reader")
@@ -674,6 +937,55 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertTrue(reader.waitForExistence(timeout: 5))
     }
 
+    /// A regular-width top tab bar item (UIKit reports a nested pair, so take the first).
+    @MainActor
+    private func tab(_ app: XCUIApplication, _ label: String) -> XCUIElement {
+        let predicate = NSPredicate(format: "label == %@ AND elementType IN %@", label,
+                                    [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.cell.rawValue])
+        return app.descendants(matching: .any).matching(predicate).firstMatch
+    }
+
+    /// The compact 2a tab control where shown, otherwise the regular-width system tab bar.
+    @MainActor
+    private func destination(_ app: XCUIApplication, _ label: String) -> XCUIElement {
+        let compact = app.buttons["destination-" + label.lowercased()]
+        return compact.exists ? compact : tab(app, label)
+    }
+
+    /// Test-runner knowledge only: the app itself asks UIKit for a hinge, never a device name.
+    @MainActor private var isPhoneWithoutHinge: Bool {
+        UIDevice.current.userInterfaceIdiom == .phone &&
+            ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.contains("Duo") != true
+    }
+
+    @MainActor
+    func testPhoneWithoutHingeHidesPageAndFoldSettings() throws {
+        guard isPhoneWithoutHinge else { throw XCTSkip("Checks a phone without a hinge") }
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        XCTAssertTrue(app.sliders["readingSizeSlider"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["pageLayoutPicker"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["automaticBookLayoutToggle"].exists)
+        XCTAssertFalse(app.staticTexts["PAGES"].exists || app.staticTexts["Pages"].exists)
+        capture(app, name: "iPhone Appearance without page or fold settings")
+        app.buttons["appearanceDoneButton"].tap()
+    }
+
+    @MainActor
+    func testIPadShowsLandscapePagesButNotFoldSettings() throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("iPad check") }
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
+        app.buttons["appearanceButton"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["pageLayoutPicker"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["automaticBookLayoutToggle"].exists)
+        capture(app, name: "iPad Appearance with landscape pages only")
+        app.buttons["appearanceDoneButton"].tap()
+    }
+
     @MainActor
     private func testApplication() -> XCUIApplication {
         let app = XCUIApplication()
@@ -695,7 +1007,9 @@ final class BibleReaderUITests: XCTestCase {
         psalms.tap()
         let chapter = picker.buttons["chapter-PSA-119"]
         for _ in 0..<10 {
-            if chapter.isHittable { break }
+            // Duo can report an invalid activation point for a lazy cell outside the popover.
+            // Scroll it into visible geometry before asking XCTest to resolve its hit point.
+            if chapter.exists, !chapter.frame.isEmpty, picker.frame.intersects(chapter.frame), chapter.isHittable { break }
             picker.swipeUp()
         }
     }
@@ -731,7 +1045,7 @@ final class BibleReaderUITests: XCTestCase {
 
     @MainActor
     private func capture(_ app: XCUIApplication, name: String) {
-        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)

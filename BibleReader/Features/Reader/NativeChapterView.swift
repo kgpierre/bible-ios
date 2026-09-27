@@ -17,6 +17,21 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         }
     }
     private var wide = false
+    /// Book-page mode: one page of a two-page spread. The spread owns the reading anchor and
+    /// turning, so the page neither scrolls (unless one verse overflows it) nor captures position.
+    var paged = false {
+        didSet { if paged != oldValue { alwaysBounceVertical = !paged; setNeedsLayout() } }
+    }
+    var pageInnerInset: CGFloat = 0 {
+        didSet { if pageInnerInset != oldValue { setNeedsLayout() } }
+    }
+    var isLeftSpreadPage = true {
+        didSet { if isLeftSpreadPage != oldValue { setNeedsLayout() } }
+    }
+    /// The chapter's opening page shows its full title; later pages show a small running head.
+    var showsHeader = true {
+        didSet { if showsHeader != oldValue { applyHeaderMode(); measuredHeaderWidth = -1; setNeedsLayout() } }
+    }
     private var lastWidth: CGFloat = 0
     private var measuredHeaderWidth: CGFloat = -1
     private var measuredHeaderHeight: CGFloat = 0
@@ -249,6 +264,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             chapterTitle.text = String(localized: "Chapter \(document.label)")
             chapterTitle.font = scaledFont(size: wide ? 24 : 22, style: .title2, serif: true)
             chapterTitle.textColor = UIColor(resource: .readingSecondary)
+            applyHeaderMode()
             gutterLabels.values.forEach { $0.removeFromSuperview() }
             gutterLabels.removeAll()
             bookmarkIndicators.values.forEach { $0.removeFromSuperview() }
@@ -301,6 +317,34 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         setNeedsLayout()
     }
 
+    private func applyHeaderMode() {
+        bookTitle.isHidden = !showsHeader
+        chapterTitle.isHidden = !showsHeader
+        eyebrow.text = showsHeader ? document?.eyebrow : document?.reference.localizedUppercase
+        eyebrow.accessibilityTraits = showsHeader ? .staticText : .header
+    }
+
+    /// Paged layout: the bottom of each verse's last line (headings travel with their verse) and
+    /// of all content, in text-container coordinates. Lays out the whole chapter; measure offscreen.
+    func measuredVerseEnds() -> (verses: [CGFloat], content: CGFloat)? {
+        guard let manager = textLayoutManager, let content = manager.textContentManager, let map else { return nil }
+        manager.ensureLayout(for: content.documentRange)
+        let indexByOffset = Dictionary(uniqueKeysWithValues: map.entries.enumerated().map { ($1.range.location, $0) })
+        var ends = [CGFloat](repeating: 0, count: map.entries.count)
+        var bottom: CGFloat = 0
+        manager.enumerateTextLayoutFragments(from: content.documentRange.location, options: [.ensuresLayout]) { fragment in
+            let offset = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
+            let maxY = fragment.layoutFragmentFrame.maxY
+            if let index = indexByOffset[offset] { ends[index] = maxY }
+            bottom = max(bottom, maxY)
+            return true
+        }
+        return (ends, bottom)
+    }
+
+    /// Text height available between the header (or top chrome) and the bottom chrome.
+    var pageTextHeight: CGFloat { bounds.height - textContainerInset.top - textContainerInset.bottom }
+
     private func scaledFont(size: CGFloat, style: UIFont.TextStyle, serif: Bool = false, weight: UIFont.Weight = .regular) -> UIFont {
         let base = UIFont.systemFont(ofSize: size, weight: weight)
         let descriptor = serif ? (base.fontDescriptor.withDesign(.serif) ?? base.fontDescriptor) : base.fontDescriptor
@@ -316,19 +360,27 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     override func layoutSubviews() {
         let widthChanged = abs(lastWidth - bounds.width) > 0.5
         if widthChanged { needsAnchorRestore = true; accessibilityNeedsUpdate = true; guttersDirty = true; lastWidth = bounds.width }
-        let column = min(max(0, bounds.width - 40), 640)
-        let outer = max(20, (bounds.width - column) / 2)
+        let innerInset = paged ? max(0, pageInnerInset) : 0
+        let column = min(max(0, bounds.width - 40 - innerInset), 640)
+        let outer = max(20, (bounds.width - column - innerInset) / 2)
+        let leading = outer + (isLeftSpreadPage ? 0 : innerInset)
+        let trailing = outer + (isLeftSpreadPage ? innerInset : 0)
         let trailingExtra: CGFloat = wide ? 0 : 8
         let textWidth = max(1, column - gutterWidth - trailingExtra)
         if measuredHeaderWidth != textWidth {
             measuredHeaderWidth = textWidth
             measuredHeaderHeight = header.systemLayoutSizeFitting(CGSize(width: textWidth, height: 0), withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel).height
         }
-        header.frame = CGRect(x: outer + gutterWidth, y: chromeInsets.top + (wide ? 20 : 8), width: textWidth, height: measuredHeaderHeight)
-        let inset = UIEdgeInsets(top: header.frame.maxY + (wide ? 30 : 26), left: outer + gutterWidth, bottom: chromeInsets.bottom + 32, right: outer + trailingExtra)
+        header.frame = CGRect(x: leading + gutterWidth, y: chromeInsets.top + (wide ? 20 : 8), width: textWidth, height: measuredHeaderHeight)
+        let inset = UIEdgeInsets(top: header.frame.maxY + (showsHeader ? (wide ? 30 : 26) : 16), left: leading + gutterWidth, bottom: chromeInsets.bottom + 32, right: trailing + trailingExtra)
         if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true }
         verticalScrollIndicatorInsets = UIEdgeInsets(top: chromeInsets.top, left: 0, bottom: chromeInsets.bottom, right: 0)
         super.layoutSubviews()
+        if paged {
+            // A page scrolls only when a single verse is taller than the page.
+            let overflows = contentSize.height > bounds.height + 1
+            if isScrollEnabled != overflows { isScrollEnabled = overflows }
+        } else if !isScrollEnabled { isScrollEnabled = true }
         if needsAnchorRestore, bounds.width > 0, bounds.height > 0 {
             needsAnchorRestore = false
             restorePosition()
@@ -478,6 +530,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     }
 
     func capturePosition() {
+        // A page's selection is tracked as it changes; its spread records the reading anchor.
+        guard !paged else { return }
         guard !applying, !needsAnchorRestore, abs(lastWidth - bounds.width) < 0.5, let state = readerState, state.chapterID == document?.id, let map, bounds.height > 0 else { return }
         state.selection = map.selection(for: selectedRange)
         if contentOffset.y < 4 { state.anchor = nil; return }
@@ -494,7 +548,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     }
 
     private func restorePosition() {
-        guard let state = readerState, let anchor = state.anchor, let map,
+        guard !paged, let state = readerState, let anchor = state.anchor, let map,
               let offset = map.offset(for: anchor.text), let position = position(from: beginningOfDocument, offset: offset) else { return }
         if let manager = textLayoutManager, let content = manager.textContentManager,
            let location = content.location(content.documentRange.location, offsetBy: offset),
@@ -562,6 +616,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     func textViewDidChangeSelection(_ textView: UITextView) {
         guard !applying else { return }
         quickSelectionMenu.dismissMenu()
+        // The facing page resigning must not erase a selection just made on this one.
+        if paged, selectedRange.length == 0, !isFirstResponder { selectionDidChange?(); return }
         readerState?.selection = map?.selection(for: selectedRange)
         selectionDidChange?()
     }

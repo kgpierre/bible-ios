@@ -3,6 +3,10 @@ import SwiftUI
 struct AppearanceView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var preferences: ReaderPreferences
+    /// Two Pages needs a display that can fit facing pages (iPad or a foldable's inner display).
+    var showsPageLayout = false
+    /// Book layout applies only to devices with a hinge.
+    var showsFoldOptions = false
 
     var body: some View {
         NavigationStack {
@@ -14,15 +18,43 @@ struct AppearanceView: View {
                     .pickerStyle(.inline)
                     .labelsHidden()
                 }
+                if showsPageLayout || showsFoldOptions {
+                    Section {
+                        if showsPageLayout {
+                            Picker("Landscape pages", selection: $preferences.pageLayout) {
+                                ForEach(ReadingPageLayout.allCases) { Text($0.title).tag($0) }
+                            }
+                            .accessibilityIdentifier("pageLayoutPicker")
+                        }
+                        if showsFoldOptions {
+                            Toggle("Book layout when folded", isOn: $preferences.automaticBookLayout)
+                                .accessibilityIdentifier("automaticBookLayoutToggle")
+                        }
+                    } header: {
+                        Text("Pages")
+                    } footer: {
+                        Text(pagesFooter)
+                    }
+                }
                 Section {
                     Picker("Reading font", selection: $preferences.typography.face) {
                         ForEach(ReadingFace.allCases) { Text($0.title).tag($0) }
                     }
                     .accessibilityIdentifier("readingFacePicker")
-                    Stepper(value: $preferences.typography.sizeAdjustment, in: -2...4) {
+                    VStack(alignment: .leading, spacing: 4) {
                         LabeledContent("Text size", value: sizeLabel)
+                            .accessibilityHidden(true)
+                        // Whole steps only: each one is a 2-point change on top of Dynamic Type.
+                        Slider(value: sizeStep, in: -2...4, step: 1) {
+                            Text("Text size")
+                        } minimumValueLabel: {
+                            Image(systemName: "textformat.size.smaller").accessibilityHidden(true)
+                        } maximumValueLabel: {
+                            Image(systemName: "textformat.size.larger").accessibilityHidden(true)
+                        }
+                        .accessibilityValue(sizeLabel)
+                        .accessibilityIdentifier("readingSizeSlider")
                     }
-                    .accessibilityIdentifier("readingSizeStepper")
                     Picker("Line spacing", selection: $preferences.typography.spacing) {
                         ForEach(ReadingSpacing.allCases) { Text($0.title).tag($0) }
                     }
@@ -49,6 +81,23 @@ struct AppearanceView: View {
             }
         }
         .preferredColorScheme(preferences.theme.colorScheme)
+    }
+
+    private var pagesFooter: String {
+        var parts: [String] = []
+        if showsPageLayout {
+            parts.append(String(localized: "Two Pages shows facing pages that turn like a book when the window is wide enough."))
+        }
+        if showsFoldOptions {
+            parts.append(String(localized: "Book layout automatically uses facing pages when folded like a book. Turn it off to keep continuous scrolling while folded."))
+        }
+        parts.append(String(localized: "Narrow windows and accessibility text sizes use scrolling. A selection stays within one page."))
+        return parts.joined(separator: " ")
+    }
+
+    private var sizeStep: Binding<Double> {
+        Binding(get: { Double(preferences.typography.sizeAdjustment) },
+                set: { preferences.typography.sizeAdjustment = Int($0.rounded()) })
     }
 
     private var sizeLabel: String {

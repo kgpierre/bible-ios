@@ -1,3 +1,20 @@
+## Latest continuation — 27 September 2026, initial Duo adaptation
+
+Owner requested iPhone Duo feature hypotheses, existing-feature parity with iPad-like inner-display reading/page swiping, tests, and AGENTS.md directives. The page preference is no longer iPad-only. Facing pages use regular width plus a scaled readable-page budget, with scrolling at narrow/accessibility sizes. The subsequent owner refinement adds automatic facing pages in a partially folded book pose (with an Appearance opt-out), and reading above chapter controls in tabletop pose. These use public active division regions on iOS 27.1 without overwriting flat-screen preferences. Build with the owner's Xcode 27.1 per-process; keep minimum iOS 26. See [0018](Docs/Decisions/0018-iphone-duo-adaptive-reader.md) and [validation](Docs/Validation/duo/README.md) for actual test results and remaining acceptance. A Scripture/source-notes companion remains a proposal.
+
+Actual Duo UI checks passed for automatic book paging/opt-out, horizontal-fold reader/control placement and chapter navigation, and the flat wide-display spread with exact-word highlighting, Saved, chapter turns, and restoration to Scroll. iPhone/iPad regressions also passed. The flat Duo test uses an operator-selected Device Hub pose because XCTest rotation/window queries were unreliable. Inner-display screenshot capture returns black images; visual review, live close/reopen transitions, broader accessibility, and physical-device checks remain open.
+
+## Latest continuation — 27 September 2026, iPad top tab bar
+
+On regular width, the iPad now uses the system top tab bar (`.tabBarOnly`: Read, Saved, Search) instead of the custom sidebar. The owner reviewed a sidebar-adaptable version and chose no sidebar. The glass passage capsule floats at the bottom right. Chapter picker numbers are Liquid Glass on every device, with the current chapter in accent-tinted glass. Compact width, including iPhone and narrow iPad windows, keeps 2a. ⌘⇧S is removed. See [0017](Docs/Decisions/0017-ipad-top-tab-bar.md). iPad UI tests were rewritten for the tab model and pass on the iPad Pro 13-inch simulator.
+
+In the same session:
+
+- **Two Pages:** an iPad landscape option (Appearance → Pages). It shows facing pages at verse boundaries that curl like a book, and crossing the last page opens the next chapter. The reading anchor is the first verse of the left page. A selection stays within one page, which the owner accepted.
+- **Text size** is a slider on both devices.
+
+Two Pages still needs on-device checks: curl feel, Psalm 119 pagination time, and accessibility text sizes.
+
 ## Latest continuation — 26 September 2026, release decisions, summaries, notes, Saved, search
 
 **Owner decisions** (recorded in [0015](Docs/Decisions/0015-release-identity-and-scripture-rights.md)):

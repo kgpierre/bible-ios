@@ -26,7 +26,7 @@ The iPhone palette displays color swatches with a selected checkmark, offers rem
 
 ## Setup
 
-- Tested: Xcode **27.0 (27A266a)**, Swift **6.4**, Swift 6 language mode with complete concurrency checking.
+- Current build toolchain: Xcode **27.1 (27A9269)**, Swift **6.4**, Swift 6 language mode with complete concurrency checking. The Duo reserved-region APIs require this SDK; earlier validation used Xcode 27.0. Use `DEVELOPER_DIR=/Users/kyle/Downloads/Xcode.app/Contents/Developer` for the owner's expanded installation.
 - Deployment minimum: iOS/iPadOS **26.0** (owner decision, 26 September 2026).
 - Open `BibleReader.xcodeproj` and select the shared **BibleReader** scheme.
 - GRDB **7.11.1** is pinned in the project and shared `Package.resolved`. Internet access is needed once to resolve this development dependency; the running reader does not fetch Scripture or dependencies.
@@ -223,3 +223,7 @@ Results:
 - **Corpus rebuild.** `python3 Content/Tools/build_corpus.py && python3 Content/Tools/validate_corpus.py` passed 9 of 9 checks. The database bytes are identical; only the manifest and notice changed.
 
 No physical-device checks were run. The locked-device procedure is ready but still needs the owner's iPhone.
+
+### Initial iPhone Duo adaptation (27 September 2026)
+
+The saved Two Pages choice is now available on phones as well as iPad. Regular-width landscape windows use a scaled readable-page-width budget; narrow windows and accessibility text sizes retain scrolling. The minimum OS stays 26.0. See [decision 0018](Docs/Decisions/0018-iphone-duo-adaptive-reader.md) for feature hypotheses and [validation commands and screenshots](Docs/Validation/duo/README.md) for actual results and remaining Duo checks.
