@@ -15,6 +15,9 @@ final class AppState {
     var savedSelection: String?
     var savedFilter: SavedFilter = .all
     var savedSort: SavedSort = .recent
+    /// First visible Saved row. Compact and regular layouts build separate lists, so resizing
+    /// across the size-class boundary restores from this instead of returning to the top.
+    @ObservationIgnored var savedScrollID: String?
     var destination: AppDestination = .read
     let reader: ReaderState
     let search: SearchState

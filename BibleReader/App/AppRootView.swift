@@ -198,6 +198,12 @@ struct AppRootView: View {
                     SpreadChapterView(document: document, state: state.reader,
                                       chromeInsets: geometry.safeAreaInsets, isActive: active)
                         .ignoresSafeArea(.container, edges: .vertical)
+                } else if let pane = fold?.clearPane {
+                    // Scrolling fallback with an active fold (book layout off, accessibility text, or
+                    // pages too narrow): keep text out of the division rather than spanning it.
+                    PaperChapterView(document: document, state: state.reader, wide: wide, isActive: active)
+                        .frame(width: pane.width, height: pane.height)
+                        .position(x: pane.midX, y: pane.midY)
                 } else {
                     PaperChapterView(document: document, state: state.reader, wide: wide,
                                       chromeInsets: geometry.safeAreaInsets, isActive: active)

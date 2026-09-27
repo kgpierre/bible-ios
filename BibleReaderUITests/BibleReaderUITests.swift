@@ -61,6 +61,49 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
+    func testSavedScrollSurvivesSizeClassChanges() throws {
+        let app = testApplication()
+        app.launchEnvironment["BIBLE_TEST_CHAPTER"] = "PSA:119"
+        app.launchEnvironment["BIBLE_TEST_SAVED_COUNT"] = "60"
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        guard app.buttons["destination-saved"].exists, app.frame.width < 600 else {
+            throw XCTSkip("Needs a compact portrait phone that becomes regular width in landscape")
+        }
+        app.buttons["destination-saved"].tap()
+        let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "savedItem-"))
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10))
+        let top = rows.firstMatch.identifier
+        for _ in 0..<4 { app.swipeUp() }
+        // Frames, not isHittable: XCTest cannot compute activation points mid-rotation.
+        func onScreen(_ id: String) -> Bool {
+            let row = app.buttons[id], window = app.windows.firstMatch.frame
+            return row.exists && window.contains(CGPoint(x: row.frame.midX, y: row.frame.midY))
+        }
+        func firstVisible() -> String? {
+            rows.allElementsBoundByIndex.filter { onScreen($0.identifier) }.min { $0.frame.minY < $1.frame.minY }?.identifier
+        }
+        let deep = try XCTUnwrap(firstVisible())
+        XCTAssertNotEqual(deep, top, "The list must actually scroll away from the top")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        // Regular width replaces the compact bottom destinations with the system tab bar.
+        let compactGone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["destination-saved"])
+        guard XCTWaiter.wait(for: [compactGone], timeout: 5) == .completed else { throw XCTSkip("Landscape stays compact on this device") }
+        let restoredWide = expectation(for: NSPredicate { _, _ in onScreen(deep) }, evaluatedWith: nil)
+        wait(for: [restoredWide], timeout: 5)
+        XCTAssertFalse(onScreen(top), "Regular Saved must not return to the top")
+        capture(app, name: "Saved — scroll retained in regular width")
+        let wide = try XCTUnwrap(firstVisible())
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.buttons["destination-saved"].waitForExistence(timeout: 5))
+        let restoredCompact = expectation(for: NSPredicate { _, _ in onScreen(wide) }, evaluatedWith: nil)
+        wait(for: [restoredCompact], timeout: 5)
+        XCTAssertFalse(onScreen(top), "Compact Saved must not return to the top")
+    }
+
+    @MainActor
     func testSavedFiltersAtLargestTypeInDarkAppearance() throws {
         let app = testApplication()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
@@ -815,6 +858,21 @@ final class BibleReaderUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 4"))
+    }
+
+    @MainActor
+    func testPaperTurnsStopAtBibleEndpoints() throws {
+        for (chapter, label, swipe) in [("GEN:1", "Genesis 1", false), ("REV:22", "Revelation 22", true)] {
+            let app = testApplication()
+            app.launchEnvironment["BIBLE_TEST_CHAPTER"] = chapter
+            app.launch()
+            let reader = app.textViews["chapterText"]
+            XCTAssertTrue(reader.waitForExistence(timeout: 10))
+            swipe ? reader.swipeLeft() : reader.swipeRight()
+            XCTAssertEqual(app.state, .runningForeground, "Turning past \(label) must not crash")
+            XCTAssertTrue(app.buttons["passageButton"].label.contains(label))
+            app.terminate()
+        }
     }
 
     @MainActor

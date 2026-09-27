@@ -228,6 +228,10 @@ struct PaperChapterView: UIViewControllerRepresentable {
             // fails at once into the text view's scroll.
             let travel = pan.translation(in: pan.view), velocity = pan.velocity(in: pan.view)
             guard abs(travel.x) >= abs(travel.y) * 2, abs(velocity.x) >= abs(velocity.y) * 1.5 else { return false }
+            // A double-sided curl with no destination (Genesis 1 backward, Revelation 22 forward, or a
+            // neighbor still loading) makes UIKit throw from its pan handler. Start only when one is ready.
+            let delta = (travel.x != 0 ? travel.x : velocity.x) < 0 ? 1 : -1
+            guard let id = active?.document.id, preparedDocument(delta, from: id) != nil else { return false }
             haptics.prepare()
             return true
         }

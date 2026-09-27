@@ -52,6 +52,23 @@ struct ReaderLayoutTests {
         #expect(ReaderFoldLayout(size: size, divisions: [CGRect(x: 100, y: 100, width: 30, height: 30)]) == nil)
     }
 
+    @Test func scrollingFallbackStaysClearOfTheDivision() throws {
+        let book = try #require(ReaderFoldLayout(size: CGSize(width: 867, height: 543),
+            divisions: [CGRect(x: 435.5, y: 0, width: 80, height: 543)]))
+        #expect(book.clearPane == CGRect(x: 0, y: 0, width: 435.5, height: 543))
+        #expect(!book.clearPane.intersects(book.division))
+        let trailing = try #require(ReaderFoldLayout(size: CGSize(width: 900, height: 650),
+            divisions: [CGRect(x: 300, y: 0, width: 60, height: 650)]))
+        #expect(trailing.clearPane == CGRect(x: 360, y: 0, width: 540, height: 650))
+        // Tabletop reads above the division whenever that side is usable, even if it is smaller.
+        let tabletop = try #require(ReaderFoldLayout(size: CGSize(width: 900, height: 650),
+            divisions: [CGRect(x: 0, y: 250, width: 900, height: 50)]))
+        #expect(tabletop.clearPane == CGRect(x: 0, y: 0, width: 900, height: 250))
+        let low = try #require(ReaderFoldLayout(size: CGSize(width: 900, height: 650),
+            divisions: [CGRect(x: 0, y: 120, width: 900, height: 50)]))
+        #expect(low.clearPane == CGRect(x: 0, y: 170, width: 900, height: 480))
+    }
+
     @Test func bookPagesFitBesideAnAsymmetricSystemBar() throws {
         // Geometry observed in Device Hub; keep this a regression input, never a device lookup.
         let fold = try #require(ReaderFoldLayout(size: CGSize(width: 867, height: 543),

@@ -5,12 +5,14 @@ import UIKit
 @testable import BibleReader
 
 struct ReleaseAuditTests {
-    @Test func packagedPrivacyManifestDeclaresAppPreferences() throws {
+    @Test func packagedPrivacyManifestDeclaresRequiredReasonAPIs() throws {
         let url = try #require(Bundle.main.url(forResource: "PrivacyInfo", withExtension: "xcprivacy"))
         let manifest = try #require(PropertyListSerialization.propertyList(from: Data(contentsOf: url), format: nil) as? [String: Any])
         #expect(manifest["NSPrivacyTracking"] as? Bool == false)
         let types = try #require(manifest["NSPrivacyAccessedAPITypes"] as? [[String: Any]])
         #expect(types.contains { ($0["NSPrivacyAccessedAPIType"] as? String) == "NSPrivacyAccessedAPICategoryUserDefaults" && ($0["NSPrivacyAccessedAPITypeReasons"] as? [String]) == ["CA92.1"] })
+        // The migration backup checks free capacity before writing (BibleStore.backupBeforeMigration).
+        #expect(types.contains { ($0["NSPrivacyAccessedAPIType"] as? String) == "NSPrivacyAccessedAPICategoryDiskSpace" && ($0["NSPrivacyAccessedAPITypeReasons"] as? [String]) == ["E174.1"] })
     }
 
     @Test @MainActor func wrappedVerseAccessibilityIncludesLastLineWithoutVoiceOver() async throws {

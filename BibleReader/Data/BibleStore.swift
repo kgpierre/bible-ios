@@ -26,6 +26,9 @@ actor BibleStore {
     private let decoder = JSONDecoder()
     #if DEBUG
     func clearSavedCacheForTesting() { cachedSavedItems = nil }
+    /// Awaited after a Saved rebuild resolves and before it publishes, to order overlapping rebuilds.
+    private var savedResolutionHook: (@Sendable () async -> Void)?
+    func setSavedResolutionHookForTesting(_ hook: (@Sendable () async -> Void)?) { savedResolutionHook = hook }
     func quickCheck() throws -> String { try user.read { try String.fetchOne($0, sql: "PRAGMA quick_check") ?? "no result" } }
     private(set) var exactDecodeCount = 0
     private(set) var chapterDecodeCount = 0
@@ -40,6 +43,8 @@ actor BibleStore {
     /// edit leaves that chapter dirty.
     private var dirtySavedChapters: [String: Int] = [:]
     private var savedGeneration = 0
+    /// Generation of the input behind `cachedSavedItems`; an older rebuild never replaces it.
+    private var publishedSavedGeneration = -1
     private let savedCorpus: DatabaseQueue
 
     /// Another connection's commit changes `data_version`; our own commits do not.
@@ -48,6 +53,8 @@ actor BibleStore {
         if annotationDataVersion != version {
             exactByChapter = [:]
             cachedSavedItems = nil
+            // Rebuilds that read before this change must not publish afterwards.
+            savedGeneration += 1
             annotationDataVersion = version
         }
     }
@@ -626,6 +633,12 @@ actor BibleStore {
         guard let (snapshot, payloads, rebuilding) = input else { return cachedSavedItems ?? [] }
         let generation = savedGeneration
         var items = try await Self.resolveSaved(snapshot: snapshot, payloads: payloads, corpus: savedCorpus)
+        #if DEBUG
+        await savedResolutionHook?()
+        #endif
+        // Rebuilds can overlap across suspensions. A newer one already published: defer to it
+        // (and any later edits) rather than overwrite it with this older snapshot.
+        guard generation >= publishedSavedGeneration else { return try await savedItems() }
         if let rebuilding {
             // Another connection invalidated the cache while resolving: rebuild everything.
             guard let cached = cachedSavedItems else { return try await savedItems() }
@@ -633,6 +646,7 @@ actor BibleStore {
         }
         let sorted = items.sorted { $0.updated == $1.updated ? $0.id < $1.id : $0.updated > $1.updated }
         cachedSavedItems = sorted
+        publishedSavedGeneration = generation
         dirtySavedChapters = dirtySavedChapters.filter { $0.value > generation }
         return sorted
     }

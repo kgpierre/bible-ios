@@ -6,11 +6,71 @@ struct SavedView: View {
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     @State private var items: [SavedItem] = []
+    /// Row order of `items`, so finding the first visible row stays cheap in large libraries.
+    @State private var itemIndex: [String: Int] = [:]
+    @State private var scroll = SavedScrollTracker()
+    @State private var pendingScroll: String?
+    private static let listSpace = "savedList"
     private var listRevision: String {
         "\(state.reader.savedRevision):\(state.reader.savedLoadedRevision):\(state.savedFilter.rawValue):\(state.savedSort.rawValue):\(state.reader.catalog.count)"
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            list
+                .onChange(of: pendingScroll) { _, id in
+                    if let id { proxy.scrollTo(id, anchor: .top) }
+                }
+                .task(id: listRevision) {
+                    let source = state.reader.savedItems, filter = state.savedFilter
+                    let sort = state.savedSort, chapters = state.reader.catalogIndex
+                    // Ordinary libraries sort inline (no empty-state flash). Large ones sort off the main
+                    // actor; a newer revision cancels this task and its stale result is discarded.
+                    let ordered: [SavedItem]
+                    if source.count > 1_000 {
+                        ordered = await Task.detached(priority: .userInitiated) {
+                            SavedOrdering.items(source, filter: filter, sort: sort, chapters: chapters)
+                        }.value
+                        guard !Task.isCancelled else { return }
+                    } else {
+                        ordered = SavedOrdering.items(source, filter: filter, sort: sort, chapters: chapters)
+                    }
+                    items = ordered
+                    itemIndex = Dictionary(ordered.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+                    await restoreScroll()
+                }
+        }
+    }
+
+    /// Once per list instance, return to the row that was first visible in the other layout.
+    private func restoreScroll() async {
+        guard !scroll.restored, state.reader.savedLoadedRevision >= 0 else { return }
+        scroll.restored = true
+        guard let id = state.savedScrollID, id != items.first?.id, itemIndex[id] != nil else { return }
+        // A new list (after a size-class change) ignores scrolling until its rows have laid out.
+        for _ in 0..<40 {
+            if !scroll.visibleIDs.isEmpty { break }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        pendingScroll = id
+    }
+
+    /// Rows moving because the list itself resized (rotation, fold, window) are not a user scroll
+    /// and must not move the anchor. List reports no scroll phases, so settle before committing.
+    private func trackVisibility(of id: String, visible: Bool) {
+        if visible { scroll.visibleIDs.insert(id) } else { scroll.visibleIDs.remove(id) }
+        scroll.commit?.cancel()
+        guard scroll.restored, ContinuousClock.now - scroll.resizedAt > .seconds(1) else { return }
+        scroll.commit = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled,
+                  let first = scroll.visibleIDs.min(by: { (itemIndex[$0] ?? .max) < (itemIndex[$1] ?? .max) }),
+                  itemIndex[first] != nil else { return }
+            state.savedScrollID = first
+        }
+    }
+
+    private var list: some View {
         List {
             Section {
                 if dynamicType.isAccessibilitySize {
@@ -72,27 +132,26 @@ struct SavedView: View {
                 }
                 ForEach(items) { item in
                     row(item)
+                        .id(item.id)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(item) }
                         .contextMenu { deleteButton(item) }
                         .accessibilityAction(named: Text("Delete saved item")) { delete(item) }
                         .listRowBackground(wide && state.savedSelection == item.id ? Color(.accent).opacity(0.12) : nil)
+                        .onGeometryChange(for: Bool.self) { [scroll] proxy in
+                            // List exposes no scroll-view bounds to its rows; measure against the list's own frame.
+                            let midY = proxy.frame(in: .named(Self.listSpace)).midY
+                            return midY >= 0 && midY <= scroll.listHeight
+                        } action: { trackVisibility(of: item.id, visible: $0) }
                 }
             }
         }
-        .task(id: listRevision) {
-            let source = state.reader.savedItems, filter = state.savedFilter
-            let sort = state.savedSort, chapters = state.reader.catalogIndex
-            // Ordinary libraries sort inline (no empty-state flash). Large ones sort off the main
-            // actor; a newer revision cancels this task and its stale result is discarded.
-            guard source.count > 1_000 else {
-                items = SavedOrdering.items(source, filter: filter, sort: sort, chapters: chapters)
-                return
-            }
-            let ordered = await Task.detached(priority: .userInitiated) {
-                SavedOrdering.items(source, filter: filter, sort: sort, chapters: chapters)
-            }.value
-            if !Task.isCancelled { items = ordered }
+        .coordinateSpace(.named(Self.listSpace))
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+            scroll.listHeight = size.height
+            scroll.resizedAt = .now
+            scroll.commit?.cancel()
         }
+        .onDisappear { scroll.commit?.cancel() }
         .refreshable { await state.reader.loadSavedItems(force: true) }
         .scrollContentBackground(.hidden)
         .background(Color(.readingCanvas))
@@ -145,4 +204,14 @@ struct SavedView: View {
     private func delete(_ item: SavedItem) {
         Task { await state.reader.deleteSaved(item) }
     }
+}
+
+/// Scroll bookkeeping for one Saved list. A plain reference, not observed: row visibility changes
+/// on every scrolled frame, and re-rendering the List for it cancels programmatic scrolling.
+@MainActor private final class SavedScrollTracker {
+    var visibleIDs: Set<String> = []
+    var restored = false
+    var listHeight: CGFloat = 0
+    var resizedAt = ContinuousClock.now
+    var commit: Task<Void, Never>?
 }

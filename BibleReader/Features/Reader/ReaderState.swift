@@ -161,6 +161,16 @@ final class ReaderState {
             chapters = [chapter]
             chapterID = chapter.id
             anchor = holdUnresolvedPosition ? nil : position?.anchor
+            #if DEBUG
+            // UI tests that need a long Saved library highlight the opening words of the first N verses.
+            if let count = ProcessInfo.processInfo.environment["BIBLE_TEST_SAVED_COUNT"].flatMap(Int.init), position == nil {
+                for verse in chapter.verses.prefix(count) {
+                    guard let part = SavedTextPart(verseID: verse.id, text: verse.text, range: NSRange(location: 0, length: 2)) else { continue }
+                    let passage = ExactPassage(chapterID: chapter.id, reference: chapter.reference + ":" + verse.label, parts: [part])
+                    _ = try await opened.editExact(passage, color: .yellow)
+                }
+            }
+            #endif
             try await refreshAnnotations()
             loadFailed = false
         } catch {
@@ -252,15 +262,16 @@ final class ReaderState {
             changed = true
         }
         guard changed else { return }
-        pruneLoadedAnnotations()
+        pruneLoadedAnnotations(keeping: missing)
         flattenedExact = nil
         annotationsRevision += 1
     }
 
-    /// Keeps the loaded set bounded during long sessions: current chapter and neighbors stay.
-    private func pruneLoadedAnnotations() {
+    /// Keeps the loaded set bounded during long sessions: current chapter and neighbors stay, and so
+    /// do the chapters just loaded. Navigation loads its destination before `chapterID` changes.
+    private func pruneLoadedAnnotations(keeping incoming: [String]) {
         guard exactByChapter.count > 24, let index = chapterID.flatMap({ catalogIndex[$0] }) else { return }
-        let keep = Set((index - 1...index + 1).compactMap { catalog.indices.contains($0) ? catalog[$0].id : nil })
+        let keep = Set((index - 1...index + 1).compactMap { catalog.indices.contains($0) ? catalog[$0].id : nil } + incoming)
         exactByChapter = exactByChapter.filter { keep.contains($0.key) }
     }
 
