@@ -47,7 +47,10 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["Highlights"].tap()
         app.buttons["savedSort"].tap()
         app.buttons["Bible order"].tap()
-        XCTAssertEqual(app.buttons["savedSort"].value as? String, "Bible order")
+        // Toolbar menus expose no value; reopen the menu to read the chosen order.
+        app.buttons["savedSort"].tap()
+        XCTAssertTrue(app.buttons["Bible order"].isSelected)
+        app.buttons["Bible order"].tap()
         row.tap()
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
         app.buttons["destination-saved"].tap()
@@ -113,13 +116,17 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["Dark"].tap()
         app.buttons["appearanceDoneButton"].tap()
         app.buttons["destination-saved"].tap()
-        XCTAssertTrue(app.buttons["savedFilter"].waitForExistence(timeout: 5))
-        app.buttons["savedFilter"].tap()
+        // At accessibility sizes, Show and Sort share one toolbar menu instead of truncating segments.
+        XCTAssertTrue(app.buttons["savedSort"].waitForExistence(timeout: 5))
+        app.buttons["savedSort"].tap()
         app.buttons["Bookmarks"].tap()
         app.buttons["savedSort"].tap()
         app.buttons["Bible order"].tap()
-        XCTAssertTrue(app.buttons["savedFilter"].label.contains("Bookmarks"))
-        XCTAssertTrue(app.buttons["savedSort"].label.contains("Bible order"))
+        app.buttons["savedSort"].tap()
+        XCTAssertTrue(app.buttons["Bookmarks"].isSelected)
+        XCTAssertTrue(app.buttons["Bible order"].isSelected)
+        capture(app, name: "Saved — Show and Sort menu at largest type")
+        app.buttons["Bible order"].tap()
         capture(app, name: "Saved — largest type and dark appearance")
     }
 
@@ -359,7 +366,7 @@ final class BibleReaderUITests: XCTestCase {
         reader.swipeUp()
         let visibleVerse = try XCTUnwrap(reader.textViews.allElementsBoundByIndex.first { $0.isHittable }?.label)
         tab(app, "Search").tap()
-        let field = app.textFields["searchField"]
+        let field = searchField(app)
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("light\n")
@@ -427,7 +434,7 @@ final class BibleReaderUITests: XCTestCase {
         defer { XCUIDevice.shared.orientation = .portrait }
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
-        let next = app.buttons["Next chapter"].firstMatch
+        let next = app.buttons["Next Chapter"].firstMatch
         XCTAssertTrue(next.waitForExistence(timeout: 5))
         XCTAssertGreaterThan(next.frame.minY, reader.frame.maxY)
         next.tap()
@@ -538,7 +545,7 @@ final class BibleReaderUITests: XCTestCase {
             .press(forDuration: 0.05, thenDragTo: reader.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
         XCTAssertEqual(app.tabBars.firstMatch.value as? String, "Expanded")
         app.buttons["passageButton"].tap()
-        app.buttons["chapterBooksButton"].tap()
+        chapterBooksButton(app).tap()
         XCTAssertTrue(app.buttons["book-MAT"].waitForExistence(timeout: 5))
         capture(app, name: "Books — New Testament")
         app.buttons["Old Testament"].tap()
@@ -557,7 +564,7 @@ final class BibleReaderUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         app.buttons["destination-search"].tap()
-        let field = app.textFields["searchField"]
+        let field = searchField(app)
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("light\n")
@@ -570,14 +577,15 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["destination-search"].tap()
         XCTAssertEqual(field.value as? String, "light")
         XCTAssertTrue(app.staticTexts["searchCount"].exists)
-        app.buttons["clearSearch"].tap()
+        field.tap()
+        field.buttons["Clear text"].tap()
         field.typeText("Jhon 3\n")
         XCTAssertTrue(app.buttons["openReferenceSuggestion"].waitForExistence(timeout: 10))
         capture(app, name: "Explicit reference correction")
         app.buttons["openReferenceSuggestion"].tap()
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
         app.buttons["passageButton"].tap()
-        let reference = app.textFields["referenceField"]
+        let reference = searchField(app, "Go to reference, e.g. John 3:16")
         XCTAssertTrue(reference.waitForExistence(timeout: 5))
         reference.tap()
         reference.typeText("Jude 5")
@@ -597,7 +605,7 @@ final class BibleReaderUITests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         tab(app, "Search").tap()
-        let field = app.textFields["searchField"]
+        let field = searchField(app)
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText("John 3:16\n")
@@ -658,7 +666,7 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["Dark"].tap()
         app.buttons["appearanceDoneButton"].tap()
         app.buttons["passageButton"].tap()
-        app.buttons["chapterBooksButton"].tap()
+        chapterBooksButton(app).tap()
         XCTAssertTrue(app.navigationBars["Books"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["book-MAT"].waitForExistence(timeout: 5))
         capture(app, name: "Books — largest type and dark appearance")
@@ -679,7 +687,8 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertEqual(button.label, "Summarize current chapter")
         button.tap()
         XCTAssertTrue(app.navigationBars["Summary"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["JOHN 3"].exists)
+        // The eyebrow is drawn uppercase but read as ordinary words.
+        XCTAssertTrue(app.staticTexts["John 3"].exists)
         // Some simulator runtimes can generate; others report unavailable. Check the actual terminal state.
         let terminal = app.staticTexts.matching(NSPredicate(format: "identifier IN %@", ["chapterSummaryStatus", "chapterSummaryText"])).firstMatch
         XCTAssertTrue(terminal.waitForExistence(timeout: 45))
@@ -851,7 +860,7 @@ final class BibleReaderUITests: XCTestCase {
         wait(for: [reverse], timeout: 10)
         app.buttons["More"].tap()
         XCTAssertFalse(app.buttons["Paper turn experiment"].exists)
-        app.buttons["Next chapter"].tap()
+        app.buttons["Next Chapter"].tap()
         let explicit = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 4"), evaluatedWith: app.buttons["passageButton"])
         wait(for: [explicit], timeout: 10)
         app.terminate()
@@ -911,8 +920,11 @@ final class BibleReaderUITests: XCTestCase {
         remove.tap()
         app.buttons["destination-saved"].tap()
         XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
+        // Reader actions, including named Undo, live on Read only.
+        app.buttons["destination-read"].tap()
         app.buttons["More"].tap()
-        app.buttons["Undo annotation"].tap()
+        app.buttons["Undo Remove Highlight"].tap()
+        app.buttons["destination-saved"].tap()
         XCTAssertTrue(blue.waitForExistence(timeout: 5))
         XCTAssertFalse(blue.label.contains("was a man"))
         capture(app, name: "Undo — exact Blue excerpt restored")
@@ -946,13 +958,14 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["More"].tap()
         app.buttons["About Bible"].tap()
         XCTAssertTrue(app.staticTexts["Bible"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["donateButton"].exists)
+        // Support stays hidden until a donation page is configured.
+        XCTAssertFalse(app.buttons["donateButton"].exists)
         XCTAssertTrue(app.links.matching(NSPredicate(format: "label CONTAINS %@", "Kyle Pierre")).firstMatch.exists)
         app.swipeUp()
-        app.buttons["Edition notice"].tap()
+        app.buttons["Edition Notice"].tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Crosswire Bible Society")).firstMatch.waitForExistence(timeout: 5))
         // The reader's own bar stays in the hierarchy behind the sheet; go back in the sheet.
-        app.navigationBars["Edition notice"].buttons.element(boundBy: 0).tap()
+        app.navigationBars["Edition Notice"].buttons.element(boundBy: 0).tap()
         app.buttons["aboutCloseButton"].tap()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
         capture(app, name: "About closed back to reader")
@@ -965,7 +978,7 @@ final class BibleReaderUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         app.buttons["More"].tap()
-        app.buttons["Chapter notes"].tap()
+        app.buttons["Chapter Notes"].tap()
         XCTAssertTrue(app.staticTexts["Verse 4"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "between the light and between the darkness")).firstMatch.exists)
         capture(app, name: "Chapter source notes")
@@ -1001,6 +1014,20 @@ final class BibleReaderUITests: XCTestCase {
         let predicate = NSPredicate(format: "label == %@ AND elementType IN %@", label,
                                     [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.cell.rawValue])
         return app.descendants(matching: .any).matching(predicate).firstMatch
+    }
+
+    /// The system search field with this prompt (Search tab, or the chapter picker's reference lookup).
+    @MainActor
+    private func searchField(_ app: XCUIApplication, _ prompt: String = "Word, phrase, or reference") -> XCUIElement {
+        app.searchFields.matching(NSPredicate(format: "placeholderValue == %@", prompt)).firstMatch
+    }
+
+    /// The picker opens on the current book's chapters; its back button returns to Books.
+    @MainActor
+    private func chapterBooksButton(_ app: XCUIApplication) -> XCUIElement {
+        let bar = app.navigationBars["Chapters"]
+        _ = bar.waitForExistence(timeout: 5)
+        return bar.buttons.element(boundBy: 0)
     }
 
     /// The compact 2a tab control where shown, otherwise the regular-width system tab bar.
@@ -1045,6 +1072,80 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
+    func testSaveChapterAndMakeWidget() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.buttons["More"].tap()
+        let save = app.buttons["Save Chapter"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        save.tap()
+        destination(app, "Saved").tap()
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "savedItem-")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.label.contains("Saved chapter"))
+        app.buttons["Bookmarks"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        capture(app, name: "Saved chapter row")
+        row.press(forDuration: 1.0)
+        let make = app.buttons["Make Widget"]
+        XCTAssertTrue(make.waitForExistence(timeout: 5))
+        make.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["cardPreview"].waitForExistence(timeout: 5))
+        app.buttons["cardPreset-evening"].tap()
+        XCTAssertTrue(app.buttons["cardPreset-evening"].isSelected)
+        app.buttons["Large"].tap()
+        capture(app, name: "Widget card editor — chapter, Evening, Large")
+        // The form is lazy; scroll to the remaining background and text options.
+        app.swipeUp()
+        // Image Playground is offered only where Apple Intelligence is available; Photos always is.
+        XCTAssertTrue(app.buttons["cardPhotoButton"].waitForExistence(timeout: 5))
+        capture(app, name: "Widget card editor — background and text options")
+        app.buttons["cardSaveButton"].tap()
+        XCTAssertTrue(app.buttons["savedWidgets"].waitForExistence(timeout: 5))
+        app.buttons["savedWidgets"].tap()
+        let card = app.buttons["card-John 3"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        capture(app, name: "Widgets sheet with saved card")
+        card.tap()
+        XCTAssertTrue(app.buttons["cardPreset-evening"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["cardPreset-evening"].isSelected)
+        app.navigationBars["John 3"].buttons["BackButton"].tap()
+        let done = app.buttons["cardsDoneButton"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5))
+        done.tap()
+        destination(app, "Read").tap()
+        app.buttons["More"].tap()
+        let remove = app.buttons["Remove Saved Chapter"]
+        XCTAssertTrue(remove.waitForExistence(timeout: 5))
+        remove.tap()
+        destination(app, "Saved").tap()
+        app.buttons["All"].tap()
+        XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
+        // The card is independent of the saved chapter.
+        app.buttons["savedWidgets"].tap()
+        XCTAssertTrue(app.buttons["card-John 3"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testWidgetLinkOpensValidatedPassage() throws {
+        let app = testApplication()
+        app.launch()
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        app.open(URL(string: "dev.kpierre.bible://open?chapter=eng-kjv-1769-protestant:PSA:23&verse=eng-kjv-1769-protestant:PSA:23:1")!)
+        let passage = app.buttons["passageButton"]
+        XCTAssertTrue(passage.waitForExistence(timeout: 10))
+        let opened = NSPredicate(format: "label CONTAINS %@", "23")
+        expectation(for: opened, evaluatedWith: passage)
+        waitForExpectations(timeout: 10)
+        // Unknown chapters are ignored rather than guessed.
+        app.open(URL(string: "dev.kpierre.bible://open?chapter=eng-kjv-1769-protestant:XYZ:1")!)
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        XCTAssertTrue(passage.label.contains("23"))
+        capture(app, name: "Widget link opened Psalm 23")
+    }
+
+    @MainActor
     private func testApplication() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["BIBLE_TEST_STORE"] = UUID().uuidString
@@ -1054,7 +1155,7 @@ final class BibleReaderUITests: XCTestCase {
 
     @MainActor
     private func choosePsalms(_ app: XCUIApplication) {
-        app.buttons["chapterBooksButton"].tap()
+        chapterBooksButton(app).tap()
         let picker: XCUIElement = app.popovers.firstMatch.exists ? app.popovers.firstMatch : app
         picker.buttons["Old Testament"].tap()
         let psalms = picker.buttons["book-PSA"]

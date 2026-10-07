@@ -48,35 +48,28 @@ struct AboutView: View {
                 }
 
                 Section {
-                    Link(destination: AppInfo.authorURL) {
-                        LabeledContent {
-                            Text("kpierre.dev").foregroundStyle(Color(.accent))
-                        } label: {
-                            Label {
-                                Text("Made by \(AppInfo.author)").foregroundStyle(Color(.readingPrimary))
-                            } icon: {
-                                Image(systemName: "person.crop.circle")
-                            }
-                        }
-                    }
-                    .accessibilityHint("Opens the author’s website")
+                    ExternalLinkRow(title: "Made by \(AppInfo.author)", systemImage: "person.crop.circle",
+                                    destination: AppInfo.authorURL)
+                        .accessibilityHint("Opens the author’s website")
                 }
 
-                Section {
-                    Button {
-                        if let url = AppInfo.donationURL { openURL(url) }
-                    } label: {
-                        Label("Support development", systemImage: "heart.fill")
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: 36)
+                // Shown only once a donation page exists; a permanently disabled button offers nothing.
+                if let donationURL = AppInfo.donationURL {
+                    Section {
+                        Button {
+                            openURL(donationURL)
+                        } label: {
+                            Label("Support Development", systemImage: "heart.fill")
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: 36)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                        .accessibilityIdentifier("donateButton")
+                    } footer: {
+                        Text("\(AppInfo.name) is free. If it helps you, you can support its development. Donations are optional and unlock nothing.")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(AppInfo.donationURL == nil)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                    .accessibilityIdentifier("donateButton")
-                } footer: {
-                    Text("\(AppInfo.name) is free. If it helps you, you can support its development. Donations are optional and unlock nothing.")
                 }
 
                 Section("Scripture") {
@@ -85,11 +78,11 @@ struct AboutView: View {
                         Text("Standardized 1769 text, 66 books. Provided by CrossWire Bible Society and eBible.org. Source files dated 17 September 2026, retrieved 21 September 2026.")
                             .font(.subheadline).foregroundStyle(Color(.readingSecondary))
                     }
-                    Link(destination: AppInfo.scriptureSourceURL) {
-                        Label("eBible.org source", systemImage: "arrow.up.right.square")
-                    }
-                    NavigationLink("Edition notice") {
-                        NoticePage(title: "Edition notice", text: editionNotice)
+                    ExternalLinkRow(title: "eBible.org Source", systemImage: "globe", destination: AppInfo.scriptureSourceURL)
+                    NavigationLink {
+                        NoticePage(title: "Edition Notice", text: editionNotice)
+                    } label: {
+                        Label("Edition Notice", systemImage: "doc.text")
                     }
                 }
 
@@ -99,11 +92,11 @@ struct AboutView: View {
                         Text("SQLite toolkit by Gwendal Roué. MIT License.")
                             .font(.subheadline).foregroundStyle(Color(.readingSecondary))
                     }
-                    Link(destination: AppInfo.grdbURL) {
-                        Label("GRDB.swift on GitHub", systemImage: "arrow.up.right.square")
-                    }
-                    NavigationLink("GRDB license") {
-                        NoticePage(title: "GRDB license", text: Self.bundledText("GRDB-LICENSE"))
+                    ExternalLinkRow(title: "GRDB.swift on GitHub", systemImage: "globe", destination: AppInfo.grdbURL)
+                    NavigationLink {
+                        NoticePage(title: "GRDB License", text: Self.bundledText("GRDB-LICENSE"))
+                    } label: {
+                        Label("GRDB License", systemImage: "doc.text")
                     }
                 } header: {
                     Text("Software")
@@ -135,6 +128,29 @@ struct AboutView: View {
         guard let url = Bundle.main.url(forResource: name, withExtension: "txt"),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return "" }
         return text
+    }
+}
+
+/// A row that leaves the app: leading symbol, primary title, trailing outbound arrow.
+private struct ExternalLinkRow: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+    let destination: URL
+    var body: some View {
+        Link(destination: destination) {
+            HStack {
+                Label {
+                    Text(title).foregroundStyle(Color(.readingPrimary))
+                } icon: {
+                    Image(systemName: systemImage)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color(.readingSecondary))
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 

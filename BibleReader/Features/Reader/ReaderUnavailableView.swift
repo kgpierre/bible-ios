@@ -1,23 +1,27 @@
 import SwiftUI
 
-/// Explicit missing-content state until the validated bundled corpus is introduced.
+/// Explicit missing-content state: never placeholder Scripture.
 struct ReaderUnavailableView: View {
+    /// Offered when the failure may be temporary, such as a locked device.
+    var retry: (() -> Void)?
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: ReaderLayout.sectionSpacing) {
-                Text("Scripture unavailable")
-                    .readerTypography(.bookTitle)
-                    .accessibilityAddTraits(.isHeader)
+        ContentUnavailableView {
+            Label {
+                Text("Scripture Unavailable")
                     .accessibilityIdentifier("readerUnavailableTitle")
-                Text("The Bible text could not be loaded from this installation.")
-                    .font(.body)
-                    .foregroundStyle(Color(.readingSecondary))
+            } icon: {
+                Image(systemName: "book.closed")
             }
-            .frame(maxWidth: ReaderLayout.maximumColumnWidth, alignment: .leading)
-            .padding(ReaderLayout.outerMargin)
-            .frame(maxWidth: .infinity, alignment: .center)
+        } description: {
+            Text("The Bible text could not be loaded from this installation.")
+        } actions: {
+            if let retry {
+                Button("Try Again", action: retry)
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("readerUnavailableRetry")
+            }
         }
-        .foregroundStyle(Color(.readingPrimary))
         .background(Color(.readingCanvas))
     }
 }

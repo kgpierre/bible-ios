@@ -54,13 +54,6 @@ struct AppRootView: View {
             if horizontalSizeClass == .regular { regularLayout } else { compactLayout }
         }
         .background(Color(.readingCanvas))
-        .sheet(isPresented: $state.isAppearancePresented) {
-            // Only offer page layouts a device can show: Two Pages needs an iPad-class or foldable
-            // display; the folded book layout needs a hinge.
-            AppearanceView(preferences: state.preferences,
-                           showsPageLayout: UIDevice.current.userInterfaceIdiom == .pad || state.hasHinge,
-                           showsFoldOptions: state.hasHinge)
-        }
         .sheet(item: $state.summary) { summary in
             ChapterSummaryView(state: summary) { source in
                 if let chapter = state.reader.catalogChapter(source.chapterID) {
@@ -73,6 +66,13 @@ struct AppRootView: View {
             SourceNotesView(request: request)
                 .preferredColorScheme(state.preferences.theme.colorScheme)
         }
+        .sheet(item: $state.cardsRequest) { request in
+            CardsSheet(request: request, model: state.cards) { state.cardsRequest = nil }
+        }
+        .onOpenURL { state.open($0) }
+        .onChange(of: state.reader.catalog.count) { _, _ in
+            if let link = state.pendingLink, let url = CardLink.url(chapterID: link.chapterID, verseID: link.verseID) { state.open(url) }
+        }
         .sheet(isPresented: $state.isAboutPresented) {
             AboutView(editionNotice: state.reader.editionNotice) { state.isAboutPresented = false }
         }
@@ -83,7 +83,7 @@ struct AppRootView: View {
         .task(id: "\(state.destination.rawValue):\(state.reader.savedRevision)") {
             if state.destination == .saved { await state.reader.loadSavedItems() }
         }
-        .alert("Local reading data", isPresented: Binding(get: { state.reader.errorMessage != nil }, set: { if !$0 { state.reader.errorMessage = nil } })) {
+        .alert(state.reader.errorTitle, isPresented: Binding(get: { state.reader.errorMessage != nil }, set: { if !$0 { state.reader.errorMessage = nil } })) {
             if state.reader.canRetry {
                 Button("Retry") { Task { await state.reader.retry() } }
             }
@@ -91,14 +91,32 @@ struct AppRootView: View {
         } message: { Text(state.reader.errorMessage ?? "") }
     }
 
+    /// Each destination keeps its own navigation stack and toolbar; reader actions appear only on Read.
     private var compactLayout: some View {
-        NavigationStack {
-            destinationContent
-                .background(Color(.readingCanvas).ignoresSafeArea())
-                .toolbarBackground(.hidden, for: .navigationBar)
-                .toolbar { readerToolbar }
-                .safeAreaInset(edge: .bottom, spacing: 0) { CompactReaderNavigation(state: state) }
+        ZStack {
+            NavigationStack {
+                chapter(wide: false, active: state.destination == .read)
+                    .background(Color(.readingCanvas).ignoresSafeArea())
+                    .navigationTitle("")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(.hidden, for: .navigationBar)
+                    .toolbar { readerToolbar }
+            }
+            .destination(.read, selected: state.destination)
+            NavigationStack {
+                SavedView(state: state)
+            }
+            .destination(.saved, selected: state.destination)
+            NavigationStack {
+                SearchView(state: state.search, active: state.destination == .search) { passage in
+                    state.reader.openPassage(passage)
+                    state.destination = .read
+                }
+            }
+            .destination(.search, selected: state.destination)
         }
+        .background(Color(.readingCanvas).ignoresSafeArea())
+        .safeAreaInset(edge: .bottom, spacing: 0) { CompactReaderNavigation(state: state) }
     }
 
     private var regularLayout: some View {
@@ -127,7 +145,6 @@ struct AppRootView: View {
                         .frame(maxWidth: 720)
                         .frame(maxWidth: .infinity)
                         .background(Color(.readingCanvas).ignoresSafeArea())
-                        .toolbarBackground(.hidden, for: .navigationBar)
                 }
             }
             Tab(AppDestination.search.title, systemImage: AppDestination.search.symbol, value: AppDestination.search, role: .search) {
@@ -139,34 +156,11 @@ struct AppRootView: View {
                     .frame(maxWidth: 720)
                     .frame(maxWidth: .infinity)
                     .background(Color(.readingCanvas).ignoresSafeArea())
-                    .toolbarBackground(.hidden, for: .navigationBar)
                 }
             }
         }
         .tabViewStyle(.tabBarOnly)
         .tint(Color(.accent))
-    }
-
-    private var destinationContent: some View {
-        ZStack {
-            chapter(wide: false, active: state.destination == .read)
-                .opacity(state.destination == .read ? 1 : 0)
-                .allowsHitTesting(state.destination == .read)
-                .accessibilityHidden(state.destination != .read)
-            SavedView(state: state)
-                .opacity(state.destination == .saved ? 1 : 0)
-                .allowsHitTesting(state.destination == .saved)
-                .accessibilityHidden(state.destination != .saved)
-            SearchView(state: state.search, active: state.destination == .search) { passage in
-                state.reader.openPassage(passage)
-                state.destination = .read
-            }
-            .opacity(state.destination == .search ? 1 : 0)
-            .allowsHitTesting(state.destination == .search)
-            .accessibilityHidden(state.destination != .search)
-        }
-        .navigationTitle("")
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     @ViewBuilder private func chapter(wide: Bool, active: Bool) -> some View {
@@ -212,8 +206,9 @@ struct AppRootView: View {
             }
         } else if state.reader.isLoading {
             ProgressView("Opening Bible…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ReaderUnavailableView()
+            ReaderUnavailableView(retry: state.reader.canRetry ? { Task { await state.reader.retry() } } : nil)
         }
     }
 
@@ -235,9 +230,9 @@ struct AppRootView: View {
             Text(state.reader.document?.reference ?? "")
                 .font(.title2.weight(.semibold)).fontDesign(.serif)
             HStack(spacing: 24) {
-                Button("Previous chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
+                Button("Previous Chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
                     .disabled(!state.reader.hasAdjacentChapter(-1))
-                Button("Next chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
+                Button("Next Chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
                     .disabled(!state.reader.hasAdjacentChapter(1))
             }
             .buttonStyle(.glass)
@@ -250,8 +245,20 @@ struct AppRootView: View {
         ToolbarItemGroup(placement: .topBarTrailing) {
             Button("Appearance", systemImage: "textformat.size") { state.isAppearancePresented = true }
                 .accessibilityIdentifier("appearanceButton")
+                .popover(isPresented: $state.isAppearancePresented) {
+                    // Only offer page layouts a device can show: Two Pages needs an iPad-class or foldable
+                    // display; the folded book layout needs a hinge.
+                    AppearanceView(preferences: state.preferences,
+                                   showsPageLayout: UIDevice.current.userInterfaceIdiom == .pad || state.hasHinge,
+                                   showsFoldOptions: state.hasHinge)
+                        .frame(idealWidth: 400, idealHeight: 560)
+                        .presentationCompactAdaptation(.sheet)
+                        // Leave the reader visible above the sheet so changes show as they are made.
+                        .presentationDetents([.medium, .large])
+                        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+                }
             Button {
-                if let chapter = state.reader.document { state.summary = state.reader.summaryState(for: chapter) }
+                state.summarizeCurrentChapter()
             } label: {
                 Image(systemName: "apple.intelligence")
             }
@@ -260,25 +267,32 @@ struct AppRootView: View {
             .disabled(state.reader.document == nil || state.reader.isLoading)
             Menu("More", systemImage: "ellipsis") {
                 Section {
-                    Button("Search", systemImage: "magnifyingglass") {
-                        state.destination = .search
-                        state.search.focusRequest += 1
-                    }
-                    Button("Previous chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
+                    Button("Previous Chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
                         .disabled(!state.reader.hasAdjacentChapter(-1))
-                    Button("Next chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
+                    Button("Next Chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
                         .disabled(!state.reader.hasAdjacentChapter(1))
                 }
                 Section {
-                    Button("Undo annotation", systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
+                    if state.reader.document != nil {
+                        // Menu items expose their title only; it names the action in the reader's context.
+                        let saved = state.reader.isCurrentChapterSaved
+                        Button(saved ? "Remove Saved Chapter" : "Save Chapter",
+                               systemImage: saved ? "book.closed.fill" : "book.closed") {
+                            Task { await state.reader.setCurrentChapterSaved(!saved) }
+                        }
+                        .disabled(state.reader.isSaving)
+                    }
+                    Button(state.reader.undoActionName.map { String(localized: "Undo \($0)") } ?? String(localized: "Undo"),
+                           systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
                         .disabled(!state.reader.canUndo || state.reader.isSaving)
+                        .accessibilityIdentifier("undoAnnotation")
                     if let document = state.reader.document {
-                        Button("Chapter notes", systemImage: "note.text") {
+                        Button("Chapter Notes", systemImage: "note.text") {
                             state.reader.notesRequest = .chapter(document)
                         }
                         .disabled(!document.verses.contains { !$0.notes.isEmpty })
                         ShareLink(item: "\(document.reference) — \(document.editionLabel)") {
-                            Label("Share reference", systemImage: "square.and.arrow.up")
+                            Label("Share Reference", systemImage: "square.and.arrow.up")
                         }
                     }
                 }
@@ -287,6 +301,18 @@ struct AppRootView: View {
         }
     }
 
+}
+
+private extension View {
+    /// Shows one compact destination; hidden ones keep their state but leave touch and VoiceOver.
+    func destination(_ destination: AppDestination, selected: AppDestination) -> some View {
+        opacity(selected == destination ? 1 : 0)
+            // Hidden stacks host UIKit navigation controllers; keep the selected one frontmost
+            // so their transparent bars can never intercept its touches.
+            .zIndex(selected == destination ? 1 : 0)
+            .allowsHitTesting(selected == destination)
+            .accessibilityHidden(selected != destination)
+    }
 }
 
 #Preview { AppRootView() }

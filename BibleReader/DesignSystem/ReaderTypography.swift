@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Named design targets from 2a and 3a–3c; fonts scale with Dynamic Type.
 /// Nominal HTML line heights are deliberately not fixed native text heights.
@@ -60,16 +61,16 @@ extension View {
     }
 }
 
-/// In-content serif heading shared by compact destinations (Search, Saved).
-struct DestinationTitle: View {
-    let title: LocalizedStringKey
-    @ScaledMetric(relativeTo: .largeTitle) private var size = 38.0
-    init(_ title: LocalizedStringKey) { self.title = title }
-    var body: some View {
-        Text(title)
-            .font(.system(size: size, weight: .semibold, design: .serif))
-            .foregroundStyle(Color(.readingPrimary))
-            .textCase(nil)
-            .accessibilityAddTraits(.isHeader)
+/// Destination large titles (Saved, Search) use the reading serif while staying system navigation titles,
+/// so they collapse into the bar, name the screen for VoiceOver, and scale with Dynamic Type.
+enum NavigationTitleStyle {
+    @MainActor static func apply() {
+        let base = UIFont.preferredFont(forTextStyle: .largeTitle)
+        let descriptor = base.fontDescriptor.withDesign(.serif)?
+            .addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: UIFont.Weight.semibold]]) ?? base.fontDescriptor
+        UINavigationBar.appearance().largeTitleTextAttributes = [
+            .font: UIFont(descriptor: descriptor, size: 0),
+            .foregroundColor: UIColor(resource: .readingPrimary)
+        ]
     }
 }

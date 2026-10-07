@@ -73,6 +73,7 @@ struct SourceNotesView: View {
                 }
             }
         }
+        .tint(Color(.accent))
         .presentationDetents(fitted.map { [$0, .large] } ?? [.medium, .large], selection: $detent)
         .accessibilityIdentifier("sourceNotes")
     }

@@ -34,6 +34,21 @@ struct BookmarkRecord: Codable, Equatable, Identifiable, Sendable {
     let updated: Double
 }
 
+/// A whole chapter saved by identity, independent of verse highlights and bookmarks.
+struct SavedChapterRecord: Codable, Equatable, Identifiable, Sendable {
+    let id: String
+    let chapterID: String
+    let created: Double
+    let updated: Double
+}
+
+/// One save or removal; Undo restores `before` only while the store still holds `after`.
+struct SavedChapterChange: Sendable {
+    let chapterID: String
+    let before: SavedChapterRecord?
+    let after: SavedChapterRecord?
+}
+
 struct AnnotationSnapshot: Equatable, Sendable {
     var highlights: [HighlightRecord]
     var bookmarks: [BookmarkRecord]
@@ -65,6 +80,9 @@ struct SavedItem: Identifiable, Sendable {
     var unavailable = false
     var verseOrder: Int? = nil
     var records = SavedRecords()
+    /// A saved whole chapter; `text` is its opening verse and `verseCount` its length.
+    var savedChapter = false
+    var verseCount: Int? = nil
 }
 
 /// Original persisted values identify exactly what the user saw before deleting.
@@ -72,6 +90,7 @@ struct SavedRecords: Equatable, Sendable {
     var exact: [ExactAnnotation] = []
     var highlights: [HighlightRecord] = []
     var bookmarks: [BookmarkRecord] = []
+    var chapters: [SavedChapterRecord] = []
 }
 
 enum StorageIssue: Error {

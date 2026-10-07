@@ -15,19 +15,20 @@ struct AppearanceView: View {
                     Picker("Theme", selection: $preferences.theme) {
                         ForEach(AppAppearance.allCases) { Text($0.title).tag($0) }
                     }
-                    .pickerStyle(.inline)
+                    .pickerStyle(.segmented)
                     .labelsHidden()
+                    .accessibilityIdentifier("themePicker")
                 }
                 if showsPageLayout || showsFoldOptions {
                     Section {
                         if showsPageLayout {
-                            Picker("Landscape pages", selection: $preferences.pageLayout) {
+                            Picker("Landscape Pages", selection: $preferences.pageLayout) {
                                 ForEach(ReadingPageLayout.allCases) { Text($0.title).tag($0) }
                             }
                             .accessibilityIdentifier("pageLayoutPicker")
                         }
                         if showsFoldOptions {
-                            Toggle("Book layout when folded", isOn: $preferences.automaticBookLayout)
+                            Toggle("Book Layout When Folded", isOn: $preferences.automaticBookLayout)
                                 .accessibilityIdentifier("automaticBookLayoutToggle")
                         }
                     } header: {
@@ -37,16 +38,16 @@ struct AppearanceView: View {
                     }
                 }
                 Section {
-                    Picker("Reading font", selection: $preferences.typography.face) {
+                    Picker("Reading Font", selection: $preferences.typography.face) {
                         ForEach(ReadingFace.allCases) { Text($0.title).tag($0) }
                     }
                     .accessibilityIdentifier("readingFacePicker")
                     VStack(alignment: .leading, spacing: 4) {
-                        LabeledContent("Text size", value: sizeLabel)
+                        LabeledContent("Text Size", value: sizeLabel)
                             .accessibilityHidden(true)
                         // Whole steps only: each one is a 2-point change on top of Dynamic Type.
                         Slider(value: sizeStep, in: -2...4, step: 1) {
-                            Text("Text size")
+                            Text("Text Size")
                         } minimumValueLabel: {
                             Image(systemName: "textformat.size.smaller").accessibilityHidden(true)
                         } maximumValueLabel: {
@@ -55,17 +56,24 @@ struct AppearanceView: View {
                         .accessibilityValue(sizeLabel)
                         .accessibilityIdentifier("readingSizeSlider")
                     }
-                    Picker("Line spacing", selection: $preferences.typography.spacing) {
+                    Picker("Line Spacing", selection: $preferences.typography.spacing) {
                         ForEach(ReadingSpacing.allCases) { Text($0.title).tag($0) }
                     }
                     .accessibilityIdentifier("readingSpacingPicker")
-                    Toggle("Show source notes", isOn: $preferences.typography.showsNotes)
-                        .accessibilityIdentifier("sourceNotesToggle")
-                    Button("Reset reading style") { preferences.resetReadingStyle() }
                 } header: {
                     Text("Reading")
                 } footer: {
-                    Text("Follows your device’s Text Size setting. These adjustments change Scripture text on top of that setting and are saved on this device. Source notes mark verses that have marginal notes from the source edition; tap a marked verse number to read them.")
+                    Text("Follows your device’s Text Size setting. These adjustments change Scripture text on top of that setting and are saved on this device.")
+                }
+                Section {
+                    Toggle("Show Source Notes", isOn: $preferences.typography.showsNotes)
+                        .accessibilityIdentifier("sourceNotesToggle")
+                } footer: {
+                    Text("Marks verses that have marginal notes from the source edition. Tap a marked verse number to read them.")
+                }
+                Section {
+                    Button("Reset Reading Style") { preferences.resetReadingStyle() }
+                        .accessibilityIdentifier("resetReadingStyle")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -80,6 +88,7 @@ struct AppearanceView: View {
                 }
             }
         }
+        .tint(Color(.accent))
         .preferredColorScheme(preferences.theme.colorScheme)
     }
 

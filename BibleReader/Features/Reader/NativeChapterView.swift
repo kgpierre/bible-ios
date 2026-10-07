@@ -490,8 +490,11 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                     marker.button.isHidden = false
                     let dot = CGRect(x: frame.maxX + 2, y: frame.minY + 1, width: 5, height: 5)
                     if marker.dot.frame != dot { marker.dot.frame = dot }
-                    // A 44-point target over the number and dot only; it stops short of the text column.
-                    let target = CGRect(x: frame.minX - 4, y: frame.midY - 22, width: self.textContainerInset.left - 2 - (frame.minX - 4), height: 44)
+                    // A 44-point square over the number and dot, extending into the leading margin;
+                    // it stops short of the text column so it never intercepts text selection.
+                    let trailing = self.textContainerInset.left - 2
+                    let left = min(frame.minX - 4, trailing - 44)
+                    let target = CGRect(x: left, y: frame.midY - 22, width: trailing - left, height: 44)
                     if marker.button.frame != target { marker.button.frame = target }
                 }
                 return true
@@ -706,7 +709,21 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             parent?.present(controller, animated: true)
         }
         let annotationActions: [UIMenuElement] = [palette, bookmark] + (highlightStatus.hasHighlights ? [remove] : [])
-        return UIMenu(children: annotationActions + [share] + suggestedActions)
+        // "Share Passage" replaces the system Share, which would send the words without their reference.
+        return UIMenu(children: annotationActions + [share] + Self.removingSystemShare(suggestedActions))
+    }
+
+    private static let systemShareAction = NSSelectorFromString("_share:")
+
+    private static func removingSystemShare(_ elements: [UIMenuElement]) -> [UIMenuElement] {
+        elements.compactMap { element in
+            if let menu = element as? UIMenu {
+                if menu.identifier == .share { return nil }
+                return menu.replacingChildren(removingSystemShare(menu.children))
+            }
+            if let command = element as? UICommand, command.action == systemShareAction { return nil }
+            return element
+        }
     }
 
 

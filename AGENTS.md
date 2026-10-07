@@ -6,6 +6,12 @@ Version 1.1 · 21 September 2026 · Implementation specification
 
 Latest owner refinements from `HANDOFF.md` take precedence: exact selected-word highlights/bookmarks save directly from native menus; persisted typography composes with Dynamic Type; an optional on-device current-chapter overview uses an icon-only Apple Intelligence button between Appearance and More. Summaries remain separate from authoritative Scripture.
 
+### Saved chapters and widgets directive — 7 October 2026
+
+- Owner-requested scope change ([0019](Docs/Decisions/0019-saved-chapters-and-widgets.md)): users can save whole chapters (by chapter identity, migration `v4_saved_chapters`, shown in Saved under Bookmarks, with Undo) and turn Saved passages or chapters into WidgetKit cards.
+- Card text is copied verbatim from the corpus or the exact saved excerpt; never generate or alter it. Apple Intelligence (Image Playground) may create only card backgrounds, labeled as such; photos come through the out-of-process picker.
+- The widget extension reads only the App Group card library (`group.dev.kpierre.bible`); it never opens the corpus or user database. Card files are protected until first unlock so widgets render while locked.
+
 ### iPhone Duo directive — 27 September 2026
 
 - Begin supporting iPhone Duo with full existing feature parity, compact reading on the outer display, and the iPad-like regular-width reader on the inner display, particularly landscape facing-page swiping. Preserve the owner-selected system tabs without a sidebar and the passage control. Use system placement where bars adapt to the device.
@@ -50,7 +56,7 @@ V1 includes restored reading position; previous/next chapter; book, chapter, and
 
 Defaults: KJV with a pinned exact edition; a 66-book Protestant canon pending owner confirmation; Genesis 1 on first launch and John 3 for previews; local persistence eligible for ordinary OS backup; one active scene with resizing/restoration; English UI and text with localization-ready strings.
 
-Out of scope: accounts, iCloud sync, downloadable translations, audio, commentary, personal notes, tags, folders, plans, streaks, notifications, social features, AI features beyond the explicitly requested on-device chapter overview, widgets, Apple Watch, and arbitrary Bible imports. Do not build speculative infrastructure for these.
+Out of scope: accounts, iCloud sync, downloadable translations, audio, commentary, personal notes, tags, folders, plans, streaks, notifications, social features, AI features beyond the explicitly requested on-device chapter overview and Image Playground card backgrounds, widgets other than the Scripture card widget, Apple Watch, and arbitrary Bible imports. Do not build speculative infrastructure for these.
 
 ## 2. Design Sources
 
@@ -276,7 +282,7 @@ Offer System/Light/Dark, Serif/System Sans, modest text-size adjustment, and a f
 - VoiceOver announces verse reference/text in reading order, annotation states/actions, without duplicate gutter numbers. Offer per-verse annotation actions independent of selection.
 - Chapter labels include book/chapter/selected state. Respect Reduce Motion, Reduce Transparency, Increase Contrast, and differentiate-without-color.
 - Validate both themes, all highlight fills, and actual glass backgrounds.
-- Keyboard: Command-F Search; Command-Shift-S wide sidebar; Command-[ / Command-] previous/next when not editing; standard Copy; Escape dismissal; discoverable shortcuts.
+- Keyboard: Command-1/2/3 Read/Saved/Search; Command-F Search; Command-Shift-A Appearance; Command-Shift-Y chapter summary; Command-D save chapter; Command-[ / Command-] previous/next when not editing; standard Copy; Escape dismissal; discoverable shortcuts.
 - Support pointer focus/hover without requiring hover. Pencil uses normal touch; no handwriting.
 
 Accessibility may change spacing/chrome arrangement, never remove content, actions, or destinations to match screenshots.

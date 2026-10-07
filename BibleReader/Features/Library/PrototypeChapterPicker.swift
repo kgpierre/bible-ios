@@ -1,78 +1,71 @@
 import SwiftUI
 
+/// Books is the root; the current book's chapters open pushed so the system back button returns to Books.
 struct PrototypeChapterPicker: View {
     @Bindable var state: ReaderState
     let didOpen: () -> Void
     private let onClose: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
-    @State private var showingBooks: Bool
     @State private var newTestament: Bool
-    @State private var path: [String] = []
+    @State private var path: [String]
 
     init(state: ReaderState, startsWithBooks: Bool = false, onClose: (() -> Void)? = nil, didOpen: @escaping () -> Void = {}) {
         self.onClose = onClose
         self.didOpen = didOpen
         self.state = state
-        _showingBooks = State(initialValue: startsWithBooks)
-        _newTestament = State(initialValue: (state.books.first { $0.id == state.document?.bookID }?.ordinal ?? 0) >= 39)
+        _newTestament = State(initialValue: Self.isNewTestament(state))
+        _path = State(initialValue: startsWithBooks ? [] : [state.document?.bookID ?? "GEN"])
+    }
+
+    private static func isNewTestament(_ state: ReaderState) -> Bool {
+        (state.books.first { $0.id == state.document?.bookID }?.ordinal ?? 0) >= 39
     }
 
     private func close() {
         if let onClose { onClose() } else { dismiss() }
     }
 
+    private func opened() { didOpen(); close() }
+
     var body: some View {
         NavigationStack(path: $path) {
-            Group {
-                if showingBooks {
-                    VStack(spacing: 0) {
-                        TestamentPicker(newTestament: $newTestament).padding(.horizontal, 20).padding(.vertical, 12)
-                        List(state.books.filter { ($0.ordinal >= 39) == newTestament }) { book in
-                            NavigationLink(value: book.id) {
-                                BookRow(book: book, selected: state.document?.bookID == book.id)
-                            }
-                            .accessibilityIdentifier("book-\(book.id)")
-                            .listRowBackground(Color(.readingCanvas))
-                        }
-                        .listStyle(.plain)
-                        .scrollContentBackground(.hidden)
-                    }
-                    .navigationTitle("Books")
-                } else {
-                    ChapterChoices(state: state, bookID: state.document?.bookID ?? "GEN") { didOpen(); close() }
-                        .navigationTitle("Chapters")
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button { showingBooks = true } label: {
-                                    Label("Books", systemImage: "books.vertical")
-                                }
-                                    .accessibilityIdentifier("chapterBooksButton")
-                            }
-                        }
+            List(state.books.filter { ($0.ordinal >= 39) == newTestament }) { book in
+                NavigationLink(value: book.id) {
+                    BookRow(book: book, selected: state.document?.bookID == book.id)
                 }
+                .accessibilityIdentifier("book-\(book.id)")
+                .listRowBackground(Color(.readingCanvas))
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .background(Color(.readingCanvas))
+            .safeAreaBar(edge: .top) {
+                TestamentPicker(newTestament: $newTestament).padding(.horizontal, 20).padding(.vertical, 8)
+            }
+            .navigationTitle("Books")
             .navigationBarTitleDisplayMode(.inline)
+            .referenceSearch(reader: state, didOpen: opened)
+            .toolbar { closeButton }
             .navigationDestination(for: String.self) { bookID in
-                ChapterChoices(state: state, bookID: bookID) { didOpen(); close() }
+                ChapterChoices(state: state, bookID: bookID, didOpen: opened)
                     .navigationTitle("Chapters")
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) { Button(role: .close) { close() }
-                            .labelStyle(.iconOnly).accessibilityIdentifier("chapterPickerClose") }
-                    }
-            }
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button(role: .close) { close() }
-                            .labelStyle(.iconOnly).accessibilityIdentifier("chapterPickerClose") }
+                    .navigationBarTitleDisplayMode(.inline)
+                    .referenceSearch(reader: state, didOpen: opened)
+                    .toolbar { closeButton }
             }
         }
-        .onAppear {
-            newTestament = (state.books.first { $0.id == state.document?.bookID }?.ordinal ?? 0) >= 39
-        }
+        .onAppear { newTestament = Self.isNewTestament(state) }
         .tint(Color(.accent))
         .frame(idealWidth: 420, idealHeight: 600)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+
+    @ToolbarContentBuilder private var closeButton: some ToolbarContent {
+        ToolbarItem(placement: .confirmationAction) {
+            Button(role: .close) { close() }
+                .labelStyle(.iconOnly).accessibilityIdentifier("chapterPickerClose")
+        }
     }
 }
 
@@ -99,10 +92,6 @@ struct ChapterChoices: View {
                             chapterButton(chapter, highlighted: highlighted.contains(chapter.id))
                         }
                     }
-                }
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("GO TO").readerTypography(.eyebrow).tracking(0.6).foregroundStyle(Color(.readingSecondary))
-                    ReferenceInputView(reader: state, didOpen: didOpen)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -131,7 +120,7 @@ struct ChapterChoices: View {
             .accessibilityAddTraits(.isHeader)
     }
     private var chapterCount: some View {
-        Text(chapters.count == 1 ? "1 chapter" : "\(chapters.count) chapters")
+        Text("^[\(chapters.count) chapter](inflect: true)")
             .font(.subheadline).foregroundStyle(Color(.readingSecondary))
     }
     private func chapterButton(_ chapter: ChapterSummary, highlighted: Bool) -> some View {

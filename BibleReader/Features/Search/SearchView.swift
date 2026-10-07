@@ -5,48 +5,31 @@ struct SearchView: View {
     var active = true
     let open: (ResolvedPassage) -> Void
     @FocusState private var focused: Bool
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            DestinationTitle("Search")
-            HStack(spacing: 8) {
-                HStack(spacing: 4) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Color(.readingSecondary))
-                    TextField("Word, phrase, or reference", text: $state.query)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .focused($focused).submitLabel(.search)
-                        .accessibilityIdentifier("searchField")
-                        .onSubmit { focused = false }
-                    if !state.query.isEmpty {
-                        Button { state.query = ""; focused = true } label: { Image(systemName: "xmark.circle.fill") }
-                            .frame(minWidth: 44, minHeight: 44)
-                            .accessibilityLabel("Clear search")
-                            .accessibilityIdentifier("clearSearch")
-                    }
-                }
-                .padding(.leading,12)
-                .frame(minHeight: 44)
-                .background(Color(.readingPrimary).opacity(0.06), in: .rect(cornerRadius: 14))
-                if focused {
-                    Button("Cancel") { focused = false }.frame(minHeight: 44)
-                }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                results
             }
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    results
-                }
-                .scrollTargetLayout()
-                .padding(.bottom,20)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .scrollPosition(id: Binding(get: { state.scrollID }, set: { if let id = $0 { state.scrollID = id } }), anchor: .top)
-            .accessibilityIdentifier("searchResults")
+            .scrollTargetLayout()
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
         }
-        .padding(.horizontal,20)
-        .padding(.top,12)
+        .scrollDismissesKeyboard(.interactively)
+        .scrollPosition(id: Binding(get: { state.scrollID }, set: { if let id = $0 { state.scrollID = id } }), anchor: .top)
+        .accessibilityIdentifier("searchResults")
         .foregroundStyle(Color(.readingPrimary))
-        .tint(Color(.accent))
         .background(Color(.readingCanvas))
+        .navigationTitle("Search")
+        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $state.query,
+                    placement: horizontalSizeClass == .regular ? .automatic : .navigationBarDrawer(displayMode: .always),
+                    prompt: Text("Word, phrase, or reference"))
+        .searchFocused($focused)
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled()
+        .onSubmit(of: .search) { focused = false }
         .task(id: "\(state.query)|\(state.retryToken)|\(active)") { if active { await state.run() } }
         // Opening the tab must not summon the keyboard: its first presentation after launch
         // stalls the main thread on device. Tapping the field, ⌘F, or More → Search focuses it.
@@ -57,12 +40,25 @@ struct SearchView: View {
     @ViewBuilder private var results: some View {
         switch state.status {
         case .idle:
-            guidance("Search a reference like John 3:16, or a word or phrase in the King James Version. Use quotation marks for an exact phrase.")
+            ContentUnavailableView {
+                Label("Search the Bible", systemImage: "magnifyingglass")
+            } description: {
+                Text("Search a reference like John 3:16, or a word or phrase in the King James Version. Use quotation marks for an exact phrase.")
+            }
+            .padding(.top, 40)
+            .accessibilityIdentifier("searchGuidance")
         case .loading:
             ProgressView("Searching…").frame(maxWidth: .infinity).padding(.top,30)
         case .failed:
-            guidance("Search could not complete. Your query has been kept.")
-            Button("Retry search") { state.retry() }.frame(minHeight: 44)
+            ContentUnavailableView {
+                Label("Search Couldn’t Complete", systemImage: "exclamationmark.magnifyingglass")
+            } description: {
+                Text("Your query has been kept.")
+            } actions: {
+                Button("Try Again") { state.retry() }
+                    .accessibilityIdentifier("searchRetry")
+            }
+            .padding(.top, 40)
         case .loaded(let response):
             switch response {
             case .empty: guidance("Enter a word, a quoted phrase, or a reference such as John 3:16.")
@@ -74,12 +70,15 @@ struct SearchView: View {
                 ReferenceResult(passage: passage, suggestion: true) { focused = false; open(passage) }
             case .results(let page):
                 if page.total == 0 {
-                    Text("No results for “\(state.query)”")
-                        .font(.system(.title2, design: .serif)).padding(.top,28)
-                        .accessibilityIdentifier("searchNoResults")
-                    guidance("Try another word or phrase from the King James Version.")
+                    ContentUnavailableView {
+                        Label("No Results for “\(state.query)”", systemImage: "magnifyingglass")
+                    } description: {
+                        Text("Try another word or phrase from the King James Version.")
+                    }
+                    .padding(.top, 40)
+                    .accessibilityIdentifier("searchNoResults")
                 } else {
-                    Text("\(page.total) verses · King James Version")
+                    Text("^[\(page.total) verse](inflect: true) · King James Version")
                         .font(.caption).foregroundStyle(Color(.readingSecondary)).padding(.vertical,12)
                         .accessibilityIdentifier("searchCount")
                     ForEach(page.hits) { hit in
@@ -93,14 +92,24 @@ struct SearchView: View {
                         .accessibilityIdentifier("search-hit-\(hit.id)")
                         .accessibilityAddTraits(state.selectedID == hit.id ? .isSelected : [])
                         .id(hit.id)
+                        .onAppear {
+                            // Load the next page as the last rows arrive; a failed page waits for Retry.
+                            if hit.id == page.hits.last?.id, page.hasMore, !state.pageError {
+                                Task { await state.loadMore() }
+                            }
+                        }
                         Divider()
                     }
                     if page.hasMore {
-                        Button(state.pageError ? "Retry loading results" : "Load more results") { Task { await state.loadMore() } }
-                            .frame(maxWidth: .infinity,minHeight: 44)
-                            .disabled(state.isLoadingMore)
-                            .accessibilityIdentifier("searchLoadMore")
-                        if state.isLoadingMore { ProgressView("Loading more…").frame(maxWidth: .infinity) }
+                        if state.pageError {
+                            Button("Retry Loading Results") { Task { await state.loadMore() } }
+                                .frame(maxWidth: .infinity,minHeight: 44)
+                                .disabled(state.isLoadingMore)
+                                .accessibilityIdentifier("searchLoadMore")
+                        } else {
+                            ProgressView("Loading more…").frame(maxWidth: .infinity).padding(.vertical, 12)
+                                .accessibilityIdentifier("searchLoadingMore")
+                        }
                     }
                 }
             }

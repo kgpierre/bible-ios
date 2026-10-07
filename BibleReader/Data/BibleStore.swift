@@ -117,7 +117,7 @@ actor BibleStore {
         var writable = Configuration()
         writable.busyMode = .timeout(2)
         user = try DatabaseQueue(path: userURL.path, configuration: writable)
-        let migrations = ["v1_local_reader", "v2_exact_annotations", "v3_exact_chapter_index"]
+        let migrations = ["v1_local_reader", "v2_exact_annotations", "v3_exact_chapter_index", "v4_saved_chapters"]
         let applied = try user.read { db -> [String] in
             guard try db.tableExists("grdb_migrations") else { return [] }
             return try String.fetchAll(db, sql: "SELECT identifier FROM grdb_migrations")
@@ -152,6 +152,13 @@ actor BibleStore {
                                arguments: [record.passage.chapterID, record.color != nil, row["id"] as String])
             }
             try db.execute(sql: "CREATE INDEX exact_annotation_chapter ON exact_annotation(editionID, chapterID)")
+        }
+        // Additive: whole chapters saved by identity. Existing records are untouched.
+        migrator.registerMigration("v4_saved_chapters") { db in
+            try db.execute(sql: """
+                CREATE TABLE saved_chapter(id TEXT PRIMARY KEY, editionID TEXT NOT NULL, chapterID TEXT NOT NULL,
+                    created REAL NOT NULL, updated REAL NOT NULL, UNIQUE(editionID, chapterID))
+                """)
         }
         try migrator.migrate(user)
         try Self.protectFiles(at: userURL)
@@ -622,6 +629,59 @@ actor BibleStore {
         return change
     }
 
+    func savedChapterIDs() throws -> Set<String> {
+        try user.read { db in
+            Set(try String.fetchAll(db, sql: "SELECT chapterID FROM saved_chapter WHERE editionID=?", arguments: [editionID]))
+        }
+    }
+
+    private func savedChapter(_ chapterID: String, _ db: Database) throws -> SavedChapterRecord? {
+        try Row.fetchOne(db, sql: "SELECT * FROM saved_chapter WHERE editionID=? AND chapterID=?", arguments: [editionID, chapterID]).map {
+            SavedChapterRecord(id: $0["id"], chapterID: $0["chapterID"], created: $0["created"], updated: $0["updated"])
+        }
+    }
+
+    /// Saving is idempotent and keeps the original record. Removal can require the exact displayed
+    /// record, so a Saved row never deletes a newer save of the same chapter.
+    func setChapterSaved(_ chapterID: String, saved: Bool, expecting: SavedChapterRecord? = nil) throws -> SavedChapterChange {
+        if saved {
+            let exists = try corpus.read { db in
+                try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM chapter WHERE id=?)", arguments: [chapterID]) ?? false
+            }
+            guard exists else { throw StorageIssue.invalidPassage }
+        }
+        let edition = editionID
+        let change = try user.write { db -> SavedChapterChange in
+            let before = try savedChapter(chapterID, db)
+            if let expecting, before != expecting { throw StorageIssue.undoConflict }
+            if saved {
+                if let before { return SavedChapterChange(chapterID: chapterID, before: before, after: before) }
+                let now = Date().timeIntervalSince1970
+                let record = SavedChapterRecord(id: UUID().uuidString, chapterID: chapterID, created: now, updated: now)
+                try db.execute(sql: "INSERT INTO saved_chapter VALUES(?,?,?,?,?)",
+                               arguments: [record.id, edition, chapterID, record.created, record.updated])
+                return SavedChapterChange(chapterID: chapterID, before: nil, after: record)
+            }
+            try db.execute(sql: "DELETE FROM saved_chapter WHERE editionID=? AND chapterID=?", arguments: [edition, chapterID])
+            return SavedChapterChange(chapterID: chapterID, before: before, after: nil)
+        }
+        markSavedDirty([chapterID])
+        return change
+    }
+
+    func undoChapter(_ change: SavedChapterChange) throws {
+        let edition = editionID
+        try user.write { db in
+            guard try savedChapter(change.chapterID, db) == change.after else { throw StorageIssue.undoConflict }
+            try db.execute(sql: "DELETE FROM saved_chapter WHERE editionID=? AND chapterID=?", arguments: [edition, change.chapterID])
+            if let record = change.before {
+                try db.execute(sql: "INSERT INTO saved_chapter VALUES(?,?,?,?,?)",
+                               arguments: [record.id, edition, record.chapterID, record.created, record.updated])
+            }
+        }
+        markSavedDirty([change.chapterID])
+    }
+
     /// Raw rows are read on the store queue (cheap). Decoding annotations and resolving verse text run
     /// off it on a dedicated read-only corpus connection, so chapter loads and position saves are not
     /// queued behind a large library. Only chapters changed since the last pass are rebuilt.
@@ -630,9 +690,9 @@ actor BibleStore {
         defer { ReaderPerformance.signposter.endInterval("Saved resolution", interval) }
         try Task.checkCancellation()
         let input = try savedInput()
-        guard let (snapshot, payloads, rebuilding) = input else { return cachedSavedItems ?? [] }
+        guard let (snapshot, payloads, savedChapters, rebuilding) = input else { return cachedSavedItems ?? [] }
         let generation = savedGeneration
-        var items = try await Self.resolveSaved(snapshot: snapshot, payloads: payloads, corpus: savedCorpus)
+        var items = try await Self.resolveSaved(snapshot: snapshot, payloads: payloads, savedChapters: savedChapters, corpus: savedCorpus)
         #if DEBUG
         await savedResolutionHook?()
         #endif
@@ -652,13 +712,16 @@ actor BibleStore {
     }
 
     /// Synchronous on the store queue: raw payloads and legacy rows for a full or incremental rebuild.
-    private func savedInput() throws -> (AnnotationSnapshot, [Data], Set<String>?)? {
+    private func savedInput() throws -> (AnnotationSnapshot, [Data], [SavedChapterRecord], Set<String>?)? {
         let edition = editionID
-        return try user.read { db -> (AnnotationSnapshot, [Data], Set<String>?)? in
+        return try user.read { db -> (AnnotationSnapshot, [Data], [SavedChapterRecord], Set<String>?)? in
             try synchronizeAnnotationVersion(db)
             let rebuilding: Set<String>? = cachedSavedItems == nil ? nil : Set(dirtySavedChapters.keys)
             if rebuilding?.isEmpty == true { return nil }
             var payloads: [Data] = []
+            let savedChapters = try Row.fetchAll(db, sql: "SELECT * FROM saved_chapter WHERE editionID=?", arguments: [edition]).map {
+                SavedChapterRecord(id: $0["id"], chapterID: $0["chapterID"], created: $0["created"], updated: $0["updated"])
+            }.filter { rebuilding?.contains($0.chapterID) ?? true }
             if let rebuilding {
                 let ids = rebuilding.sorted()
                 for start in stride(from: 0, to: ids.count, by: 200) {
@@ -669,16 +732,17 @@ actor BibleStore {
             } else {
                 payloads = try Data.fetchAll(db, sql: "SELECT payload FROM exact_annotation WHERE editionID=?", arguments: [edition])
             }
-            return (try Self.snapshot(db, edition: edition, chapters: rebuilding), payloads, rebuilding)
+            return (try Self.snapshot(db, edition: edition, chapters: rebuilding), payloads, savedChapters, rebuilding)
         }
     }
 
-    @concurrent private static func resolveSaved(snapshot: AnnotationSnapshot, payloads: [Data], corpus: DatabaseQueue) async throws -> [SavedItem] {
+    @concurrent private static func resolveSaved(snapshot: AnnotationSnapshot, payloads: [Data], savedChapters: [SavedChapterRecord] = [],
+                                                 corpus: DatabaseQueue) async throws -> [SavedItem] {
         let decoder = JSONDecoder()
         let exactRecords = try payloads.map { try decoder.decode(ExactAnnotation.self, from: $0) }
         // Saved needs canonical verse text and order, not chapter runs, notes, or typography.
         let verseIDs = snapshot.highlights.map(\.verseID) + snapshot.bookmarks.flatMap { [$0.startID, $0.endID] }
-        let chapterIDs = Array(Set(verseIDs.map { ScriptureID.chapter(containing: $0) } + exactRecords.map { $0.passage.chapterID })).sorted()
+        let chapterIDs = Array(Set(verseIDs.map { ScriptureID.chapter(containing: $0) } + exactRecords.map { $0.passage.chapterID } + savedChapters.map(\.chapterID))).sorted()
         struct Verse: Sendable {
             let id: String
             let label: String
@@ -773,6 +837,15 @@ actor BibleStore {
                 reference: String(localized: "\(record.passage.reference) (excerpt)"), text: record.passage.text,
                 color: record.color, bookmark: record.isBookmark, updated: record.updated, passage: unavailable ? nil : resolved, unavailable: unavailable,
                 verseOrder: doc?.index[first.verseID], records: SavedRecords(exact: [record])))
+        }
+        for record in savedChapters {
+            let doc = documents[record.chapterID]
+            let opening = doc?.verses.first
+            items.append(SavedItem(id: record.id, chapterID: record.chapterID, verseID: opening?.id ?? record.chapterID,
+                reference: doc?.reference ?? record.chapterID,
+                text: opening?.text ?? String(localized: "This saved chapter is unavailable in the installed edition."),
+                color: nil, bookmark: false, updated: record.updated, unavailable: doc == nil, verseOrder: doc == nil ? nil : 0,
+                records: SavedRecords(chapters: [record]), savedChapter: true, verseCount: doc?.verses.count))
         }
         return items
     }

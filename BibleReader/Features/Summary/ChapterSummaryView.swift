@@ -41,22 +41,17 @@ struct ChapterSummaryView: View {
             .background(Color(.readingCanvas))
             .safeAreaBar(edge: .bottom, spacing: 0) { composer }
             .navigationTitle(questionsShown ? "Questions" : "Summary")
+            .navigationSubtitle(state.chapter.reference)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
         }
+        .tint(Color(.accent))
         .presentationDragIndicator(.visible)
         .onAppear { start() }
         .onDisappear { generation?.cancel(); state.cancel() }
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            VStack(spacing: 2) {
-                Text(questionsShown ? "Questions" : "Summary").font(.headline)
-                Text(state.chapter.reference).font(.caption).foregroundStyle(.secondary)
-            }
-            .accessibilityElement(children: .combine)
-        }
         ToolbarItem(placement: .confirmationAction) {
             Button(role: .close) { generation?.cancel(); state.cancel(); dismiss() }
                 .labelStyle(.iconOnly)
@@ -67,14 +62,14 @@ struct ChapterSummaryView: View {
     private var summary: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(state.chapter.reference.uppercased()).readerTypography(.eyebrow).tracking(0.6).foregroundStyle(.secondary)
+                Text(state.chapter.reference).textCase(.uppercase).readerTypography(.eyebrow).tracking(0.6).foregroundStyle(.secondary)
                 Text(state.overviewTitle).readerTypography(.bookTitle).accessibilityAddTraits(.isHeader)
             }
             Text(state.overviewQuestion).font(.subheadline).foregroundStyle(.secondary)
             overview
             if !state.peopleAndPlaces.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("PEOPLE & PLACES").readerTypography(.eyebrow).tracking(0.6).foregroundStyle(.secondary)
+                    Text("People & Places").textCase(.uppercase).readerTypography(.eyebrow).tracking(0.6).foregroundStyle(.secondary)
                     SummaryChipLayout {
                         ForEach(state.peopleAndPlaces, id: \.self) { name in entity(name) }
                     }
@@ -101,7 +96,7 @@ struct ChapterSummaryView: View {
             if let pending = state.pendingQuestion {
                 questionBubble(pending).id("pendingQuestion")
                 ProgressView("Reading passages in \(state.chapter.bookName)…")
-                Button("Cancel answer") { generation?.cancel(); state.cancel() }
+                Button("Cancel Answer") { generation?.cancel(); state.cancel() }
             }
             if let message = state.questionMessage {
                 questionBubble(state.question).id("questionError")
@@ -165,18 +160,18 @@ struct ChapterSummaryView: View {
                 Text("Draft overview · still generating and checking").font(.caption).foregroundStyle(.secondary)
             }
             ProgressView("Summarizing this chapter…")
-            Button("Cancel summary") { generation?.cancel(); state.cancel() }
+            Button("Cancel Summary") { generation?.cancel(); state.cancel() }
         case .complete(let text):
             Text(text).readerTypography(.verse).lineSpacing(6)
                 .textSelection(.enabled).accessibilityIdentifier("chapterSummaryText")
         case .unavailable(let message), .failed(let message):
             Text(message).readerTypography(.verse).foregroundStyle(.secondary).accessibilityIdentifier("chapterSummaryStatus")
-            Button("Try again", systemImage: "arrow.clockwise") { start() }
+            Button("Try Again", systemImage: "arrow.clockwise") { start() }
                 .buttonStyle(.borderedProminent).tint(Color(.accent)).controlSize(.large)
                 .disabled(state.isAnswering).accessibilityIdentifier("retryChapterSummary")
         case .cancelled:
             Text("Summary cancelled.").foregroundStyle(.secondary)
-            Button("Try again", systemImage: "arrow.clockwise") { start() }
+            Button("Try Again", systemImage: "arrow.clockwise") { start() }
                 .buttonStyle(.borderedProminent).tint(Color(.accent)).controlSize(.large)
                 .disabled(state.isAnswering)
         }
@@ -203,7 +198,7 @@ struct ChapterSummaryView: View {
                 }
                 if state.question.count > 350 {
                     Text("\(state.question.count)/400 characters").font(.caption).monospacedDigit()
-                        .foregroundStyle(state.question.count > 400 ? Color.red : Color.secondary)
+                        .foregroundStyle(state.question.count > 400 ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
                 }
                 HStack(alignment: .center, spacing: 8) {
                     TextField(questionsShown ? "Ask a follow-up" : "Ask about \(state.chapter.reference)", text: $state.question, axis: .vertical)
@@ -212,11 +207,10 @@ struct ChapterSummaryView: View {
                         .accessibilityIdentifier("bookQuestionInput")
                         .padding(.leading, 18).padding(.vertical, 12)
                     Button(action: ask) {
-                        Image(systemName: "arrow.up").font(.system(size: 20, weight: .semibold)).frame(width: 44, height: 44)
-                            .foregroundStyle(state.canAsk ? Color.white : Color(.readingSecondary))
-                            .background(state.canAsk ? Color(.accent) : .clear, in: .circle)
+                        Image(systemName: "arrow.up").font(.body.weight(.semibold)).frame(width: 30, height: 30)
                     }
-                    .buttonStyle(.plain).padding(6)
+                    .buttonStyle(.borderedProminent).buttonBorderShape(.circle).tint(Color(.accent))
+                    .padding(6)
                     .accessibilityLabel("Ask question").accessibilityIdentifier("askBookQuestion")
                     .disabled(!state.canAsk)
                 }

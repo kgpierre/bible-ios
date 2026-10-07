@@ -1,8 +1,8 @@
 import SwiftUI
+import UIKit
 
 struct SavedView: View {
     @Bindable var state: AppState
-    var wide = false
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     @State private var items: [SavedItem] = []
@@ -73,70 +73,35 @@ struct SavedView: View {
     private var list: some View {
         List {
             Section {
-                if dynamicType.isAccessibilitySize {
-                    // Segments truncate at accessibility sizes; full-width menus keep every label readable.
-                    Picker("Show", selection: $state.savedFilter) {
-                        ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("savedFilter")
-                    Picker("Sort", selection: $state.savedSort) {
-                        ForEach(SavedSort.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.menu)
-                    .accessibilityIdentifier("savedSort")
-                } else {
-                    HStack(spacing: 12) {
-                        Picker("Show", selection: $state.savedFilter) {
-                            ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .accessibilityIdentifier("savedFilterSegments")
-                        Menu {
-                            Picker("Sort", selection: $state.savedSort) {
-                                ForEach(SavedSort.allCases) { Text($0.title).tag($0) }
-                            }
-                        } label: {
-                            Image(systemName: "arrow.up.arrow.down")
-                                .frame(minWidth: 44, minHeight: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .accessibilityLabel("Sort")
-                        .accessibilityValue(state.savedSort.title)
-                        .accessibilityIdentifier("savedSort")
-                    }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 8))
-                }
-                if state.reader.canUndo {
-                    Button("Undo last annotation change", systemImage: "arrow.uturn.backward") {
-                        Task { await state.reader.undo() }
-                    }
-                    .disabled(state.reader.isSaving)
-                    .accessibilityIdentifier("savedUndo")
-                }
-            } header: {
-                DestinationTitle("Saved")
-                    .padding(.bottom, 8)
-            }
-            Section("Saved on this device") {
                 if let error = state.reader.savedError {
-                    Text(error).foregroundStyle(Color(.readingSecondary))
-                    Button("Retry saved passages") { Task { await state.reader.loadSavedItems() } }
+                    ContentUnavailableView {
+                        Label("Saved Unavailable", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        Text(error)
+                    } actions: {
+                        Button("Try Again") { Task { await state.reader.loadSavedItems() } }
+                            .accessibilityIdentifier("savedRetry")
+                    }
+                    .listRowBackground(Color.clear)
                 } else if state.reader.savedLoadedRevision < 0 {
                     ProgressView("Loading saved passages…")
+                        .frame(maxWidth: .infinity)
+                        .listRowBackground(Color.clear)
                 } else if items.isEmpty {
-                    Text(state.reader.savedItems.isEmpty
-                         ? "Your highlights and bookmarks will appear here."
-                         : state.savedFilter == .highlights ? "No saved highlights." : "No saved bookmarks.")
-                        .foregroundStyle(Color(.readingSecondary))
+                    emptyState.listRowBackground(Color.clear)
                 }
                 ForEach(items) { item in
                     row(item)
                         .id(item.id)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) { deleteButton(item) }
-                        .contextMenu { deleteButton(item) }
-                        .accessibilityAction(named: Text("Delete saved item")) { delete(item) }
-                        .listRowBackground(wide && state.savedSelection == item.id ? Color(.accent).opacity(0.12) : nil)
+                        .swipeActions(edge: .leading) { if !item.unavailable { widgetButton(item).tint(Color(.accent)) } }
+                        .contextMenu {
+                            contextActions(item)
+                        } preview: {
+                            SavedItemPreview(item: item)
+                        }
+                        .accessibilityAction(named: Text("Make Widget")) { state.makeWidget(from: item) }
+                        .accessibilityAction(named: Text("Delete Saved Item")) { delete(item) }
                         .onGeometryChange(for: Bool.self) { [scroll] proxy in
                             // List exposes no scroll-view bounds to its rows; measure against the list's own frame.
                             let midY = proxy.frame(in: .named(Self.listSpace)).midY
@@ -152,24 +117,128 @@ struct SavedView: View {
             scroll.commit?.cancel()
         }
         .onDisappear { scroll.commit?.cancel() }
-        .refreshable { await state.reader.loadSavedItems(force: true) }
         .scrollContentBackground(.hidden)
         .background(Color(.readingCanvas))
+        .safeAreaBar(edge: .top) {
+            if !dynamicType.isAccessibilitySize {
+                Picker("Show", selection: $state.savedFilter) {
+                    ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("savedFilterSegments")
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+            }
+        }
+        .navigationTitle("Saved")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar { toolbar }
+    }
+
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
+        if state.reader.canUndo {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(state.reader.undoActionName.map { String(localized: "Undo \($0)") } ?? String(localized: "Undo"),
+                       systemImage: "arrow.uturn.backward") {
+                    Task { await state.reader.undo() }
+                }
+                .disabled(state.reader.isSaving)
+                .accessibilityIdentifier("savedUndo")
+            }
+        }
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button("Widgets", systemImage: "widget.small") { state.cardsRequest = .library }
+                .accessibilityHint("Design widget cards from your saved passages")
+                .accessibilityIdentifier("savedWidgets")
+            Menu {
+                if dynamicType.isAccessibilitySize {
+                    // Segments truncate at accessibility sizes; the menu keeps every label readable.
+                    Picker("Show", selection: $state.savedFilter) {
+                        ForEach(SavedFilter.allCases) { Text($0.title).tag($0) }
+                    }
+                    .accessibilityIdentifier("savedFilter")
+                }
+                Picker("Sort", selection: $state.savedSort) {
+                    ForEach(SavedSort.allCases) { Text($0.title).tag($0) }
+                }
+            } label: {
+                Label(dynamicType.isAccessibilitySize ? "Show and Sort" : "Sort",
+                      systemImage: dynamicType.isAccessibilitySize ? "line.3.horizontal.decrease" : "arrow.up.arrow.down")
+            }
+            .accessibilityValue(dynamicType.isAccessibilitySize
+                                ? "\(state.savedFilter.title), \(state.savedSort.title)" : state.savedSort.title)
+            .accessibilityIdentifier("savedSort")
+        }
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        if state.reader.savedItems.isEmpty {
+            ContentUnavailableView {
+                Label("No Saved Passages", systemImage: "bookmark")
+            } description: {
+                Text("Your highlights and bookmarks will appear here.")
+            }
+        } else {
+            ContentUnavailableView {
+                Label(state.savedFilter == .highlights ? "No Highlights" : "No Bookmarks",
+                      systemImage: state.savedFilter == .highlights ? "highlighter" : "bookmark")
+            } description: {
+                Text(state.savedFilter == .highlights ? "No saved highlights." : "No saved bookmarks.")
+            }
+        }
+    }
+
+    @ViewBuilder private func contextActions(_ item: SavedItem) -> some View {
+        Section {
+            Button("Open", systemImage: "book") { open(item) }
+            if let text = shareText(item) {
+                Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = text }
+                ShareLink(item: text) { Label("Share", systemImage: "square.and.arrow.up") }
+            }
+            if !item.unavailable { widgetButton(item) }
+        }
+        deleteButton(item)
+    }
+
+    /// Exact saved text with its reference and edition, as Copy and Share do in the reader.
+    /// Saved chapters hold only their opening verse, so they offer no text to copy.
+    private func shareText(_ item: SavedItem) -> String? {
+        guard !item.unavailable, !item.savedChapter else { return nil }
+        let edition = state.reader.document?.editionLabel ?? "KJV"
+        let excerpt = item.records.exact.isEmpty ? "" : String(localized: " (excerpt)")
+        return "\(item.text)\n— \(item.reference), \(edition)\(excerpt)"
+    }
+
+    private func open(_ item: SavedItem) {
+        state.savedSelection = item.id
+        if let chapter = state.reader.catalogChapter(item.chapterID) {
+            state.reader.navigate(to: chapter, verseID: item.savedChapter ? nil : item.verseID,
+                                 utf16Offset: item.passage?.parts.first?.start ?? 0)
+            state.destination = .read
+        }
     }
 
     private func row(_ item: SavedItem) -> some View {
         Button {
-            state.savedSelection = item.id
-            if let chapter = state.reader.catalogChapter(item.chapterID) {
-                state.reader.navigate(to: chapter, verseID: item.verseID, utf16Offset: item.passage?.parts.first?.start ?? 0)
-                if !wide { state.destination = .read }
-            }
+            open(item)
         } label: {
             // Matches Search results: accent reference, serif Scripture excerpt, labeled annotation kind.
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.reference).font(.subheadline.weight(.semibold)).foregroundStyle(Color(.accent))
                 Text(item.text).font(.system(.body, design: .serif)).foregroundStyle(Color(.readingPrimary))
                     .lineLimit(dynamicType.isAccessibilitySize ? nil : 3)
+                if item.savedChapter {
+                    Label {
+                    if let count = item.verseCount {
+                        Text("Saved chapter · ^[\(count) verse](inflect: true)")
+                    } else {
+                        Text("Saved chapter")
+                    }
+                } icon: {
+                    Image(systemName: "book.closed.fill")
+                }
+                        .font(.caption).foregroundStyle(Color(.readingSecondary))
+                }
                 if item.color != nil || item.bookmark {
                     HStack(spacing: 14) {
                         if let color = item.color {
@@ -186,14 +255,18 @@ struct SavedView: View {
                     .font(.caption).foregroundStyle(Color(.readingSecondary))
                 }
                 if item.unavailable {
-                    Text("Saved words could not be located. Opens the chapter when available.")
+                    Text(item.savedChapter ? "This chapter is not in the installed edition. Its reference has been kept."
+                                           : "Saved words could not be located. Opens the chapter when available.")
                         .font(.caption).foregroundStyle(Color(.readingSecondary))
                 }
             }
             .padding(.vertical, 4)
         }
         .accessibilityIdentifier("savedItem-" + item.id)
-        .accessibilityAddTraits(state.savedSelection == item.id ? .isSelected : [])
+    }
+
+    private func widgetButton(_ item: SavedItem) -> some View {
+        Button("Make Widget", systemImage: "widget.small") { state.makeWidget(from: item) }
     }
 
     private func deleteButton(_ item: SavedItem) -> some View {
@@ -203,6 +276,21 @@ struct SavedView: View {
 
     private func delete(_ item: SavedItem) {
         Task { await state.reader.deleteSaved(item) }
+    }
+}
+
+/// The context menu preview: the saved text at a readable size, with its reference.
+private struct SavedItemPreview: View {
+    let item: SavedItem
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(item.reference).font(.subheadline.weight(.semibold)).foregroundStyle(Color(.accent))
+            Text(item.text).font(.system(.body, design: .serif)).foregroundStyle(Color(.readingPrimary))
+                .lineLimit(12)
+        }
+        .padding(20)
+        .frame(width: 340, alignment: .leading)
+        .background(Color(.readingCanvas))
     }
 }
 

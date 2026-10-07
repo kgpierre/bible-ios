@@ -18,12 +18,14 @@ enum SavedSort: String, CaseIterable, Identifiable {
 enum SavedOrdering {
     static func items(_ items: [SavedItem], filter: SavedFilter, sort: SavedSort,
                       chapters: [String: Int]) -> [SavedItem] {
-        items.filter { filter == .all || (filter == .bookmarks ? $0.bookmark : $0.color != nil) }
+        items.filter { filter == .all || (filter == .bookmarks ? $0.bookmark || $0.savedChapter : $0.color != nil) }
             .sorted { lhs, rhs in
                 if sort == .bible {
                     let left = chapters[lhs.chapterID] ?? Int.max, right = chapters[rhs.chapterID] ?? Int.max
                     if left != right { return left < right }
                     if lhs.chapterID != rhs.chapterID { return lhs.chapterID < rhs.chapterID }
+                    // A saved chapter leads its own verses.
+                    if lhs.savedChapter != rhs.savedChapter { return lhs.savedChapter }
                     let lv = lhs.verseOrder ?? Int.max, rv = rhs.verseOrder ?? Int.max
                     if lv != rv { return lv < rv }
                     let lo = lhs.passage?.parts.first?.start ?? 0, ro = rhs.passage?.parts.first?.start ?? 0

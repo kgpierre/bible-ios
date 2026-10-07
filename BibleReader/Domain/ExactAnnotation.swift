@@ -69,6 +69,7 @@ struct ExactAnnotationChange: Sendable {
 enum ReaderAnnotationChange {
     case legacy(AnnotationChange)
     case exact(ExactAnnotationChange)
+    case chapter(SavedChapterChange)
 }
 
 extension ChapterTextMap {

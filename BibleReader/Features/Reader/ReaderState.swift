@@ -68,6 +68,9 @@ final class ReaderState {
     }
     var bookmarkRanges: [BookmarkRecord] = [] { didSet { annotationsRevision += 1 } }
     var savedItems: [SavedItem] = []
+    /// Whole chapters saved by identity, across the library.
+    var savedChapterIDs: Set<String> = []
+    var isCurrentChapterSaved: Bool { chapterID.map(savedChapterIDs.contains) ?? false }
     var savedRevision = 0
     var savedLoadedRevision = -1
     var savedError: String?
@@ -78,9 +81,12 @@ final class ReaderState {
     var isSaving = false
     var annotationEditingEnabled = true
     var errorMessage: String?
+    /// A specific alert title for `errorMessage`.
+    var errorTitle = String(localized: "Couldn’t Complete Action")
     private enum AnnotationRetry {
         case save(ExactPassage, HighlightColor?, Bool?)
         case delete(SavedItem)
+        case saveChapter(String, Bool)
         case refresh
         case undo
     }
@@ -94,6 +100,8 @@ final class ReaderState {
     var notesRequest: SourceNotesRequest?
     @ObservationIgnored private var cueTask: Task<Void, Never>?
     var canUndo = false
+    /// The most recent undoable change's name, for menu titles such as "Undo Highlight".
+    var undoActionName: String?
     @ObservationIgnored weak var systemUndoManager: UndoManager?
     @ObservationIgnored var selection: PassageSelection?
     @ObservationIgnored var anchor: ReadingAnchor? { didSet { if anchor != oldValue { schedulePositionSave() } } }
@@ -103,6 +111,8 @@ final class ReaderState {
     @ObservationIgnored private var navigationRequest = UUID()
     @ObservationIgnored private var holdUnresolvedPosition = false
     @ObservationIgnored private var undoHistory: [ReaderAnnotationChange] = []
+    /// Action names parallel to `undoHistory`.
+    @ObservationIgnored private var undoNames: [String] = []
     @ObservationIgnored private let makeStore: @Sendable () async throws -> BibleStore
 
     init(makeStore: @escaping @Sendable () async throws -> BibleStore = StoreLocation.open) {
@@ -154,6 +164,7 @@ final class ReaderState {
             if let proposed = initial, catalogIndex[proposed] == nil {
                 holdUnresolvedPosition = true
                 initial = catalog.first?.id
+                errorTitle = String(localized: "Chapter Unavailable")
                 errorMessage = String(localized: "Your saved chapter is unavailable in this edition. Its reference has been kept. Choose a chapter to continue.")
             }
             guard let initial else { throw StorageIssue.incompatibleCorpus }
@@ -175,6 +186,7 @@ final class ReaderState {
             loadFailed = false
         } catch {
             loadFailed = true
+            errorTitle = String(localized: "Couldn’t Open Reading Data")
             errorMessage = String(localized: "Local reading data could not open. Your saved data has been kept. Unlock the device and try again.")
             store = nil
         }
@@ -216,6 +228,7 @@ final class ReaderState {
                     }
                 }
             } catch is CancellationError { } catch {
+                errorTitle = String(localized: "Couldn’t Load Chapter")
                 errorMessage = String(localized: "This chapter could not load. Your current passage and saved data have been kept.")
             }
         }
@@ -327,17 +340,62 @@ final class ReaderState {
             let change = try await store.editExact(passage, color: color, bookmarkAction: bookmarkAction)
             if let pending { apply(pending, reversed: true) }
             apply(change)
-            recordUndo(.exact(change))
+            recordUndo(.exact(change), name: Self.undoName(color: color, bookmarkAction: bookmarkAction))
             savedRevision += 1
             annotationRetry = nil
         } catch {
             if let pending { apply(pending, reversed: true) }
             annotationRetry = .save(passage, color, bookmarkAction)
+            errorTitle = String(localized: "Couldn’t Save Selection")
             errorMessage = String(localized: "The selected words in \(passage.reference) could not be saved. Your existing annotations have been kept. Retry to save this selection.")
         }
     }
 
+    /// Saves or removes the whole current chapter in one transaction, with session Undo.
+    func setCurrentChapterSaved(_ saved: Bool) async {
+        guard let chapterID else { return }
+        await setChapterSaved(chapterID, saved: saved)
+    }
+
+    @discardableResult
+    private func setChapterSaved(_ chapterID: String, saved: Bool, expecting: SavedChapterRecord? = nil) async -> Bool {
+        guard annotationEditingEnabled, let store, !isSaving else { return false }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            let change = try await store.setChapterSaved(chapterID, saved: saved, expecting: expecting)
+            applyChapter(change.after != nil, chapterID)
+            if change.before != change.after {
+                recordUndo(.chapter(change), name: saved ? String(localized: "Save Chapter") : String(localized: "Remove Saved Chapter"))
+            }
+            savedRevision += 1
+            annotationRetry = nil
+            return true
+        } catch {
+            annotationRetry = .saveChapter(chapterID, saved)
+            let reference = catalogChapter(chapterID)?.reference ?? String(localized: "This chapter")
+            errorTitle = saved ? String(localized: "Couldn’t Save Chapter") : String(localized: "Couldn’t Remove Saved Chapter")
+            errorMessage = saved
+                ? String(localized: "\(reference) could not be saved. Your existing saved items have been kept. Retry to save it.")
+                : String(localized: "\(reference) could not be removed from Saved. Your saved items have been kept. Retry, or reload Saved.")
+            return false
+        }
+    }
+
+    private func applyChapter(_ saved: Bool, _ chapterID: String) {
+        if saved { savedChapterIDs.insert(chapterID) } else { savedChapterIDs.remove(chapterID) }
+    }
+
     func deleteSaved(_ item: SavedItem) async {
+        if let record = item.records.chapters.first {
+            if await setChapterSaved(record.chapterID, saved: false, expecting: record) {
+                savedItems.removeAll { $0.id == item.id }
+            } else {
+                annotationRetry = .delete(item)
+            }
+            return
+        }
         guard annotationEditingEnabled, let store, !isSaving else { return }
         isSaving = true
         errorMessage = nil
@@ -345,12 +403,13 @@ final class ReaderState {
         do {
             let change = try await store.deleteSaved(item)
             apply(change)
-            recordUndo(.exact(change))
+            recordUndo(.exact(change), name: String(localized: "Delete"))
             savedItems.removeAll { $0.id == item.id }
             savedRevision += 1
             annotationRetry = nil
         } catch {
             annotationRetry = .delete(item)
+            errorTitle = String(localized: "Couldn’t Delete Saved Item")
             errorMessage = String(localized: "This saved item could not be deleted. Your annotations have been kept. Retry, or reload Saved if the item has changed.")
         }
     }
@@ -395,12 +454,13 @@ final class ReaderState {
         case .save(let passage, let color, let bookmark):
             await saveExact(passage, color: color, bookmarkAction: bookmark)
         case .delete(let item): await deleteSaved(item)
+        case .saveChapter(let id, let saved): _ = await setChapterSaved(id, saved: saved)
         case .refresh:
             guard !isSaving else { return }
             isSaving = true
             defer { isSaving = false }
             do { try await refreshAnnotations(); annotationRetry = nil }
-            catch { errorMessage = String(localized: "Your saved annotations could not refresh. Please try again.") }
+            catch { errorTitle = String(localized: "Couldn’t Refresh Annotations"); errorMessage = String(localized: "Your saved annotations could not refresh. Please try again.") }
         case .undo: await undo()
         case nil: await load()
         }
@@ -424,37 +484,50 @@ final class ReaderState {
         guard systemUndoManager !== manager else { return }
         systemUndoManager?.removeAllActions(withTarget: self)
         systemUndoManager = manager
-        for _ in undoHistory { registerSystemUndo() }
+        for name in undoNames { registerSystemUndo(name) }
     }
 
     /// Session Undo keeps the most recent edits only. Each entry retains before/after records,
     /// so an uncapped history grows for as long as the app stays open.
     static let undoLimit = 100
 
-    private func recordUndo(_ change: ReaderAnnotationChange) {
+    private func recordUndo(_ change: ReaderAnnotationChange, name: String) {
         undoHistory.append(change)
-        if undoHistory.count > Self.undoLimit { undoHistory.removeFirst(undoHistory.count - Self.undoLimit) }
+        undoNames.append(name)
+        if undoHistory.count > Self.undoLimit {
+            undoHistory.removeFirst(undoHistory.count - Self.undoLimit)
+            undoNames.removeFirst(undoNames.count - Self.undoLimit)
+        }
         systemUndoManager?.levelsOfUndo = Self.undoLimit
         canUndo = true
-        registerSystemUndo()
+        undoActionName = name
+        registerSystemUndo(name)
     }
 
-    private func registerSystemUndo() {
+    private static func undoName(color: HighlightColor?, bookmarkAction: Bool?) -> String {
+        switch bookmarkAction {
+        case true?: String(localized: "Bookmark")
+        case false?: String(localized: "Remove Bookmark")
+        case nil: color == nil ? String(localized: "Remove Highlight") : String(localized: "Highlight")
+        }
+    }
+
+    private func registerSystemUndo(_ name: String) {
         guard let manager = systemUndoManager else { return }
         manager.registerUndo(withTarget: self) { reader in
             Task { @MainActor in await reader.undo(fromSystem: true) }
         }
-        manager.setActionName(String(localized: "Annotation"))
+        manager.setActionName(name)
     }
 
     func undo(fromSystem: Bool = false) async {
-        if fromSystem, isSaving { registerSystemUndo(); return }
+        if fromSystem, isSaving { registerSystemUndo(undoNames.last ?? ""); return }
         guard let store, let lastChange = undoHistory.last, !isSaving else { return }
         if !fromSystem { systemUndoManager?.removeAllActions(withTarget: self) }
         isSaving = true
         defer {
             isSaving = false
-            if !fromSystem { for _ in undoHistory { registerSystemUndo() } }
+            if !fromSystem { for name in undoNames { registerSystemUndo(name) } }
         }
         do {
             switch lastChange {
@@ -462,12 +535,18 @@ final class ReaderState {
             case .exact(let change):
                 try await store.undoExact(change)
                 apply(change, reversed: true)
+            case .chapter(let change):
+                try await store.undoChapter(change)
+                applyChapter(change.before != nil, change.chapterID)
             }
             undoHistory.removeLast()
+            undoNames.removeLast()
             canUndo = !undoHistory.isEmpty
+            undoActionName = undoNames.last
         } catch {
-            if fromSystem { registerSystemUndo() }
+            if fromSystem { registerSystemUndo(undoNames.last ?? "") }
             annotationRetry = .undo
+            errorTitle = String(localized: "Couldn’t Undo")
             errorMessage = String(localized: "Undo could not complete. Later changes and saved data have been kept.")
             return
         }
@@ -477,6 +556,7 @@ final class ReaderState {
             annotationRetry = nil
         } catch {
             annotationRetry = .refresh
+            errorTitle = String(localized: "Couldn’t Refresh Annotations")
             errorMessage = String(localized: "Undo was saved, but the display could not refresh. Please try again.")
         }
     }
@@ -502,6 +582,7 @@ final class ReaderState {
         legacyHighlights = snapshot.highlights
         highlights = Dictionary(uniqueKeysWithValues: snapshot.highlights.map { ($0.verseID,$0.color) })
         bookmarkRanges = snapshot.bookmarks
+        savedChapterIDs = try await store.savedChapterIDs()
         updateBookmarkIndicators()
         savedRevision += 1
     }
@@ -540,6 +621,7 @@ final class ReaderState {
                 try Task.checkCancellation()
                 try await store.savePosition(chapterID: chapterID, anchor: anchor)
             } catch is CancellationError { } catch {
+                errorTitle = String(localized: "Couldn’t Save Reading Position")
                 errorMessage = String(localized: "Your reading position could not be saved. Your annotations have been kept.")
             }
         }
@@ -572,7 +654,7 @@ final class ReaderState {
             defer { lease?.end() }
             do { try await store.savePosition(chapterID: chapterID, anchor: anchor) }
             catch is CancellationError { }
-            catch { errorMessage = String(localized: "Your reading position could not be saved. Please try again.") }
+            catch { errorTitle = String(localized: "Couldn’t Save Reading Position"); errorMessage = String(localized: "Your reading position could not be saved. Please try again.") }
         }
     }
 }
