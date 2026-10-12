@@ -1,0 +1,21 @@
+
+🧪 Test
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Debug
+   Platform: iOS Simulator
+   Simulator: 00228CE2-2A4E-4687-ADF6-A83BA5C65C17
+   Derived Data: .build/Audit-2026-10-10/iOS26DerivedData
+   Selective Testing:
+     BibleReaderUITests/AuditPhotoUITests/testAboutCreditAndNoticesOnMinimumOS
+
+Discovered 1 test(s):
+   BibleReaderUITests/AuditPhotoUITests/testAboutCreditAndNoticesOnMinimumOS
+Running tests (1 completed, 0 failures, 0 skipped)
+
+✅ 1 test passed, 0 failed, 0 skipped (⏱️ 33.1s)
+  └ Files:
+     ├ Result Bundle: .build/Audit-2026-10-10/about26-qa.xcresult
+     ├ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/test_sim_2026-10-11T04-24-14-853Z_pid81491_7c82c1ac.log
+     └ Test Products: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/test-products/test_sim_2026-10-11T04-24-14-853Z_pid81491_a7b4c8c1.xctestproducts

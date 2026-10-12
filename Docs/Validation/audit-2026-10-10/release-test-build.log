@@ -1,0 +1,36 @@
+
+🔨 Build
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Release
+   Platform: iOS Simulator
+   Simulator: 0287C297-095D-4DD5-9C38-652D88A0ECCD
+   Derived Data: .build/Audit-2026-10-10/ReleaseDerivedData
+
+Compiler Errors (5):
+
+  ✗ value of type 'BibleStore' has no member 'setSavedResolutionHookForTesting'
+    BibleReaderTests/AnnotationCacheTests.swift:50:21
+
+  ✗ |                     `- error: value of type 'BibleStore' has no member 'setSavedResolutionHookForTesting'
+
+  ✗ value of type 'BibleStore' has no member 'setSavedResolutionHookForTesting'
+    BibleReaderTests/AnnotationCacheTests.swift:59:21
+
+  ✗ value of type 'BibleStore' has no member 'clearSavedCacheForTesting'
+    BibleReaderTests/PerformanceAuditTests.swift:154:21
+
+  ✗ |                     `- error: value of type 'BibleStore' has no member 'clearSavedCacheForTesting'
+
+Warnings (2):
+
+  ⚠ main actor-isolated static property 'listSpace' can not be referenced from a Sendable closure
+    BibleReader/Features/Saved/SavedView.swift:107:68
+
+  ⚠ main actor-isolated property 'listHeight' can not be referenced from a nonisolated autoclosure
+    BibleReader/Features/Saved/SavedView.swift:108:64
+
+❌ Build failed. (⏱️ 46.8s)
+  └ Files:
+     └ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/build_sim_2026-10-11T03-59-41-352Z_pid73400_dc3491ef.log

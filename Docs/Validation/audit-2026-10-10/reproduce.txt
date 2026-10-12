@@ -1,0 +1,117 @@
+Bible Reader audit and QA evidence
+Audit dates: 10–11 October 2026 (local time)
+Audited commit: 57e5eff6b1b47aa9daf14146eec568a684b8456a
+Workspace: /Users/kyle/Developer/bible-ios
+
+DELIVERABLES
+Interactive report:
+/Users/kyle/.cursor/projects/Users-kyle-Developer/canvases/bible-audit-2026-10-11.canvas.tsx
+
+findings.json: eight findings, suggested fixes, regression checks, and nine
+performance/quality recommendations. Five findings were reproduced; three
+are supported by source inspection and have not been forced through live UI.
+evidence.json: per-run counts, simulator identities/builds, raw performance
+samples, baseline skipped test names, build/content checks, and reference hashes.
+screenshots/: six selected, visually inspected images.
+
+Production source, project settings, dependency resolution, Scripture resources,
+and existing tests were not modified. Temporary audit test-target copies were
+removed. No git commit was made. Preserve the audit sources below as evidence;
+they are intentionally outside the app's synchronized test folders.
+
+TOOLCHAIN
+Commands used the installed Xcode 27.1 (27A9269), SDK 27.1 (24A94403), through
+per-command DEVELOPER_DIR. The selected system Xcode was left unchanged.
+Runtime builds and exact simulator IDs are in evidence.json.
+
+NORMALIZED REPRODUCTION COMMANDS
+Run from the workspace. Output paths below are examples for a new run, not an
+instruction to overwrite the original .xcresult bundles. Use a fresh result
+path because Xcode does not replace an existing result bundle.
+
+Content pipeline:
+python3 -m unittest discover -s Content/Tests -v
+
+Full iPhone 27 baseline:
+DEVELOPER_DIR=/Users/kyle/Downloads/Xcode.app/Contents/Developer xcodebuildmcp simulator test --project-path /Users/kyle/Developer/bible-ios/BibleReader.xcodeproj --scheme BibleReader --simulator-id 0287C297-095D-4DD5-9C38-652D88A0ECCD --configuration Debug --derived-data-path /Users/kyle/Developer/bible-ios/.build/Audit-Recheck --extra-args '-resultBundlePath' '/Users/kyle/Developer/bible-ios/.build/Audit-Recheck-iPhone27.xcresult' '-collect-test-diagnostics' 'never' '-parallel-testing-enabled' 'NO'
+
+For iPhone 26, use simulator 00228CE2-2A4E-4687-ADF6-A83BA5C65C17 and new paths.
+For iPad 27, use 0F2A0A84-D272-4D01-B5B1-17D90DC1ECF8. The 15 selected scenario
+identifiers are listed at the start of .build/Audit-2026-10-10/iPad27.log.
+For iPad 26, use 382EB526-8B8C-40F7-861F-E08538F452C8. The four selected scenario
+identifiers are listed at the start of iPad26.log in this evidence directory.
+Add '-only-testing:Target/Class/testName' inside --extra-args to select a test.
+
+Release test compilation reproduction:
+Use the simulator test command with --configuration Release and add
+'ENABLE_TESTABILITY=YES' to --extra-args. AnnotationCacheTests and
+PerformanceAuditTests reference helpers compiled only when DEBUG is defined.
+The existing failure log is release-test-build.log.
+
+FOCUSED AUDIT TESTS
+AuditRegressionProbes.swift: copy temporarily into BibleReaderTests/ and select
+'-only-testing:BibleReaderTests/AuditRegressionProbes'. All four desired-behavior
+tests fail on the audited commit, reproducing findings F1–F4. A single test can
+have multiple failing assertions, so four failed tests is not an assertion count.
+Run on the iPad 27 simulator. It uses isolated temporary stores and an injected
+card library; no normal user database reset is needed.
+
+AuditPhotoUITests.swift: copy temporarily into BibleReaderUITests/ and select
+'-only-testing:BibleReaderUITests/AuditPhotoUITests/testPhotoCardSaveAndReopen'
+on iPhone 27, or testAboutCreditAndNoticesOnMinimumOS on iPhone 26. Each launch
+uses a fresh UUID test store. The photo test waits for the system Photos picker
+to load before selecting its first stock photo. The first audit attempt tapped
+too early; the readiness-wait revision passed. This was an audit probe issue.
+
+AuditLandscapeUITests.swift: copy temporarily into BibleReaderUITests/ and select
+'-only-testing:BibleReaderUITests/AuditLandscapeUITests/testLandscapeDeviceCapture'
+on iPad 27. It captures both XCUIScreen.main and XCUIApplication screenshots.
+The full-device image is correct; the app-only image has a black band/cropped
+right side after rotation. Frames are in landscape-frames.txt. Use the complete
+landscape-full-device.png as visual evidence.
+
+Remove only the temporary copies you created after running these probes.
+Keep the originals in this directory. Do not include intentionally failing
+audit probes in normal CI without implementing the desired behavior first.
+
+RESULT BUNDLES
+Full bundles and exported attachments remain under .build/Audit-2026-10-10/:
+iPhone27.xcresult: 139 passed, 0 failed, 13 skipped.
+iPhone26.xcresult: 137 passed, 2 failed, 13 skipped.
+iPad27.xcresult: 14 passed, 1 failed, 0 skipped.
+iPad26.xcresult: 4 passed, 0 failed, 0 skipped.
+iPad-selection-retry.xcresult: 1 passed unchanged.
+photo-qa-retry.xcresult: 1 passed after fixing the picker-readiness wait.
+about26-qa.xcresult: 1 passed with an element-type-independent selector.
+landscape-screen.xcresult: 1 passed; full-device screenshot inspected.
+regression-probes.xcresult: 4 intentionally failing tests (F1–F4).
+photo-qa.xcresult preserves the initial audit probe failure for transparency.
+
+Counts are executions per run, not distinct tests or a coverage percentage.
+The iOS 26 About failure is a selector mismatch; the key-verses question was
+refused by the live on-device model and showed the expected refusal/retry UI.
+The iPad native-menu failure passed unchanged on retry, but remains evidence of
+timing sensitivity. No production fix was applied to make these checks pass.
+
+Inspect any result bundle:
+DEVELOPER_DIR=/Users/kyle/Downloads/Xcode.app/Contents/Developer xcrun xcresulttool get test-results summary --path <bundle.xcresult>
+DEVELOPER_DIR=/Users/kyle/Downloads/Xcode.app/Contents/Developer xcrun xcresulttool export attachments --path <bundle.xcresult> --output-path <new-directory>
+
+REMAINING ACCEPTANCE
+Actual Duo poses and fold/unfold transitions were not tested; Xcode 27.1 Device
+Hub computer control timed out twice. iPad rotation is not Duo evidence.
+Physical VoiceOver, locked-store and post-unlock widget behavior, Home/Lock
+Screen placement, live Image Playground output, device memory/thermal/power,
+Split View, the compact-to-regular Saved scroll test, exhaustive keyboard and
+pointer interactions, network capture, and physical first-launch airplane-mode
+operation remain unverified. The two optional difficult-chapter model probes
+were disabled. Corpus rights/canon publication approval remains outside this
+engineering audit. GRDB integration was reviewed, not its entire upstream code.
+
+PERFORMANCE INTERPRETATION
+The 30 timing records and samples in evidence.json are Debug simulator
+observations from PerformanceAuditTests, not physical-device guarantees.
+Single samples are explicitly identified. The unchanged-configurations metric
+measures a batch of 100 calls. Do not compare these values to a device frame
+budget without device profiling. Later launch timings were excluded because
+other work ran concurrently.

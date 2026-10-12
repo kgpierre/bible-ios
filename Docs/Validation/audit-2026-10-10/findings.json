@@ -1,0 +1,184 @@
+{
+  "commit": "57e5eff6b1b47aa9daf14146eec568a684b8456a",
+  "started": "2026-10-10",
+  "finished": "2026-10-11",
+  "findings": [
+    {
+      "id": "F1",
+      "priority": "P2",
+      "area": "Reader",
+      "status": "Reproduced",
+      "title": "A completed spread turn can overwrite newer navigation",
+      "file": "BibleReader/Features/Reader/SpreadChapterView.swift",
+      "line": 318,
+      "detail": "The turn completion records the visible page's first verse without checking the navigation revision captured when the gesture started. update() defers changes during a curl, so a newer destination within the same chapter can be silently replaced.",
+      "repro": "The coordinator probe began a Genesis 1 turn, navigated to verse 31, then completed the old turn. The anchor changed from Genesis 1:31 to 1:8.",
+      "fix": "Capture a navigation generation at the start of every interactive and programmatic turn. Reject stale or cancelled completions, then reconcile the pager with the current state. Honor the animation completion Boolean.",
+      "verify": "Keep the regression probe; add real rapid reference navigation during a curl, cancelled turns, and resize/posture interruption checks.",
+      "evidence": "Docs/Validation/audit-2026-10-10/AuditRegressionProbes.swift",
+      "evidenceLine": 35
+    },
+    {
+      "id": "F2",
+      "priority": "P2",
+      "area": "Accessibility",
+      "status": "Reproduced",
+      "title": "Source headings are omitted from the accessibility reading order",
+      "file": "BibleReader/Features/Reader/NativeChapterView.swift",
+      "line": 741,
+      "detail": "prepareVerseAccessibility builds elements only from verse entries, then replaces the container's reading order with the book header and those verses. The source-heading ranges and trailing source blocks are not represented.",
+      "repro": "Psalm 23's source heading, “A Psalm of David.”, is present in the rendered text but absent from the explicit accessibility elements. The focused assertion failed.",
+      "fix": "Create accessibility elements for source headings and trailing blocks in document order, with geometry derived from TextKit. Keep them distinct from verse annotation targets.",
+      "verify": "Exercise Psalm 23, Psalm 119 section headings, and a chapter with a trailing source block using VoiceOver on a device.",
+      "evidence": "Docs/Validation/audit-2026-10-10/AuditRegressionProbes.swift",
+      "evidenceLine": 18
+    },
+    {
+      "id": "F3",
+      "priority": "P2",
+      "area": "Widgets",
+      "status": "Reproduced",
+      "title": "Background cleanup can turn a committed card edit into a reported failure",
+      "file": "BibleShared/ScriptureCard.swift",
+      "line": 165,
+      "detail": "upsert and delete atomically commit cards.json, then propagate errors deleting unused backgrounds. CardsModel catches the error, reports that the save/delete failed, retains its old list, and skips reloading widget timelines, although the library has already changed.",
+      "repro": "Making the background folder read-only before switching an image card to Sage left Sage committed on disk, but save() returned false and the widget reload count stayed zero.",
+      "fix": "Make garbage collection an independent, retryable operation after a successful commit. Publish and reload the committed library even if cleanup fails; preserve atomicity for failures before commit.",
+      "verify": "Retain the injected cleanup-failure test for both editing and deletion, plus disk-full failure before commit.",
+      "evidence": "Docs/Validation/audit-2026-10-10/AuditRegressionProbes.swift",
+      "evidenceLine": 78
+    },
+    {
+      "id": "F4",
+      "priority": "P2",
+      "area": "Navigation",
+      "status": "Reproduced",
+      "title": "Widget URLs accept nonexistent verses inside a valid chapter",
+      "file": "BibleReader/App/AppState.swift",
+      "line": 37,
+      "detail": "CardLink.parse checks a verse's chapter prefix, while AppState validates only the chapter against the catalog. ReaderState can then create an invalid anchor; position persistence rejects the nonexistent verse.",
+      "repro": "Opening a link to John 3:999 changed the reader from Genesis 1 to John 3 rather than rejecting the link. The focused regression assertion failed.",
+      "fix": "Resolve the optional verse in the loaded ChapterDocument before committing navigation. Reject invalid targets consistently and process cold-launch pending links only after initial restoration completes.",
+      "verify": "Cover unknown verses, mismatched chapters, foreign editions, missing/duplicate URL parameters, and valid links during cold launch.",
+      "evidence": "Docs/Validation/audit-2026-10-10/AuditRegressionProbes.swift",
+      "evidenceLine": 68
+    },
+    {
+      "id": "F5",
+      "priority": "P2",
+      "area": "Widgets",
+      "status": "Source-confirmed",
+      "title": "A late photo task can replace a newer background choice",
+      "file": "BibleReader/Features/Widgets/CardEditorView.swift",
+      "line": 174,
+      "detail": "prepare() starts an untracked task that writes card.style.background after awaiting photo transfer and image processing. Photo and preset controls remain usable. An older task can overwrite a later preset/photo, and the first of multiple tasks to finish clears isPreparingImage while another is still running.",
+      "repro": "Event ordering from source: select a slow photo A, choose Sage before A finishes, then A completes and replaces Sage. Overlapping photo imports can also enable Save too early. This ordering was not forced through the live picker.",
+      "fix": "Track and cancel the preparation task; increment a generation for every photo, generated image, preset selection, and dismissal. Commit results and clear loading state only for the latest generation.",
+      "verify": "Inject delayed image loaders and test A→preset, A→B with reversed completion, failure of an old request, save while work is pending, and dismissal.",
+      "evidence": "BibleReader/Features/Widgets/CardEditorView.swift",
+      "evidenceLine": 135
+    },
+    {
+      "id": "F6",
+      "priority": "P2",
+      "area": "Build and tests",
+      "status": "Reproduced",
+      "title": "The Release test target does not compile",
+      "file": "BibleReaderTests/AnnotationCacheTests.swift",
+      "line": 50,
+      "detail": "AnnotationCacheTests calls setSavedResolutionHookForTesting and PerformanceAuditTests calls clearSavedCacheForTesting, but both helpers are inside BibleStore's DEBUG conditional. Release build-for-testing fails even with ENABLE_TESTABILITY=YES.",
+      "repro": "Xcode 27.1 reported missing members at AnnotationCacheTests.swift:50 and :59 and PerformanceAuditTests.swift:154. The production Release simulator and unsigned device app builds succeeded independently.",
+      "fix": "Gate Debug-only instrumentation tests consistently, or provide a narrowly scoped testable build configuration that retains the hooks. Add a Release build-for-testing check to CI.",
+      "verify": "Compile both Debug and Release test targets. Keep genuine functional assertions in Release when possible.",
+      "evidence": ".build/Audit-2026-10-10/release-test-build.log",
+      "evidenceLine": 1
+    },
+    {
+      "id": "F7",
+      "priority": "P2",
+      "area": "Widgets",
+      "status": "Source-confirmed",
+      "title": "Generated card backgrounds have no persisted visible provenance label",
+      "file": "BibleReader/Features/Widgets/CardEditorView.swift",
+      "line": 116,
+      "detail": "The image source is persisted, but the editor preview and shared card renderer never inspect it to show an Image Playground badge. Generic explanatory footer copy appears regardless of the chosen background. Decision 0019 explicitly requires a preview badge.",
+      "repro": "Trace CardStyle.ImageSource.imagePlayground through prepared data, persistence, and card presentation: neither the reopened preview nor the card UI renders the source label. Real Image Playground generation was unavailable in the simulator.",
+      "fix": "Render a visible and accessible “Image Playground” background label when the stored source is generated, including after reopening. Keep this distinct from the exact Scripture and its attribution.",
+      "verify": "Add a presentation test using a stored generated-background card and verify the live system generation flow on an Apple Intelligence device.",
+      "evidence": "Docs/Decisions/0019-saved-chapters-and-widgets.md",
+      "evidenceLine": 50
+    },
+    {
+      "id": "F8",
+      "priority": "P3",
+      "area": "Saved",
+      "status": "Source-confirmed",
+      "title": "Sharing a saved excerpt repeats the excerpt label",
+      "file": "BibleReader/Features/Saved/SavedView.swift",
+      "line": 205,
+      "detail": "BibleStore already appends “(excerpt)” to an exact SavedItem.reference. SavedView.shareText appends a second excerpt suffix after the edition, producing a reference such as “John 3:1 (excerpt), KJV (excerpt)”.",
+      "repro": "Follow exact-item construction in BibleStore.resolveSaved into SavedView.shareText. Both add the same marker; whole-verse legacy items are unaffected.",
+      "fix": "Use the underlying ExactPassage.reference in a shared copy/share formatter and add the excerpt marker once.",
+      "verify": "Check exact excerpts, cross-verse excerpts, and legacy full-verse copy/share output.",
+      "evidence": "BibleReader/Data/BibleStore.swift",
+      "evidenceLine": 835
+    }
+  ],
+  "improvements": [
+    {
+      "title": "Move card-library file I/O off the main actor",
+      "file": "BibleReader/Features/Widgets/CardsModel.swift",
+      "line": 35,
+      "detail": "load/save/delete synchronously read and decode or rewrite the entire library, scan backgrounds, and sometimes write megabytes of JPEG data. Serialize file work in an injected actor, then publish results on MainActor. Measure save latency with 100–1,000 image cards and injected slow storage; no user-visible hang was measured in this audit."
+    },
+    {
+      "title": "Load card thumbnails lazily with a bounded cache",
+      "file": "BibleReader/Features/Widgets/CardsView.swift",
+      "line": 91,
+      "detail": "loadImages loads every saved image into a dictionary whenever the array of updated dates changes. Use display-size downsampling, visible-row tasks, a cache keyed by image file name, and cancellation/generation checks. A decoded 1200×800 RGBA image is about 3.84 MB before overhead; that is an estimate, not a measured app footprint."
+    },
+    {
+      "title": "Bound the store's exact-annotation chapter cache",
+      "file": "BibleReader/Data/BibleStore.swift",
+      "line": 39,
+      "detail": "ReaderState limits its chapter cache, but BibleStore.exactByChapter retains every visited chapter until invalidation. Apply an LRU/budget and memory-warning policy without dropping persisted annotations. Stress navigating all 1,189 chapters with a large annotation library."
+    },
+    {
+      "title": "Prune spread page controllers as well as chapter documents",
+      "file": "BibleReader/Features/Reader/SpreadChapterView.swift",
+      "line": 302,
+      "detail": "configurePages visits every cached page controller, and pages accumulate while navigating within retained chapters. Retain the visible spread and a small neighboring window where UIKit permits. Profile a complete Psalm 119 traversal at the largest supported two-page size before choosing a cap."
+    },
+    {
+      "title": "Reuse or index current-book source retrieval",
+      "file": "BibleReader/Data/BibleStore.swift",
+      "line": 351,
+      "detail": "summarySources scans and tokenizes verses in the current book for each question. The audit measured a median 33.595 ms over five Psalms retrievals in Debug on the simulator. It runs off the main actor, but can occupy the store's serial executor; consider a bounded immutable book index only if real-device traces show contention."
+    },
+    {
+      "title": "Separate note-marker visibility from typography layout keys",
+      "file": "BibleReader/DesignSystem/ReaderTypography.swift",
+      "line": 1,
+      "detail": "The showsNotes flag participates in the typography value used to detect renderer/pagination changes. Toggling only note markers can unnecessarily rebuild text and pagination. Compare layout-affecting fields separately and preserve selection; verify with the existing document-build counters."
+    },
+    {
+      "title": "Resolve the two strict-concurrency build warnings",
+      "file": "BibleReader/Features/Saved/SavedView.swift",
+      "line": 107,
+      "detail": "The geometry observer's Sendable transform captures main-actor-isolated listSpace and listHeight. Use immutable Sendable snapshots or isolate pure constants correctly. Both production Release builds emitted these warnings; no crash was reproduced."
+    },
+    {
+      "title": "Add a repeatable CI matrix and separate model quality from deterministic UI checks",
+      "file": "BibleReaderUITests/BibleReaderUITests.swift",
+      "line": 752,
+      "detail": "No repository CI workflow is present. Run corpus integrity/reproducibility, Debug functional tests, Release app/test compilation, iOS 26 and current iOS phone/iPad smoke checks, and selected accessibility checks. Real on-device generation should be an explicitly labeled environment-dependent suite; retain deterministic refusal/unavailability coverage."
+    },
+    {
+      "title": "Distinguish widget read errors from deleted cards and retry",
+      "file": "BibleWidgets/ScriptureWidget.swift",
+      "line": 77,
+      "detail": "loadCards collapses read/decode failures to an empty library; a fixed-card timeline can then show a removed-card message and request no future refresh. Keep unavailable/corrupt/deleted states separate and use a conservative retry for transient failures. Post-unlock WidgetKit recovery was not reproduced here.",
+      "source": "https://developer.apple.com/documentation/widgetkit/timelinereloadpolicy"
+    }
+  ]
+}

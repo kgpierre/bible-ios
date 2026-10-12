@@ -1,0 +1,30 @@
+
+🧪 Test
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Debug
+   Platform: iOS Simulator
+   Simulator: 382EB526-8B8C-40F7-861F-E08538F452C8
+   Derived Data: .build/Audit-2026-10-10/iOS26DerivedData
+   Selective Testing:
+     BibleReaderUITests/BibleReaderUITests/testIPadTopTabsAndRotationRestoration
+     BibleReaderUITests/BibleReaderUITests/testIPadSavedTabOpensReader
+     BibleReaderUITests/BibleReaderUITests/testWideTwoPageSpreadTurnsIntoNextChapterAndRestoresScroll
+     BibleReaderUITests/BibleReaderUITests/testSaveChapterAndMakeWidget
+
+Discovered 4 test(s):
+   BibleReaderUITests/BibleReaderUITests/testIPadSavedTabOpensReader
+   BibleReaderUITests/BibleReaderUITests/testIPadTopTabsAndRotationRestoration
+   BibleReaderUITests/BibleReaderUITests/testSaveChapterAndMakeWidget
+   BibleReaderUITests/BibleReaderUITests/testWideTwoPageSpreadTurnsIntoNextChapterAndRestoresScroll
+Running tests (1 completed, 0 failures, 0 skipped)
+Running tests (2 completed, 0 failures, 0 skipped)
+Running tests (3 completed, 0 failures, 0 skipped)
+Running tests (4 completed, 0 failures, 0 skipped)
+
+✅ 4 tests passed, 0 failed, 0 skipped (⏱️ 168.8s)
+  └ Files:
+     ├ Result Bundle: .build/Audit-2026-10-10/iPad26.xcresult
+     ├ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/test_sim_2026-10-11T04-20-26-723Z_pid80230_fd5a8519.log
+     └ Test Products: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/test-products/test_sim_2026-10-11T04-20-26-723Z_pid80230_6868cd95.xctestproducts

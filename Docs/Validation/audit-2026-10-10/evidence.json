@@ -1,0 +1,716 @@
+{
+  "auditCommit": "57e5eff6b1b47aa9daf14146eec568a684b8456a",
+  "dates": "2026-10-10 to 2026-10-11",
+  "toolchain": {
+    "path": "/Users/kyle/Downloads/Xcode.app",
+    "version": "27.1",
+    "build": "27A9269",
+    "sdk": "27.1",
+    "sdkBuild": "24A94403",
+    "minimumOS": "26.0"
+  },
+  "coverage": {
+    "productionSwiftFiles": 53,
+    "productionSwiftLines": 8684,
+    "testSwiftFiles": 21,
+    "testSwiftLines": 3646,
+    "pythonFiles": 6,
+    "pythonLines": 534,
+    "localizationKeys": 275
+  },
+  "runs": [
+    {
+      "name": "iPhone27",
+      "result": "Passed",
+      "passed": 139,
+      "failed": 0,
+      "skipped": 13,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "0287C297-095D-4DD5-9C38-652D88A0ECCD",
+        "deviceName": "iPhone 18 Pro",
+        "modelName": "iPhone 18 Pro",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/iPhone27.xcresult",
+      "failures": []
+    },
+    {
+      "name": "iPhone26",
+      "result": "Failed",
+      "passed": 137,
+      "failed": 2,
+      "skipped": 13,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "00228CE2-2A4E-4687-ADF6-A83BA5C65C17",
+        "deviceName": "iPhone 16e",
+        "modelName": "iPhone 16e",
+        "osBuildNumber": "23A343",
+        "osVersion": "26.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/iPhone26.xcresult",
+      "failures": [
+        {
+          "failureText": "XCTAssertTrue failed",
+          "targetName": "BibleReaderUITests",
+          "testIdentifier": 111,
+          "testIdentifierString": "BibleReaderUITests/testAboutShowsIdentityCreditsAndAttributions()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderUITests/BibleReaderUITests/testAboutShowsIdentityCreditsAndAttributions",
+          "testName": "testAboutShowsIdentityCreditsAndAttributions()"
+        },
+        {
+          "failureText": "XCTAssertTrue failed - Attributes: Application, 0x101d2e050, pid: 75921, label: 'Bible'\nElement subtree:\n \u2192Application, 0x101d2e050, pid: 75921, label: 'Bible'\n    Window (Main), 0x101d2e3e0, {{0.0, 0.0}, {390.0, 844.0}}\n      Other, 0x101d2ee60, {{0.0, 0.0}, {390.0, 844.0}}\n        Other, 0x101d2f1e0, {{0.0, 0.0}, {390.0, 844.0}}\n          Other, 0x101d2eae0, {{-390.0, -844.0}, {1170.0, 2532.0}}\n          Other, 0x101d2e750, {{0.0, 0.0}, {390.0, 844.0}}\n            Other, 0x101d2f560, {{0.0, 0.0}, {390.0, 844.0}}\n              Other, 0x101d304f0, {{195.0, 428.7}, {0.0, 0.0}}\n              Other, 0x101d30890, {{0.0, 0.0}, {390.0, 844.0}}\n                NavigationBar, 0x101d313f0, {{0.0, 47.0}, {390.0, 106.0}}, identifier: 'Saved'\n                Other, 0x101d31770, {{0.0, 0.0}, {390.0, 844.0}}\n                  Other, 0x101d31b00, {{0.0, 0.0}, {390.0, 844.0}}\n                    Other, 0x101d31e90, {{0.0, 0.0}, {390.0, 844.0}}\n                      Other, 0x101d32230, {{0.0, 0.0}, {390.0, 844.0}}\n                        CollectionView, 0x101d325e0, {{0.0, 0.0}, {390.0, 844.0}}\n                          Other, 0x101d32980, {{-16.0, -1488.0}, {422.0, 3473.0}}\n                          Other, 0x101d32d10, {{0.0, 101.0}, {390.0, 52.0}}\n                            StaticText, 0x101d330b0, {{16.0, 104.7}, {93.3, 40.7}}, label: 'Saved'\n                          Cell, 0x101d33450, {{16.0, 200.0}, {358.0, 77.0}}\n                            Other, 0x101d337e0, {{16.0, 200.0}, {358.0, 77.0}}\n                              Other, 0x101d34330, {{16.0, 200.0}, {358.0, 77.0}}\n                                Other, 0x101d346b0, {{16.0, 200.0}, {358.0, 77.0}}\n                            Other, 0x101d34a50, {{16.0, 200.0}, {358.0, 77.0}}\n                              Other, 0x101d34de0, {{16.0, 200.0}, {358.0, 77.0}}\n                                Other, 0x101d35160, {{16.0, 200.0}, {358.0, 77.0}}\n                                  ActivityIndicator, 0x101d354f0, {{16.0, 200.0}, {358.0, 77.0}}, label: 'Loading saved passages\u2026', value: 1\n                                    ActivityIndicator, 0x101d35860, {{185.0, 215.0}, {20.0, 20.0}}, value: 1\n                                      Image, 0x101d35c00, {{185.0, 215.0}, {20.0, 20.0}}\n                                    StaticText, 0x101d35f90, {{0.0, 0.0}, {0.0, 0.0}}, label: 'Loading saved passages\u2026'\n                          Other, 0x101d36320, {{357.0, 101.0}, {30.0, 695.7}}, label: 'Vertical scroll bar, 1 page', value: 0%\n                          Other, 0x101d366b0, {{357.0, 101.0}, {30.0, 695.7}}, label: 'Vertical scroll bar, 1 page', value: 0%\n                        SegmentedControl, 0x101d36a20, {{20.0, 161.0}, {350.0, 31.0}}, identifier: 'savedFilterSegments'\n                          Button, 0x101d37580, {{20.0, 161.0}, {116.0, 32.0}}, label: 'All', Selected\n                          Button, 0x101d37920, {{136.0, 161.0}, {117.0, 32.0}}, label: 'Highlights'\n                          Button, 0x101d37c90, {{253.0, 161.0}, {117.0, 32.0}}, label: 'Bookmarks'\n                Other, 0x101d38020, {{0.0, 0.0}, {390.0, 844.0}}\n                  Other, 0x101d383b0, {{0.0, 0.0}, {0.0, 0.0}}\n                  Other, 0x101d38740, {{0.0, 0.0}, {390.0, 844.0}}\n              Other, 0x101d38ad0, {{0.0, 0.0}, {390.0, 844.0}}\n                NavigationBar, 0x101d38e50, {{0.0, 47.0}, {390.0, 166.0}}, identifier: 'Search'\n                Other, 0x101d391c0, {{0.0, 0.0}, {390.0, 844.0}}\n                  Other, 0x101d39540, {{0.0, 0.0}, {390.0, 844.0}}\n                    Other, 0x101d398f0, {{0.0, 0.0}, {390.0, 844.0}}\n                      Other, 0x101d39c80, {{0.0, 0.0}, {390.0, 844.0}}\n                        ScrollView, 0x101d3a010, {{0.0, 0.0}, {390.0, 844.0}}, identifier: 'searchResults'\n                          Other, 0x101d3abb0, {{0.0, 101.0}, {390.0, 52.0}}\n                            StaticText, 0x101d3af20, {{16.0, 104.7}, {109.3, 40.7}}, label: 'Search'\n                          Other, 0x101d3b2b0, {{0.0, 213.0}, {390.0, 288.0}}\n                            Other, 0x101d3b650, {{52.0, 272.3}, {286.0, 172.0}}\n                              Image, 0x101d3b9f0, {{172.0, 272.3}, {46.0, 46.3}}, identifier: 'searchGuidance', label: 'Search'\n                              StaticText, 0x101d3bd60, {{111.7, 272.3}, {166.7, 91.0}}, identifier: 'searchGuidance', label: 'Search the Bible'\n                              StaticText, 0x101d3c0f0, {{52.0, 366.3}, {286.0, 78.0}}, identifier: 'searchGuidance', label: 'Search a reference like John 3:16, or a word or phrase in the King James Version. Use quotation marks for an exact phrase.'\n                          Other, 0x101d3c4a0, {{357.0, 161.0}, {30.0, 635.7}}, label: 'Vertical scroll bar, 1 page', value: 0%\n                          Other, 0x101d3c830, {{357.0, 161.0}, {30.0, 635.7}}, label: 'Vertical scroll bar, 1 page', value: 0%\n                Other, 0x101d3cbc0, {{0.0, 0.0}, {390.0, 844.0}}\n                  Other, 0x101d3cf20, {{0.0, 0.0}, {0.0, 0.0}}\n                  Other, 0x101d3d2b0, {{0.0, 0.0}, {390.0, 844.0}}\n              Other, 0x101d3d620, {{0.0, 0.0}, {390.0, 844.0}}\n                NavigationBar, 0x101d3d990, {{0.0, 47.0}, {390.0, 54.0}}, identifier: '_TtGC7SwiftUI29PresentationHosting'\n                  Button, 0x101d3dd00, {{212.3, 51.0}, {44.7, 36.0}}, identifier: 'appearanceButton', label: 'Appearance'\n                  Other, 0x101d3e090, {{273.0, 51.0}, {43.0, 36.0}}, identifier: 'chapterSummaryButton', label: 'Summarize current chapter'\n                    Other, 0x101d3e410, {{273.0, 51.0}, {43.0, 36.0}}\n                      Button, 0x101d3e7b0, {{273.0, 51.0}, {43.0, 36.0}}, identifier: 'chapterSummaryButton', label: 'Summarize current chapter'\n                  Button, 0x101d3eb60, {{332.0, 51.0}, {38.0, 36.0}}, label: 'More'\n                Other, 0x101d3f680, {{0.0, 0.0}, {390.0, 844.0}}\n                  Other, 0x101d3fa30, {{0.0, 0.0}, {390.0, 844.0}}\n                    Other, 0x101d3fdd0, {{0.0, 0.0}, {390.0, 844.0}}\n                      Other, 0x101d40910, {{0.0, 0.0}, {390.0, 844.0}}\n                        Other, 0x101d40c90, {{0.0, 0.0}, {390.0, 844.0}}, identifier: 'chapterTurnContainer'\n                          Other, 0x101d41010, {{0.0, 0.0}, {390.0, 101.0}}\n                          Other, 0x101d413b0, {{0.0, 0.0}, {390.0, 844.0}}\n                            TextView, 0x101d41730, {{0.0, 0.0}, {390.0, 844.0}}, identifier: 'chapterText', value: There was a man of...\n                              StaticText, 0x101d41ab0, {{56.0, 109.0}, {306.0, 15.7}}, label: 'THE GOSPEL ACCORDING TO'\n                              StaticText, 0x101d41e30, {{56.0, 130.7}, {306.0, 48.0}}, label: 'John'\n                              StaticText, 0x101d421e0, {{56.0, 184.7}, {306.0, 26.3}}, label: 'Chapter 3'\n                              TextView, 0x101d42580, {{56.0, 237.0}, {304.4, 88.8}}, label: 'There was a man of the Pharisees, named Nicodemus, a ruler of the Jews:'\n                              TextView, 0x101d42910, {{56.0, 336.8}, {308.6, 213.8}}, label: 'The same came to Jesus by night, and said unto him, Rabbi, we know that thou art a teacher come from God: for no man can do these miracles that thou doest, except God be with him.'\n                              TextView, 0x101d42ca0, {{56.0, 561.5}, {296.9, 151.3}}, label: 'Jesus answered and said unto him, Verily, verily, I say unto thee, Except a man be born again, he cannot see the kingdom of God.'\n                              TextView, 0x101d43020, {{56.0, 723.8}, {301.6, 151.3}}, label: 'Nicodemus saith unto him, How can a man be born when he is old? can he enter the second time into his mother\u2019s womb, and be born?'\n                              TextView, 0x101d43730, {{56.0, 886.1}, {311.1, 151.3}}, label: 'Jesus answered, Verily, verily, I say unto thee, Except a man be born of water and of the Spirit, he cannot enter into the kingdom of God.'\n                              TextView, 0x101d43ae0, {{56.0, 1048.3}, {308.5, 88.8}}, label: 'That which is born of the flesh is flesh; and that which is born of the Spirit is spirit.'\n                              TextView, 0x101d43e80, {{56.0, 1148.1}, {280.6, 57.5}}, label: 'Marvel not that I said unto thee, Ye must be born again.'\n                              TextView, 0x101d44230, {{56.0, 1216.6}, {284.7, 182.5}}, label: 'The wind bloweth where it listeth, and thou hearest the sound thereof, but canst not tell whence it cometh, and whither it goeth: so is every one that is born of the Spirit.'\n                              TextView, 0x101d445a0, {{56.0, 1410.1}, {308.3, 88.8}}, label: 'Nicodemus answered and said unto him, How can these things be?'\n                              TextView, 0x101d44950, {{56.0, 1509.9}, {296.9, 120.0}}, label: 'Jesus answered and said unto him, Art thou a master of Israel, and knowest not these things?'\n                              TextView, 0x101d44ce0, {{56.0, 1640.9}, {304.2, 120.0}}, label: 'Verily, verily, I say unto thee, We speak that we do know, and testify that we have seen; and ye receive not our witness.'\n                              TextView, 0x101d45070, {{56.0, 1771.9}, {309.3, 120.0}}, label: 'If I have told you earthly things, and ye believe not, how shall ye believe, if I tell you of heavenly things?'\n                              TextView, 0x101d453e0, {{56.0, 1902.9}, {308.8, 151.3}}, label: 'And no man hath ascended up to heaven, but he that came down from heaven, even the Son of man which is in heaven.'\n                              TextView, 0x101d45770, {{56.0, 2065.2}, {291.6, 120.0}}, label: '\u00b6 And as Moses lifted up the serpent in the wilderness, even so must the Son of man be lifted up:'\n                              TextView, 0x101d45b00, {{56.0, 2196.2}, {285.6, 88.8}}, label: 'That whosoever believeth in him should not perish, but have eternal life.'\n                              TextView, 0x101d45e90, {{56.0, 2296.0}, {303.3, 151.3}}, label: '\u00b6 For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.'\n                              TextView, 0x101d46590, {{56.0, 2458.3}, {294.4, 120.0}}, label: 'For God sent not his Son into the world to condemn the world; but that the world through him might be saved.'\n                              TextView, 0x101d46910, {{56.0, 2589.3}, {290.8, 182.5}}, label: '\u00b6 He that believeth on him is not condemned: but he that believeth not is condemned already, because he hath not believed in the name of the only begotten Son of God.'\n                              TextView, 0x101d47040, {{56.0, 2782.8}, {304.0, 151.3}}, label: 'And this is the condemnation, that light is come into the world, and men loved darkness rather than light, because their deeds were evil.'\n                              TextView, 0x101d473b0, {{56.0, 2945.1}, {287.6, 120.0}}, label: 'For every one that doeth evil hateth the light, neither cometh to the light, lest his deeds should be reproved.'\n                              TextView, 0x101d47750, {{56.0, 3076.1}, {299.6, 120.0}}, label: 'But he that doeth truth cometh to the light, that his deeds may be made manifest, that they are wrought in God.'\n                              TextView, 0x101d47b00, {{56.0, 3207.1}, {307.7, 151.3}}, label: '\u00b6 After these things came Jesus and his disciples into the land of Jud\u00e6a; and there he tarried with them, and baptized.'\n                              TextView, 0x101d47e90, {{56.0, 3369.4}, {309.9, 151.3}}, label: '\u00b6 And John also was baptizing in \u00c6non near to Salim, because there was much water there: and they came, and were baptized.'\n                              TextView, 0x101d485b0, {{56.0, 3531.6}, {295.6, 57.5}}, label: 'For John was not yet cast into prison.'\n                              TextView, 0x101d48c90, {{56.0, 3600.2}, {301.5, 120.0}}, label: '\u00b6 Then there arose a question between some of John\u2019s disciples and the Jews about purifying.'\n                              TextView, 0x101d49020, {{56.0, 3731.2}, {304.7, 182.5}}, label: 'And they came unto John, and said unto him, Rabbi, he that was with thee beyond Jordan, to whom thou barest witness, behold, the same baptizeth, and all men come to him.'\n                              TextView, 0x101d493a0, {{56.0, 3924.7}, {274.3, 120.0}}, label: 'John answered and said, A man can receive nothing, except it be given him from heaven.'\n                              TextView, 0x101d49740, {{56.0, 4055.7}, {310.4, 88.8}}, label: 'Ye yourselves bear me witness, that I said, I am not the Christ, but that I am sent before him.'\n                              TextView, 0x101d49af0, {{56.0, 4155.5}, {295.1, 213.8}}, label: 'He that hath the bride is the bridegroom: but the friend of the bridegroom, which standeth and heareth him, rejoiceth greatly because of the bridegroom\u2019s voice: this my joy therefore is fulfilled.'\n                              TextView, 0x101d4a9b0, {{56.0, 4380.2}, {287.1, 57.5}}, label: 'He must increase, but I must decrease.'\n                              TextView, 0x101d4ad40, {{56.0, 4448.8}, {298.5, 151.3}}, label: 'He that cometh from above is above all: he that is of the earth is earthly, and speaketh of the earth: he that cometh from heaven is above all.'\n                              TextView, 0x101d4b8a0, {{56.0, 4611.0}, {285.2, 120.0}}, label: 'And what he hath seen and heard, that he testifieth; and no man receiveth his testimony.'\n                              TextView, 0x101d4bc50, {{56.0, 4742.0}, {293.7, 88.8}}, label: 'He that hath received his testimony hath set to his seal that God is true.'\n                              TextView, 0x101d4bff0, {{56.0, 4841.8}, {309.5, 120.0}}, label: 'For he whom God hath sent speaketh the words of God: for God giveth not the Spirit by measure unto him.'\n                              TextView, 0x101d4c370, {{56.0, 4972.8}, {309.3, 88.8}}, label: 'The Father loveth the Son, and hath given all things into his hand.'\n                              TextView, 0x101d4c700, {{56.0, 4952.3}, {310.1, 151.3}}, label: 'He that believeth on the Son hath everlasting life: and he that believeth not the Son shall not see life; but the wrath of God abideth on him.'\n                              Other, 0x101d4ca80, {{357.0, 202.0}, {30.0, 574.0}}, label: 'Vertical scroll bar, 6 pages', value: 0%\n                                Other, 0x101d4d5d0, {{384.0, 205.0}, {3.0, 104.7}}\n                              Other, 0x101d4e110, {{47.3, 811.0}, {295.3, 30.0}}, label: 'Horizontal scroll bar, 1 page', value: 0%\n                                Other, 0x101d4e4b0, {{50.3, 838.0}, {289.3, 3.0}}\n                Other, 0x101d4e830, {{0.0, 0.0}, {390.0, 844.0}}\n                  Other, 0x101d4ebd0, {{0.0, 0.0}, {390.0, 844.0}}\n              Button, 0x101d4ef40, {{16.0, 746.0}, {105.3, 56.0}}, identifier: 'passageButton', label: 'Choose chapter, John 3'\n                StaticText, 0x101d4f2c0, {{32.0, 763.8}, {54.0, 20.3}}, label: 'John 3'\n                Image, 0x101d4f660, {{93.3, 771.0}, {10.7, 6.3}}, identifier: 'chevron.down', label: 'Go Down'\n              Other, 0x101d4f9f0, {{131.3, 742.0}, {242.7, 64.0}}\n                TabBar, 0x101d4fd70, {{111.3, 742.0}, {282.7, 83.0}}, label: 'Tab Bar', value: Expanded\n                  Other, 0x101d500f0, {{132.3, 742.0}, {240.7, 62.0}}\n                    Other, 0x101d50490, {{132.3, 742.0}, {82.9, 54.0}}\n                    Other, 0x101d50830, {{132.3, 742.0}, {240.7, 62.0}}\n                      Button, 0x101d50bb0, {{136.3, 746.0}, {82.9, 54.0}}, identifier: 'destination-read', label: 'Read', Selected\n                        Image, 0x101d50f50, {{162.3, 753.3}, {31.3, 25.3}}, identifier: 'book', label: 'bookmark'\n                      Button, 0x101d512d0, {{211.2, 746.0}, {82.9, 54.0}}, identifier: 'destination-saved', label: 'Saved'\n                        Image, 0x101d51660, {{240.2, 751.7}, {24.3, 28.7}}, identifier: 'bookmark', label: 'bookmark'\n                      Button, 0x101d519e0, {{286.1, 746.0}, {82.9, 54.0}}, identifier: 'destination-search', label: 'Search'\n                        Image, 0x101d51d80, {{314.1, 752.7}, {27.7, 26.7}}, identifier: 'magnifyingglass', label: 'Search'\n                    Other, 0x101d528c0, {{132.3, 742.0}, {240.7, 62.0}}\n                      Other, 0x101d52c60, {{132.3, 742.0}, {240.7, 62.0}}\n                        Other, 0x101d53000, {{132.3, 742.0}, {240.7, 62.0}}\n                          Other, 0x101d53390, {{132.3, 742.0}, {240.7, 62.0}}\n                            Other, 0x101d53740, {{132.3, 742.0}, {240.7, 62.0}}\n                              Other, 0x101d53ad0, {{132.3, 742.0}, {42.0, 21.0}}\n                    Other, 0x101d53e70, {{136.3, 746.0}, {82.9, 54.0}}\n                      Other, 0x101d541f0, {{136.3, 746.0}, {82.7, 54.0}}\n                        Other, 0x101d54580, {{136.3, 746.0}, {82.7, 54.0}}\n                          Other, 0x101d54910, {{136.3, 746.0}, {82.7, 54.0}}\n                        Other, 0x101d54c90, {{136.3, 746.0}, {82.7, 54.0}}\n                          Other, 0x101d55000, {{136.3, 746.0}, {82.7, 54.0}}\n                            Other, 0x101d553a0, {{136.3, 746.0}, {82.7, 54.0}}\n                              Other, 0x101d56310, {{136.3, 746.0}, {82.7, 54.0}}\n                            Other, 0x101d566a0, {{136.3, 746.0}, {82.7, 54.0}}\n                          Other, 0x101d56a10, {{136.3, 746.0}, {82.7, 54.0}}\n      Other, 0x101d56db0, {{0.0, 0.0}, {390.0, 844.0}}\n        Other, 0x101d57120, {{-390.0, -844.0}, {1170.0, 2532.0}}\n        Other, 0x101d574b0, {{0.0, 47.0}, {390.0, 797.0}}\n          Button, 0x101d57830, {{157.0, 42.0}, {76.0, 25.0}}, label: 'Sheet Grabber', value: Expanded\n          Other, 0x101d57bb0, {{0.0, 47.0}, {390.0, 797.0}}\n            Other, 0x101d57f60, {{0.0, 47.0}, {390.0, 797.0}}\n              Other, 0x101d582e0, {{0.0, 47.0}, {390.0, 797.0}}\n                Other, 0x101d58680, {{0.0, 47.0}, {390.0, 797.0}}\n                  Other, 0x101d58a00, {{0.0, 47.0}, {390.0, 797.0}}\n                    NavigationBar, 0x101d58d80, {{0.0, 63.0}, {390.0, 54.0}}, identifier: 'Questions'\n                      StaticText, 0x101d590f0, {{158.7, 69.0}, {72.7, 18.0}}, label: 'Questions'\n                      Button, 0x101d59450, {{334.0, 67.0}, {36.0, 36.0}}, identifier: 'chapterSummaryDone', label: 'Close'\n                      StaticText, 0x101d597e0, {{176.8, 87.0}, {36.3, 14.0}}, label: 'John 3'\n                    Other, 0x101d59b70, {{0.0, 47.0}, {390.0, 797.0}}\n                      Other, 0x101d59ef0, {{0.0, 47.0}, {390.0, 797.0}}\n                        Other, 0x101d5a270, {{0.0, 47.0}, {390.0, 797.0}}\n                          Other, 0x101d5a5e0, {{0.0, 47.0}, {390.0, 797.0}}\n                            ScrollView, 0x101d5a960, {{0.0, 47.0}, {390.0, 797.0}}\n                              Other, 0x101d5acd0, {{0.0, 47.0}, {390.0, 124.8}}\n                              Other, 0x101d5b070, {{0.0, 47.0}, {390.0, 124.8}}\n                                Image, 0x101d5b400, {{-120.0, -73.0}, {630.0, 240.0}}, identifier: 'AdditionalDimmingOverlay'\n                                Other, 0x101d5b790, {{0.0, 47.0}, {390.0, 60.0}}\n                                Other, 0x101d5bb10, {{0.0, 47.0}, {390.0, 124.8}}\n                                  Other, 0x101d5bea0, {{0.0, 47.0}, {390.0, 124.8}}\n                                Other, 0x101d5c220, {{0.0, 47.0}, {390.0, 124.8}}\n                                  Other, 0x101d5c5d0, {{0.0, 47.0}, {390.0, 124.8}}\n                                Other, 0x101d5c980, {{0.0, 47.0}, {390.0, 124.8}}\n                                  Other, 0x101d5cd10, {{0.0, 47.0}, {390.0, 124.8}}\n                                  Other, 0x101d5d840, {{0.0, 47.0}, {390.0, 124.8}}\n                              Other, 0x101d5dbf0, {{0.0, 79.3}, {390.0, 640.7}}\n                                StaticText, 0x101d5df80, {{24.0, 99.3}, {52.7, 15.7}}, label: 'John 3'\n                                StaticText, 0x101d5e310, {{24.0, 123.0}, {270.7, 48.0}}, label: 'In this chapter'\n                                StaticText, 0x101d5e6c0, {{24.0, 195.0}, {332.7, 18.0}}, label: 'What are the main events and themes in John 3?'\n                                StaticText, 0x101d5ea40, {{24.0, 237.0}, {325.3, 52.7}}, identifier: 'chapterSummaryStatus', label: 'The chapter summary could not be generated. Please try again.'\n                                Button, 0x101d5edc0, {{24.0, 313.7}, {136.7, 51.0}}, identifier: 'retryChapterSummary', label: 'Try Again'\n                                  Image, 0x101d5f140, {{45.3, 329.7}, {14.7, 18.0}}, identifier: 'arrow.clockwise', label: 'Refresh'\n                                  StaticText, 0x101d5f4d0, {{24.0, 313.7}, {136.7, 51.0}}, label: 'Try Again'\n                                StaticText, 0x101d5f860, {{39.0, 402.7}, {272.7, 33.7}}, label: 'AI-generated, not Scripture. May contain mistakes \u2014 compare with the text.'\n                                StaticText, 0x101d5fbe0, {{112.3, 474.3}, {253.7, 66.3}}, label: 'What are some key verses in this book?'\n                                StaticText, 0x101d5ff70, {{24.0, 568.7}, {315.7, 44.7}}, identifier: 'bookQuestionStatus', label: 'Apple Intelligence declined this question. You can edit it and try again.'\n                                StaticText, 0x101d60320, {{24.0, 641.3}, {311.7, 33.7}}, label: 'Questions stay within John. AI explanations are not Scripture. Compare them with the text.'\n                              Other, 0x101d606c0, {{0.0, 655.2}, {390.0, 188.8}}\n                              Other, 0x101d60a60, {{357.0, 117.0}, {30.0, 603.0}}, label: 'Vertical scroll bar, 2 pages', value: 100%\n                                Other, 0x101d60de0, {{384.0, 147.0}, {3.0, 570.0}}\n                              Other, 0x101d61190, {{357.0, 117.0}, {30.0, 603.0}}, label: 'Vertical scroll bar, 2 pages', value: 100%\n                                Other, 0x101d61500, {{384.0, 147.0}, {3.0, 570.0}}\n                            TextField, 0x101d61890, {{38.0, 746.0}, {258.0, 44.0}}, identifier: 'bookQuestionInput', label: 'Question about John', value: What are some key ...\n                              Other, 0x101d61c20, {{38.0, 765.0}, {258.0, 22.0}}, label: 'Horizontal scroll bar, 1 page', value: 0%\n                                Other, 0x101d61fb0, {{41.0, 784.0}, {252.0, 3.0}}\n                            Button, 0x101d62350, {{315.0, 746.0}, {44.0, 44.0}}, identifier: 'askBookQuestion', label: 'Ask question'\n                    Other, 0x101d626b0, {{0.0, 47.0}, {390.0, 797.0}}\n                      Other, 0x101d62a20, {{0.0, 47.0}, {390.0, 797.0}}\n    Window, 0x101d62db0, {{0.0, 0.0}, {390.0, 844.0}}\n      Other, 0x101d63130, {{0.0, 0.0}, {390.0, 844.0}}\n        Other, 0x101d634d0, {{0.0, 0.0}, {390.0, 844.0}}\nPath to element:\n \u2192Application, 0x101d2e050, pid: 75921, label: 'Bible'\nQuery chain:\n \u2192Find: Target Application 'dev.kpierre.bible'\n  Output: {\n    Application, 0x10c904900, pid: 75921, label: 'Bible'\n  }\n",
+          "targetName": "BibleReaderUITests",
+          "testIdentifier": 130,
+          "testIdentifierString": "BibleReaderUITests/testKeyVersesQuestionUsesCurrentBook()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderUITests/BibleReaderUITests/testKeyVersesQuestionUsesCurrentBook",
+          "testName": "testKeyVersesQuestionUsesCurrentBook()"
+        }
+      ]
+    },
+    {
+      "name": "iPad27",
+      "result": "Failed",
+      "passed": 14,
+      "failed": 1,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "0F2A0A84-D272-4D01-B5B1-17D90DC1ECF8",
+        "deviceName": "iPad Pro 13-inch (M5)",
+        "modelName": "iPad Pro 13-inch (M5)",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/iPad27.xcresult",
+      "failures": [
+        {
+          "failureText": "XCTAssertTrue failed",
+          "targetName": "BibleReaderUITests",
+          "testIdentifier": 2,
+          "testIdentifierString": "BibleReaderUITests/testChapterPickerGlassAndHighlightIndicators()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderUITests/BibleReaderUITests/testChapterPickerGlassAndHighlightIndicators",
+          "testName": "testChapterPickerGlassAndHighlightIndicators()"
+        }
+      ]
+    },
+    {
+      "name": "iPad26",
+      "result": "Passed",
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "382EB526-8B8C-40F7-861F-E08538F452C8",
+        "deviceName": "iPad Pro 13-inch (M5)",
+        "modelName": "iPad Pro 13-inch (M5)",
+        "osBuildNumber": "23A343",
+        "osVersion": "26.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/iPad26.xcresult",
+      "failures": []
+    },
+    {
+      "name": "iPad-selection-retry",
+      "result": "Passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "0F2A0A84-D272-4D01-B5B1-17D90DC1ECF8",
+        "deviceName": "iPad Pro 13-inch (M5)",
+        "modelName": "iPad Pro 13-inch (M5)",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/iPad-selection-retry.xcresult",
+      "failures": []
+    },
+    {
+      "name": "photo-qa-retry",
+      "result": "Passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "0287C297-095D-4DD5-9C38-652D88A0ECCD",
+        "deviceName": "iPhone 18 Pro",
+        "modelName": "iPhone 18 Pro",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/photo-qa-retry.xcresult",
+      "failures": []
+    },
+    {
+      "name": "about26-qa",
+      "result": "Passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "00228CE2-2A4E-4687-ADF6-A83BA5C65C17",
+        "deviceName": "iPhone 16e",
+        "modelName": "iPhone 16e",
+        "osBuildNumber": "23A343",
+        "osVersion": "26.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/about26-qa.xcresult",
+      "failures": []
+    },
+    {
+      "name": "regression-probes",
+      "result": "Failed",
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "0F2A0A84-D272-4D01-B5B1-17D90DC1ECF8",
+        "deviceName": "iPad Pro 13-inch (M5)",
+        "modelName": "iPad Pro 13-inch (M5)",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/regression-probes.xcresult",
+      "failures": [
+        {
+          "failureText": "XCTAssertTrue failed - Background garbage collection must not turn a committed save into an error",
+          "targetName": "BibleReaderTests",
+          "testIdentifier": 1,
+          "testIdentifierString": "AuditRegressionProbes/testCommittedCardSaveDoesNotReportFailureWhenCleanupFails()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderTests/AuditRegressionProbes/testCommittedCardSaveDoesNotReportFailureWhenCleanupFails",
+          "testName": "testCommittedCardSaveDoesNotReportFailureWhenCleanupFails()"
+        },
+        {
+          "failureText": "XCTAssertEqual failed: (\"Optional(\"eng-kjv-1769-protestant:GEN:1:8\")\") is not equal to (\"Optional(\"eng-kjv-1769-protestant:GEN:1:31\")\") - An old turn must not overwrite the newer reference navigation",
+          "targetName": "BibleReaderTests",
+          "testIdentifier": 2,
+          "testIdentifierString": "AuditRegressionProbes/testLateSpreadCompletionPreservesNewSameChapterNavigation()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderTests/AuditRegressionProbes/testLateSpreadCompletionPreservesNewSameChapterNavigation",
+          "testName": "testLateSpreadCompletionPreservesNewSameChapterNavigation()"
+        },
+        {
+          "failureText": "XCTAssertTrue failed - Source heading is rendered but absent from the explicit accessibility elements: A Psalm of David.",
+          "targetName": "BibleReaderTests",
+          "testIdentifier": 3,
+          "testIdentifierString": "AuditRegressionProbes/testSourceHeadingsAreAccessible()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderTests/AuditRegressionProbes/testSourceHeadingsAreAccessible",
+          "testName": "testSourceHeadingsAreAccessible()"
+        },
+        {
+          "failureText": "XCTAssertEqual failed: (\"Optional(\"eng-kjv-1769-protestant:JHN:3\")\") is not equal to (\"Optional(\"eng-kjv-1769-protestant:GEN:1\")\") - Unknown verse links should be ignored, not navigate with an invalid persistence anchor",
+          "targetName": "BibleReaderTests",
+          "testIdentifier": 4,
+          "testIdentifierString": "AuditRegressionProbes/testWidgetLinkRejectsNonexistentVerse()",
+          "testIdentifierURL": "test://com.apple.xcode/BibleReader/BibleReaderTests/AuditRegressionProbes/testWidgetLinkRejectsNonexistentVerse",
+          "testName": "testWidgetLinkRejectsNonexistentVerse()"
+        }
+      ]
+    },
+    {
+      "name": "landscape-screen",
+      "result": "Passed",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "device": {
+        "architecture": "arm64",
+        "deviceId": "0F2A0A84-D272-4D01-B5B1-17D90DC1ECF8",
+        "deviceName": "iPad Pro 13-inch (M5)",
+        "modelName": "iPad Pro 13-inch (M5)",
+        "osBuildNumber": "24A434",
+        "osVersion": "27.0",
+        "platform": "iOS Simulator"
+      },
+      "resultBundle": ".build/Audit-2026-10-10/landscape-screen.xcresult",
+      "failures": []
+    }
+  ],
+  "metrics": [
+    {
+      "metric": "annotations_full_decode_10000",
+      "unit": "ms",
+      "n": 1,
+      "median": 101.49799997452646,
+      "maximum": 101.49799997452646,
+      "samples": [
+        101.49799997452646
+      ]
+    },
+    {
+      "metric": "annotations_reader_load_10000",
+      "unit": "ms",
+      "n": 1,
+      "median": 2.3965416476130486,
+      "maximum": 2.3965416476130486,
+      "samples": [
+        2.3965416476130486
+      ]
+    },
+    {
+      "metric": "bootstrap",
+      "unit": "ms",
+      "n": 1,
+      "median": 3.6548333591781557,
+      "maximum": 3.6548333591781557,
+      "samples": [
+        3.6548333591781557
+      ]
+    },
+    {
+      "metric": "chapter_during_saved_10000",
+      "unit": "ms",
+      "n": 1,
+      "median": 4.467291699256748,
+      "maximum": 4.467291699256748,
+      "samples": [
+        4.467291699256748
+      ]
+    },
+    {
+      "metric": "configure_390",
+      "unit": "ms",
+      "n": 5,
+      "median": 2.0035833003930748,
+      "maximum": 11.309124995023012,
+      "samples": [
+        11.309124995023012,
+        1.9947499968111515,
+        1.9184999982826412,
+        2.1310416632331908,
+        2.0035833003930748
+      ]
+    },
+    {
+      "metric": "configure_640",
+      "unit": "ms",
+      "n": 5,
+      "median": 2.0925833377987146,
+      "maximum": 2.493291685823351,
+      "samples": [
+        2.493291685823351,
+        2.28770833928138,
+        2.0925833377987146,
+        1.8557083676569164,
+        1.8799167010001838
+      ]
+    },
+    {
+      "metric": "layout_390",
+      "unit": "ms",
+      "n": 5,
+      "median": 9.539166640024632,
+      "maximum": 10.23650000570342,
+      "samples": [
+        10.23650000570342,
+        9.539166640024632,
+        9.88283334299922,
+        9.416749991942197,
+        9.23737499397248
+      ]
+    },
+    {
+      "metric": "layout_640",
+      "unit": "ms",
+      "n": 5,
+      "median": 9.543249965645373,
+      "maximum": 10.348749987315387,
+      "samples": [
+        10.348749987315387,
+        9.904583333991468,
+        9.543249965645373,
+        9.153666615020484,
+        8.910208358429372
+      ]
+    },
+    {
+      "metric": "position_write",
+      "unit": "ms",
+      "n": 10,
+      "median": 0.5273124843370169,
+      "maximum": 1.7072500195354223,
+      "samples": [
+        1.7072500195354223,
+        0.5236249999143183,
+        0.4983333055861294,
+        0.6135833100415766,
+        0.6655416218563914,
+        0.5275832954794168,
+        0.5052083288319409,
+        0.527041673194617,
+        0.513958337251097,
+        0.5745416274294257
+      ]
+    },
+    {
+      "metric": "psalm119_cached",
+      "unit": "ms",
+      "n": 10,
+      "median": 0.02210415550507605,
+      "maximum": 0.028916692826896906,
+      "samples": [
+        0.028916692826896906,
+        0.022666645236313343,
+        0.02058333484455943,
+        0.02133334055542946,
+        0.023041677195578814,
+        0.02154166577383876,
+        0.024041684810072184,
+        0.019875005818903446,
+        0.028291658964008093,
+        0.01750001683831215
+      ]
+    },
+    {
+      "metric": "psalm119_decode_first",
+      "unit": "ms",
+      "n": 1,
+      "median": 1.2218333431519568,
+      "maximum": 1.2218333431519568,
+      "samples": [
+        1.2218333431519568
+      ]
+    },
+    {
+      "metric": "saved_cached_10000",
+      "unit": "ms",
+      "n": 5,
+      "median": 0.16437500016763806,
+      "maximum": 0.1889999839477241,
+      "samples": [
+        0.1889999839477241,
+        0.16437500016763806,
+        0.1700000138953328,
+        0.15341665130108595,
+        0.13937498442828655
+      ]
+    },
+    {
+      "metric": "saved_first_10000",
+      "unit": "ms",
+      "n": 1,
+      "median": 209.41504166694358,
+      "maximum": 209.41504166694358,
+      "samples": [
+        209.41504166694358
+      ]
+    },
+    {
+      "metric": "saved_main_sort_10000",
+      "unit": "ms",
+      "n": 5,
+      "median": 5.37895830348134,
+      "maximum": 5.535583302844316,
+      "samples": [
+        5.3109583677724,
+        5.516791716217995,
+        5.535583302844316,
+        5.0055416650138795,
+        5.37895830348134
+      ]
+    },
+    {
+      "metric": "scroll_layout_50_390",
+      "unit": "ms",
+      "n": 5,
+      "median": 24.966958328150213,
+      "maximum": 28.180916677229106,
+      "samples": [
+        26.88508335268125,
+        24.75341671379283,
+        28.180916677229106,
+        24.2022083257325,
+        24.966958328150213
+      ]
+    },
+    {
+      "metric": "scroll_layout_50_640",
+      "unit": "ms",
+      "n": 5,
+      "median": 28.768791642505676,
+      "maximum": 31.625583360437304,
+      "samples": [
+        31.625583360437304,
+        29.437916644383222,
+        28.25687499716878,
+        28.17783335922286,
+        28.768791642505676
+      ]
+    },
+    {
+      "metric": "search_\"in the beginning\"",
+      "unit": "ms",
+      "n": 5,
+      "median": 1.0215833317488432,
+      "maximum": 2.799250010866672,
+      "samples": [
+        2.799250010866672,
+        1.0068333358503878,
+        1.0081249638460577,
+        1.0215833317488432,
+        1.1757917236536741
+      ]
+    },
+    {
+      "metric": "search_and",
+      "unit": "ms",
+      "n": 5,
+      "median": 1.9917083554901183,
+      "maximum": 36.38987505109981,
+      "samples": [
+        36.38987505109981,
+        1.9954167073592544,
+        1.9368749926798046,
+        1.9917083554901183,
+        1.9273750367574394
+      ]
+    },
+    {
+      "metric": "search_love",
+      "unit": "ms",
+      "n": 5,
+      "median": 1.3981666415929794,
+      "maximum": 5.780041683465242,
+      "samples": [
+        5.780041683465242,
+        1.5313749900087714,
+        1.3910833513364196,
+        1.3981666415929794,
+        1.3220416731201112
+      ]
+    },
+    {
+      "metric": "search_offset_50",
+      "unit": "ms",
+      "n": 1,
+      "median": 34.860750020015985,
+      "maximum": 34.860750020015985,
+      "samples": [
+        34.860750020015985
+      ]
+    },
+    {
+      "metric": "search_offset_1000",
+      "unit": "ms",
+      "n": 1,
+      "median": 4.29145828820765,
+      "maximum": 4.29145828820765,
+      "samples": [
+        4.29145828820765
+      ]
+    },
+    {
+      "metric": "search_offset_10000",
+      "unit": "ms",
+      "n": 1,
+      "median": 3.7944999639876187,
+      "maximum": 3.7944999639876187,
+      "samples": [
+        3.7944999639876187
+      ]
+    },
+    {
+      "metric": "search_the",
+      "unit": "ms",
+      "n": 5,
+      "median": 2.218124980572611,
+      "maximum": 44.14795833872631,
+      "samples": [
+        44.14795833872631,
+        2.299166633747518,
+        2.218124980572611,
+        2.1729166619479656,
+        2.0121666602790356
+      ]
+    },
+    {
+      "metric": "store_open_fresh",
+      "unit": "ms",
+      "n": 1,
+      "median": 6.5677500097081065,
+      "maximum": 6.5677500097081065,
+      "samples": [
+        6.5677500097081065
+      ]
+    },
+    {
+      "metric": "unchanged_configure_100_390",
+      "unit": "ms",
+      "n": 5,
+      "median": 0.06979168392717838,
+      "maximum": 0.0746666919440031,
+      "samples": [
+        0.07270835340023041,
+        0.06979168392717838,
+        0.0746666919440031,
+        0.0690833549015224,
+        0.06554165156558156
+      ]
+    },
+    {
+      "metric": "unchanged_configure_100_640",
+      "unit": "ms",
+      "n": 5,
+      "median": 0.067333341576159,
+      "maximum": 0.07454172009602189,
+      "samples": [
+        0.07454172009602189,
+        0.07133331382647157,
+        0.067333341576159,
+        0.06724998820573092,
+        0.06495829438790679
+      ]
+    },
+    {
+      "metric": "adjacent_page_create_configure_layout",
+      "unit": "ms",
+      "n": 5,
+      "median": 9.248083340935409,
+      "maximum": 9.8425000323914,
+      "samples": [
+        9.063249977771193,
+        9.248083340935409,
+        9.8425000323914,
+        9.344624995719641,
+        8.810750034172088
+      ]
+    },
+    {
+      "metric": "highlight_all_176_verses",
+      "unit": "ms",
+      "n": 5,
+      "median": 10.171791655011475,
+      "maximum": 12.58791668806225,
+      "samples": [
+        9.466125047765672,
+        10.573583305813372,
+        12.58791668806225,
+        10.171791655011475,
+        9.688916616141796
+      ]
+    },
+    {
+      "metric": "largest_type_dark_reflow",
+      "unit": "ms",
+      "n": 5,
+      "median": 10.705124994274229,
+      "maximum": 11.496374965645373,
+      "samples": [
+        10.842874995432794,
+        10.321458335965872,
+        11.496374965645373,
+        10.11962495977059,
+        10.705124994274229
+      ]
+    },
+    {
+      "metric": "summary_retrieve_psalms",
+      "unit": "ms",
+      "n": 5,
+      "median": 33.594916691072285,
+      "maximum": 34.22904165927321,
+      "samples": [
+        34.22904165927321,
+        34.061833284795284,
+        33.594916691072285,
+        32.16037497622892,
+        32.364249986130744
+      ]
+    }
+  ],
+  "referenceIntegrity": [
+    {
+      "path": ".thumbnail",
+      "checksumMatches": true,
+      "sizeMatches": true
+    },
+    {
+      "path": "Bible Reader - iPad.dc.html",
+      "checksumMatches": true,
+      "sizeMatches": true
+    },
+    {
+      "path": "Bible Reader - iPhone.dc.html",
+      "checksumMatches": true,
+      "sizeMatches": true
+    },
+    {
+      "path": "ios-frame.jsx",
+      "checksumMatches": true,
+      "sizeMatches": true
+    },
+    {
+      "path": "support.js",
+      "checksumMatches": true,
+      "sizeMatches": true
+    },
+    {
+      "path": "uploads/Bible-App-Visual-Design-Brief.docx",
+      "checksumMatches": true,
+      "sizeMatches": true
+    }
+  ],
+  "releaseAppBuild": "PASS: simulator and clean unsigned iphoneos builds. No test bundles or PrototypeChapters.json in clean device app. Widget extension has no corpus/database. Bundled corpus matches source checksum.",
+  "releaseTestBuild": "FAIL: Debug-only helpers referenced by Release test sources.",
+  "contentTests": "PASS: 9 tests, 66 books, 1189 chapters, 31102 verses. Logical corpus revision 221de95d272cfe6b1aa3088f2e82ba4f8589211aca296d33bedf7d6b61ed23e0.",
+  "phoneBaselineSkippedTests": [
+    "stageOutcomesForDifficultChapters()",
+    "questionOutcomesForDifficultChapters()",
+    "testDuoBookPoseAutomaticallyTurnsPages()",
+    "testDuoFoldUnfoldKeepsSearchAndReadingPosition()",
+    "testDuoTabletopKeepsChapterControlsBelowReader()",
+    "testIPadSavedTabOpensReader()",
+    "testIPadShowsLandscapePagesButNotFoldSettings()",
+    "testIPadSpreadSurvivesRapidTurnsAndToolbarTaps()",
+    "testIPadTopTabsAndRotationRestoration()",
+    "testPagePreferenceRemainsAvailableInCompactLayoutAndPersists()",
+    "testSavedScrollSurvivesSizeClassChanges()",
+    "testSearchSurvivesIPadTabsAndRotation()",
+    "testWideTwoPageSpreadTurnsIntoNextChapterAndRestoresScroll()"
+  ],
+  "landscapeCaptureComparison": {
+    "result": "Full-device screenshot correct, app-only screenshot cropped. Not a reproduced app defect.",
+    "framesPoints": {
+      "app": [
+        0,
+        0,
+        1376,
+        1032
+      ],
+      "window": [
+        0,
+        0,
+        1376,
+        1032
+      ],
+      "left": [
+        0,
+        0,
+        688,
+        1032
+      ],
+      "right": [
+        688,
+        0,
+        688,
+        1032
+      ]
+    },
+    "fullDevice": "Docs/Validation/audit-2026-10-10/screenshots/landscape-full-device.png"
+  }
+}

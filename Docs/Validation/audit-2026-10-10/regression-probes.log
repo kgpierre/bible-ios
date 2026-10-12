@@ -1,0 +1,62 @@
+
+🧪 Test
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Debug
+   Platform: iOS Simulator
+   Simulator: 0F2A0A84-D272-4D01-B5B1-17D90DC1ECF8
+   Derived Data: .build/Audit-2026-10-10/DerivedData
+   Selective Testing:
+     BibleReaderTests/AuditRegressionProbes
+
+Discovered 4 test(s):
+   BibleReaderTests/AuditRegressionProbes/testCommittedCardSaveDoesNotReportFailureWhenCleanupFails
+   BibleReaderTests/AuditRegressionProbes/testLateSpreadCompletionPreservesNewSameChapterNavigation
+   BibleReaderTests/AuditRegressionProbes/testSourceHeadingsAreAccessible
+   BibleReaderTests/AuditRegressionProbes/testWidgetLinkRejectsNonexistentVerse
+Running tests (1 completed, 1 failure, 0 skipped)
+Running tests (2 completed, 2 failures, 0 skipped)
+Running tests (3 completed, 3 failures, 0 skipped)
+Running tests (4 completed, 4 failures, 0 skipped)
+Running tests (4 completed, 5 failures, 0 skipped)
+
+AuditRegressionProbes
+  ✗ testCommittedCardSaveDoesNotReportFailureWhenCleanupFails:
+      - XCTAssertTrue failed - Background garbage collection must not turn a committed save into an error
+        BibleReaderTests/AuditRegressionProbes.swift:92
+      - XCTAssertEqual failed: ("0") is not equal to ("1") - A committed card must reload its widgets
+        BibleReaderTests/AuditRegressionProbes.swift:93
+  ✗ testLateSpreadCompletionPreservesNewSameChapterNavigation:
+      - XCTAssertEqual failed: ("Optional("eng-kjv-1769-protestant:GEN:1:8")") is not equal to ("Optional("eng-kjv-1769-protestant:GEN:1:31")") - An old turn must not overwrite the newer reference navigation
+        BibleReaderTests/AuditRegressionProbes.swift:65
+  ✗ testSourceHeadingsAreAccessible:
+      - XCTAssertTrue failed - Source heading is rendered but absent from the explicit accessibility elements: A Psalm of David.
+        BibleReaderTests/AuditRegressionProbes.swift:32
+  ✗ testWidgetLinkRejectsNonexistentVerse:
+      - XCTAssertEqual failed: ("Optional("eng-kjv-1769-protestant:JHN:3")") is not equal to ("Optional("eng-kjv-1769-protestant:GEN:1")") - Unknown verse links should be ignored, not navigate with an invalid persistence anchor
+        BibleReaderTests/AuditRegressionProbes.swift:75
+  ✗ testCommittedCardSaveDoesNotReportFailureWhenCleanupFails():
+    - XCTAssertTrue failed - Background garbage collection must not turn a committed save into an error
+    - XCTAssertEqual failed: ("0") is not equal to ("1") - A committed card must reload its widgets
+  ✗ testLateSpreadCompletionPreservesNewSameChapterNavigation():
+      - 8")") is not equal to ("Optional("eng-kjv-1769-protestant:GEN:1:31")") - An old turn must not overwrite the newer reference navigation
+        XCTAssertEqual failed: ("Optional("eng-kjv-1769-protestant:GEN:1
+  ✗ testSourceHeadingsAreAccessible():
+    - XCTAssertTrue failed - Source heading is rendered but absent from the explicit accessibility elements: A Psalm of David.
+  ✗ testWidgetLinkRejectsNonexistentVerse():
+    - XCTAssertEqual failed: ("Optional("eng-kjv-1769-protestant:JHN:3")") is not equal to ("Optional("eng-kjv-1769-protestant:GEN:1")") - Unknown verse links should be ignored, not navigate with an invalid persistence anchor
+
+Warnings (2):
+
+  ⚠ -[BibleReaderTests.AuditRegressionProbes testLateSpreadCompletionPreservesNewSameChapterNavigation] : Accessing Environment<ColorScheme>'s value outside of being installed on a View. This will always read the default value and will not update.
+    BibleReaderTests/AuditRegressionProbes.swift:51
+
+  ⚠ -[BibleReaderTests.AuditRegressionProbes testLateSpreadCompletionPreservesNewSameChapterNavigation] : Accessing Environment<ScenePhase>'s value outside of being installed on a View. This will always read the default value and will not update.
+    BibleReaderTests/AuditRegressionProbes.swift:51
+
+❌ 4 tests failed, 0 passed, 0 skipped (⏱️ 33.7s)
+  └ Files:
+     ├ Result Bundle: .build/Audit-2026-10-10/regression-probes.xcresult
+     ├ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/test_sim_2026-10-11T04-09-01-146Z_pid75895_130071ea.log
+     └ Test Products: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/test-products/test_sim_2026-10-11T04-09-01-146Z_pid75895_a9cbbb74.xctestproducts

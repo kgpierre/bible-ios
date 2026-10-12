@@ -1,0 +1,15 @@
+test_compact_storage_matches_importer_representation (test_corpus.CorpusTests.test_compact_storage_matches_importer_representation) ... ok
+test_every_verse_matches_independent_source_extraction (test_corpus.CorpusTests.test_every_verse_matches_independent_source_extraction) ... ok
+test_golden_chapters_and_previous_fixtures (test_corpus.CorpusTests.test_golden_chapters_and_previous_fixtures) ... ok
+test_inventory_and_integrity (test_corpus.CorpusTests.test_inventory_and_integrity) ... ok
+test_reproducible_logical_and_binary_output (test_corpus.CorpusTests.test_reproducible_logical_and_binary_output) ... ok
+test_search_first_last_and_negative (test_corpus.CorpusTests.test_search_first_last_and_negative) ... ok
+test_unhandled_marker_and_entity_rejected (test_corpus.CorpusTests.test_unhandled_marker_and_entity_rejected) ... ok
+test_pinned_integrity_and_semantics (test_prototype_fixtures.FixtureTests.test_pinned_integrity_and_semantics) ... ok
+test_rejects_external_entities (test_prototype_fixtures.FixtureTests.test_rejects_external_entities) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 2.694s
+
+OK
+66 books, 1189 chapters, 31102 verses; logical SHA-256 221de95d272cfe6b1aa3088f2e82ba4f8589211aca296d33bedf7d6b61ed23e0

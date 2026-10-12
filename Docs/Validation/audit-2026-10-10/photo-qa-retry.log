@@ -1,0 +1,21 @@
+
+🧪 Test
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Debug
+   Platform: iOS Simulator
+   Simulator: 0287C297-095D-4DD5-9C38-652D88A0ECCD
+   Derived Data: .build/Audit-2026-10-10/DerivedData
+   Selective Testing:
+     BibleReaderUITests/AuditPhotoUITests
+
+Discovered 1 test(s):
+   BibleReaderUITests/AuditPhotoUITests/testPhotoCardSaveAndReopen
+Running tests (1 completed, 0 failures, 0 skipped)
+
+✅ 1 test passed, 0 failed, 0 skipped (⏱️ 49.2s)
+  └ Files:
+     ├ Result Bundle: .build/Audit-2026-10-10/photo-qa-retry.xcresult
+     ├ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/test_sim_2026-10-11T04-21-36-218Z_pid80716_9f895a5c.log
+     └ Test Products: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/test-products/test_sim_2026-10-11T04-21-36-218Z_pid80716_3a8628c4.xctestproducts

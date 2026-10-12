@@ -1,0 +1,24 @@
+
+🔨 Build
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Release
+   Platform: iOS Simulator
+   Simulator: 0287C297-095D-4DD5-9C38-652D88A0ECCD
+   Derived Data: .build/Audit-2026-10-10/ReleaseDerivedData
+
+Warnings (2):
+
+  ⚠ main actor-isolated static property 'listSpace' can not be referenced from a Sendable closure
+    BibleReader/Features/Saved/SavedView.swift:107:68
+
+  ⚠ main actor-isolated property 'listHeight' can not be referenced from a nonisolated autoclosure
+    BibleReader/Features/Saved/SavedView.swift:108:64
+
+✅ Build succeeded. (⏱️ 41.2s)
+  └ Files:
+     └ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/build_sim_2026-10-11T04-01-55-249Z_pid74012_4096fea4.log
+
+Next steps:
+1. Get built app path in simulator derived data: xcodebuildmcp simulator get-app-path --simulator-id 0287C297-095D-4DD5-9C38-652D88A0ECCD --scheme BibleReader --platform 'iOS Simulator' --derived-data-path /Users/kyle/Developer/bible-ios/.build/Audit-2026-10-10/ReleaseDerivedData

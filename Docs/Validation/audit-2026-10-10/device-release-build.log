@@ -1,0 +1,23 @@
+
+🔨 Build
+
+   Scheme: BibleReader
+   Project: BibleReader.xcodeproj
+   Configuration: Release
+   Platform: iOS
+   Derived Data: .build/Audit-2026-10-10/DeviceReleaseData
+
+Warnings (2):
+
+  ⚠ main actor-isolated static property 'listSpace' can not be referenced from a Sendable closure
+    BibleReader/Features/Saved/SavedView.swift:107:68
+
+  ⚠ main actor-isolated property 'listHeight' can not be referenced from a nonisolated autoclosure
+    BibleReader/Features/Saved/SavedView.swift:108:64
+
+✅ Build succeeded. (⏱️ 39.9s)
+  └ Files:
+     └ Build Logs: ~/Library/Developer/XcodeBuildMCP/workspaces/bible-ios-05d132857d5f/logs/build_device_2026-10-11T04-09-42-568Z_pid76321_ce4a5b97.log
+
+Next steps:
+1. Get built device app path: xcodebuildmcp device get-app-path --scheme BibleReader --derived-data-path /Users/kyle/Developer/bible-ios/.build/Audit-2026-10-10/DeviceReleaseData
