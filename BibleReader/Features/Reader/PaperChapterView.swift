@@ -96,8 +96,8 @@ struct PaperChapterView: UIViewControllerRepresentable {
         func update(_ configuration: PaperChapterView) {
             guard let controller else { return }
             let previous = self.configuration
-            let typographyChanged = renderedTypography != nil && renderedTypography != state.typography
-            renderedTypography = state.typography
+            let typographyChanged = renderedTypography != nil && renderedTypography != state.typography.layout
+            renderedTypography = state.typography.layout
             self.configuration = configuration
             controller.view.backgroundColor = UIColor(resource: .readingCanvas)
             if previous?.isActive == true, !configuration.isActive {

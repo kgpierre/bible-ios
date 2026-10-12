@@ -1,3 +1,4 @@
+import ImageIO
 import SwiftUI
 
 /// What the Widgets sheet opens to: the card list, or the editor for a new card from Saved.
@@ -18,7 +19,6 @@ struct CardsView: View {
     let onDone: () -> Void
     @State private var editing: ScriptureCard?
     @State private var pendingDelete: ScriptureCard?
-    @State private var images: [UUID: Image] = [:]
 
     var body: some View {
         List {
@@ -66,37 +66,81 @@ struct CardsView: View {
         }
         .confirmationDialog("Delete this widget card?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
                             titleVisibility: .visible, presenting: pendingDelete) { card in
-            Button("Delete Card", role: .destructive) { model.delete(card) }
+            Button("Delete Card", role: .destructive) { Task { await model.delete(card) } }
         } message: { _ in
             Text("Widgets showing this card will ask you to choose another. Your saved passage is not affected.")
         }
-        .task(id: model.cards.map(\.updated)) { await loadImages() }
     }
 
     private func row(_ card: ScriptureCard) -> some View {
-        GeometryReader { proxy in
-            let size = CardFamily.medium.previewSize
-            ScriptureCardPreview(card: card, family: .medium, image: images[card.id])
-                .scaleEffect(min(1, proxy.size.width / size.width), anchor: .topLeading)
-        }
-        .aspectRatio(CardFamily.medium.previewSize.width / CardFamily.medium.previewSize.height, contentMode: .fit)
-        .frame(maxWidth: CardFamily.medium.previewSize.width)
-        .padding(.vertical, 6)
+        CardRow(card: card, backgroundURL: model.backgroundURL(for: card))
     }
 
     private func deleteButton(_ card: ScriptureCard) -> some View {
         Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = card }
     }
+}
 
-    private func loadImages() async {
-        var loaded: [UUID: Image] = [:]
-        for card in model.cards {
-            guard let url = model.backgroundURL(for: card) else { continue }
-            if let image = await Task.detached(operation: { UIImage(contentsOfFile: url.path) }).value {
-                loaded[card.id] = Image(uiImage: image)
+/// One list row. Its background loads only while the row is on screen, downsampled to the
+/// preview's size, and the task is cancelled when the row scrolls away.
+private struct CardRow: View {
+    let card: ScriptureCard
+    let backgroundURL: URL?
+    @State private var image: Image?
+    @Environment(\.displayScale) private var displayScale
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { proxy in
+                let size = CardFamily.medium.previewSize
+                ScriptureCardPreview(card: card, family: .medium, image: image)
+                    .scaleEffect(min(1, proxy.size.width / size.width), anchor: .topLeading)
             }
+            .aspectRatio(CardFamily.medium.previewSize.width / CardFamily.medium.previewSize.height, contentMode: .fit)
+            .frame(maxWidth: CardFamily.medium.previewSize.width)
+            CardBackgroundSourceLabel(style: card.style)
         }
-        images = loaded
+        .padding(.vertical, 6)
+        .task(id: backgroundURL) {
+            guard let url = backgroundURL else { image = nil; return }
+            let pixels = CardFamily.medium.previewSize.width * displayScale
+            let loaded = await CardThumbnails.shared.image(at: url, maxPixelSize: pixels)
+            guard !Task.isCancelled else { return }
+            image = loaded.map(Image.init(uiImage:))
+        }
+    }
+}
+
+/// Downsampled card backgrounds, bounded in count and cost. Background files are written once
+/// under a new name and never changed in place, so the file name is a safe key.
+final class CardThumbnails: Sendable {
+    static let shared = CardThumbnails()
+    nonisolated(unsafe) private let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 24
+        cache.totalCostLimit = 48 * 1024 * 1024
+        return cache
+    }()
+
+    func image(at url: URL, maxPixelSize: CGFloat) async -> UIImage? {
+        let key = "\(url.lastPathComponent)@\(Int(maxPixelSize))" as NSString
+        if let cached = cache.object(forKey: key) { return cached }
+        let image = await Task.detached(priority: .userInitiated) { Self.downsample(url, maxPixelSize: maxPixelSize) }.value
+        if let image, let cgImage = image.cgImage {
+            cache.setObject(image, forKey: key, cost: cgImage.bytesPerRow * cgImage.height)
+        }
+        return image
+    }
+
+    nonisolated private static func downsample(_ url: URL, maxPixelSize: CGFloat) -> UIImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+                  kCGImageSourceCreateThumbnailFromImageAlways: true,
+                  kCGImageSourceCreateThumbnailWithTransform: true,
+                  kCGImageSourceShouldCacheImmediately: true,
+                  kCGImageSourceThumbnailMaxPixelSize: max(1, maxPixelSize),
+              ] as CFDictionary) else { return nil }
+        return UIImage(cgImage: image)
     }
 }
 
@@ -116,7 +160,7 @@ struct CardsSheet: View {
             }
         }
         .tint(Color(.accent))
-        .onAppear { model.load() }
+        .task { await model.load() }
         .alert("Couldn’t Update Widget Cards", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }

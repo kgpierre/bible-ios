@@ -150,9 +150,14 @@ final class PerformanceAuditTests: XCTestCase {
         let resolving = Task { try await store.savedItems() }
         await Task.yield()
         t = CACurrentMediaTime(); _ = try await store.chapter(bootstrap.catalog[900].id); record("chapter_during_saved_10000", t)
+        #if DEBUG
         _ = try await resolving.value
         await store.clearSavedCacheForTesting()
         t = CACurrentMediaTime(); let items = try await store.savedItems(); record("saved_first_10000", t)
+        #else
+        // Release builds have no cache-reset hook; the first resolution is measured in Debug.
+        let items = try await resolving.value
+        #endif
         XCTAssertEqual(items.count, 10000)
         for _ in 0..<5 {
             t = CACurrentMediaTime(); _ = try await store.savedItems(); record("saved_cached_10000", t)

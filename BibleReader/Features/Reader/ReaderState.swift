@@ -254,6 +254,12 @@ final class ReaderState {
         navigate(to: chapter, verseID: passage.verseIDs.first, cueVerseIDs: passage.verseIDs)
     }
 
+    /// Whether a verse exists in the installed corpus's chapter, for validating external links.
+    func containsVerse(_ verseID: String, inChapter chapterID: String) async -> Bool {
+        guard let store, let document = try? await store.chapter(chapterID) else { return false }
+        return document.verses.contains { $0.id == verseID }
+    }
+
     func chapterForTurn(_ id: String) async throws -> ChapterDocument {
         guard let store else { throw StorageIssue.incompatibleCorpus }
         let document = try await store.chapter(id)

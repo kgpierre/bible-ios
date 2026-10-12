@@ -138,6 +138,21 @@ struct CardContentView: View {
     }
 }
 
+/// Labels a generated background, outside the card so it never covers Scripture or attribution.
+struct CardBackgroundSourceLabel: View {
+    let style: CardStyle
+
+    var body: some View {
+        if style.hasGeneratedBackground {
+            Label("Background: Image Playground", systemImage: "apple.image.playground")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(Text("Background created with Image Playground"))
+                .accessibilityIdentifier("cardGeneratedBackgroundLabel")
+        }
+    }
+}
+
 /// The composed card as seen in the app (the widget composes the same parts itself).
 struct ScriptureCardPreview: View {
     let card: ScriptureCard

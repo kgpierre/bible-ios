@@ -1,4 +1,5 @@
 import SwiftUI
+import Synchronization
 import UIKit
 
 struct SavedView: View {
@@ -10,7 +11,7 @@ struct SavedView: View {
     @State private var itemIndex: [String: Int] = [:]
     @State private var scroll = SavedScrollTracker()
     @State private var pendingScroll: String?
-    private static let listSpace = "savedList"
+    nonisolated private static let listSpace = "savedList"
     private var listRevision: String {
         "\(state.reader.savedRevision):\(state.reader.savedLoadedRevision):\(state.savedFilter.rawValue):\(state.savedSort.rawValue):\(state.reader.catalog.count)"
     }
@@ -102,17 +103,17 @@ struct SavedView: View {
                         }
                         .accessibilityAction(named: Text("Make Widget")) { state.makeWidget(from: item) }
                         .accessibilityAction(named: Text("Delete Saved Item")) { delete(item) }
-                        .onGeometryChange(for: Bool.self) { [scroll] proxy in
+                        .onGeometryChange(for: Bool.self) { [listHeight = scroll.listHeight] proxy in
                             // List exposes no scroll-view bounds to its rows; measure against the list's own frame.
                             let midY = proxy.frame(in: .named(Self.listSpace)).midY
-                            return midY >= 0 && midY <= scroll.listHeight
+                            return midY >= 0 && midY <= listHeight.value
                         } action: { trackVisibility(of: item.id, visible: $0) }
                 }
             }
         }
         .coordinateSpace(.named(Self.listSpace))
         .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
-            scroll.listHeight = size.height
+            scroll.listHeight.value = size.height
             scroll.resizedAt = .now
             scroll.commit?.cancel()
         }
@@ -200,13 +201,8 @@ struct SavedView: View {
         deleteButton(item)
     }
 
-    /// Exact saved text with its reference and edition, as Copy and Share do in the reader.
-    /// Saved chapters hold only their opening verse, so they offer no text to copy.
     private func shareText(_ item: SavedItem) -> String? {
-        guard !item.unavailable, !item.savedChapter else { return nil }
-        let edition = state.reader.document?.editionLabel ?? "KJV"
-        let excerpt = item.records.exact.isEmpty ? "" : String(localized: " (excerpt)")
-        return "\(item.text)\n— \(item.reference), \(edition)\(excerpt)"
+        item.shareText(editionLabel: state.reader.document?.editionLabel ?? "KJV")
     }
 
     private func open(_ item: SavedItem) {
@@ -294,12 +290,21 @@ private struct SavedItemPreview: View {
     }
 }
 
+final class SavedListHeight: Sendable {
+    private let storage = Mutex<CGFloat>(0)
+    var value: CGFloat {
+        get { storage.withLock { $0 } }
+        set { storage.withLock { $0 = newValue } }
+    }
+}
+
 /// Scroll bookkeeping for one Saved list. A plain reference, not observed: row visibility changes
 /// on every scrolled frame, and re-rendering the List for it cancels programmatic scrolling.
 @MainActor private final class SavedScrollTracker {
     var visibleIDs: Set<String> = []
     var restored = false
-    var listHeight: CGFloat = 0
+    /// Read from nonisolated geometry transforms, so it is a Sendable box rather than actor state.
+    let listHeight = SavedListHeight()
     var resizedAt = ContinuousClock.now
     var commit: Task<Void, Never>?
 }

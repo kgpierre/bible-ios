@@ -62,6 +62,8 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         private var shownRevision = -1
         private var turning = false
         private var turnSource: String?
+        /// The navigation revision a turn began from; a completion from an older one is stale.
+        private var turnRevision: Int?
         private var preload: Task<Void, Never>?
         private var preparedID: String?
         /// Typography-only state for measuring; never the live reader.
@@ -136,7 +138,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             container.view.backgroundColor = UIColor(resource: .readingCanvas)
             let size = container.view.bounds.size
             guard size.width > 0, size.height > 0 else { return }
-            let key = LayoutKey(size: size, insets: configuration.chromeInsets, typography: state.typography,
+            let key = LayoutKey(size: size, insets: configuration.chromeInsets, typography: state.typography.layout,
                                 category: container.traitCollection.preferredContentSizeCategory, scheme: configuration.scheme,
                                 innerPageInset: configuration.innerPageInset)
             // Never replace pages under a live curl; the turn's completion refreshes.
@@ -155,7 +157,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             } else {
                 target = spreadStart(for: document)
             }
-            if target != displayed || relayout || visiblePages.first?.key.chapterID != target.chapterID { show(target, direction: .forward, animated: false) }
+            if target != displayed || relayout || visiblePages.first?.key != target { show(target, direction: .forward, animated: false) }
             shownRevision = state.navigationRevision
             configurePages()
             prepareNeighbors()
@@ -361,14 +363,14 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         private func turn(by delta: Int) -> Bool {
             guard turnsAllowed, let configuration, let target = spread(delta) else { return false }
             let source = state.chapterID
+            let revision = state.navigationRevision
             let direction: UIPageViewController.NavigationDirection = delta > 0 ? .forward : .reverse
             if configuration.animated {
                 turning = true
-                show(target, direction: direction, animated: true) { [weak self] _ in
+                show(target, direction: direction, animated: true) { [weak self] finished in
                     guard let self else { return }
                     self.turning = false
-                    self.didShow(target, from: source)
-                    self.settle()
+                    self.finishTurn(at: finished ? target : nil, from: source, revision: revision)
                 }
             } else {
                 show(target, direction: direction, animated: false)
@@ -376,6 +378,19 @@ struct SpreadChapterView: UIViewControllerRepresentable {
                 settle()
             }
             return true
+        }
+
+        /// Adopt a finished turn only if no navigation happened since it began, including during a
+        /// pan before UIKit reported the transition (pages last reconciled at `shownRevision`). A
+        /// cancelled or stale turn adopts nothing; `settle()` then returns the pager to the reader's state.
+        private func finishTurn(at key: PageKey?, from source: String?, revision: Int?) {
+            let current = state.navigationRevision
+            if let key, revision == current, shownRevision == current, !state.isNavigating {
+                didShow(key, from: source)
+            } else {
+                displayed = visiblePages.first?.key
+            }
+            settle()
         }
 
         private func settle() {
@@ -412,15 +427,16 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         func pageViewController(_ pageViewController: UIPageViewController, willTransitionTo pendingViewControllers: [UIViewController]) {
             turning = true
             turnSource = state.chapterID
+            turnRevision = state.navigationRevision
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool,
                                 previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
             turning = false
-            let source = turnSource
+            let source = turnSource, revision = turnRevision
             turnSource = nil
-            if completed, let left = visiblePages.first { didShow(left.key, from: source) }
-            settle()
+            turnRevision = nil
+            finishTurn(at: completed ? visiblePages.first?.key : nil, from: source, revision: revision)
         }
 
         func pageViewController(_ pageViewController: UIPageViewController, spineLocationFor orientation: UIInterfaceOrientation) -> UIPageViewController.SpineLocation {

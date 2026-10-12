@@ -83,6 +83,15 @@ struct SavedItem: Identifiable, Sendable {
     /// A saved whole chapter; `text` is its opening verse and `verseCount` its length.
     var savedChapter = false
     var verseCount: Int? = nil
+
+    /// Exact saved text with its reference and edition, as Copy and Share do in the reader. The
+    /// display `reference` of an exact item already reads "(excerpt)", so the marker is added once
+    /// here from the underlying passage reference. Saved chapters hold only their opening verse.
+    func shareText(editionLabel: String) -> String? {
+        guard !unavailable, !savedChapter else { return nil }
+        guard let exact = records.exact.first else { return "\(text)\n— \(reference), \(editionLabel)" }
+        return "\(text)\n— \(exact.passage.reference), \(editionLabel)" + String(localized: " (excerpt)")
+    }
 }
 
 /// Original persisted values identify exactly what the user saw before deleting.

@@ -62,6 +62,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private var appliedParts: [String: [ColoredPart]] = [:]
     private var accessibilityDirtyVerses = Set<String>()
     private var accessibilityByVerse: [String: UIAccessibilityElement] = [:]
+    /// Source headings and trailing blocks, keyed by their UTF-16 location in the current map.
+    private var accessibilityByHeading: [Int: UIAccessibilityElement] = [:]
     private var gutterFont: UIFont?
     private var visibleGutterIDs = Set<String>()
     private var guttersDirty = true
@@ -196,10 +198,11 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         if self.document == nil, state.selection != nil { needsSelectionFocusRestore = true }
         let changedChapter = self.document?.id != document.id
         let changedNavigation = lastRevision != state.navigationRevision || readerState !== state
-        let changedStyle = self.wide != wide || lastCategory != traitCollection.preferredContentSizeCategory || lastScheme != scheme || lastTypography != state.typography || lastContrast != traitCollection.accessibilityContrast
+        let changedStyle = self.wide != wide || lastCategory != traitCollection.preferredContentSizeCategory || lastScheme != scheme || lastTypography.layout != state.typography.layout || lastContrast != traitCollection.accessibilityContrast
         self.readerState = state
         let changedAnnotations = lastAnnotationsRevision != state.annotationsRevision || changedNavigation
-        guard changedChapter || changedStyle || changedNavigation || changedAnnotations || appliedCue != state.navigationCue else { return }
+        let changedNotes = showsNotes != state.typography.showsNotes
+        guard changedChapter || changedStyle || changedNavigation || changedAnnotations || changedNotes || appliedCue != state.navigationCue else { return }
         // A width-mode transition may already have intermediate UIKit geometry.
         // Keep the last settled semantic anchor instead of capturing that transient layout.
         if changedStyle && !changedChapter && !changedNavigation && self.wide == wide { capturePosition() }
@@ -278,6 +281,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             appliedCue = []
             accessibilityNeedsUpdate = true
             accessibilityByVerse.removeAll()
+            accessibilityByHeading.removeAll()
             gutterFont = scaledFont(size: wide ? 15 : 14, style: .caption1, weight: .medium)
             visibleGutterIDs.removeAll()
             guttersDirty = true
@@ -285,6 +289,13 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             refreshPalette()
             needsAnchorRestore = true
             if changedChapter, state.anchor == nil { setContentOffset(.zero, animated: false) }
+        }
+        if changedNotes && !changedChapter && !changedStyle {
+            // Markers only: hide or re-place them in the gutter without rebuilding the text.
+            showsNotes = state.typography.showsNotes
+            noteMarkers.values.forEach { $0.dot.isHidden = true; $0.button.isHidden = true }
+            guttersDirty = true
+            setNeedsLayout()
         }
         if changedChapter || changedStyle || changedAnnotations {
             applyHighlights(state.highlights, exact: state.exactAnnotations(in: document.id))
@@ -738,8 +749,10 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         let rebuildGeometry = accessibilityNeedsUpdate
         accessibilityNeedsUpdate = false
         isAccessibilityElement = false
-        verseAccessibility = map.entries.compactMap { entry in
-            if !rebuildGeometry, !accessibilityDirtyVerses.contains(entry.verse.id), let existing = accessibilityByVerse[entry.verse.id] { return existing }
+        let verses: [(location: Int, element: UIAccessibilityElement)] = map.entries.compactMap { entry in
+            if !rebuildGeometry, !accessibilityDirtyVerses.contains(entry.verse.id), let existing = accessibilityByVerse[entry.verse.id] {
+                return (entry.range.location, existing)
+            }
             guard let start = position(from: beginningOfDocument, offset: entry.range.location),
                   let end = position(from: start, offset: entry.range.length), let range = textRange(from: start, to: end) else { return nil }
             let existing = accessibilityByVerse[entry.verse.id]
@@ -787,10 +800,30 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                     }]
             }
             accessibilityByVerse[entry.verse.id] = element
-            return element
+            return (entry.range.location, element)
         }
+        verseAccessibility = verses.map(\.element)
         accessibilityDirtyVerses.removeAll()
-        accessibilityElements = [header] + verseAccessibility
+        // Source headings and trailing blocks are read in document order but carry no verse
+        // annotation actions; they are source text, not annotation targets.
+        let text = map.text as NSString
+        let headings: [(location: Int, element: UIAccessibilityElement)] = map.sourceHeadingRanges.compactMap { range in
+            if !rebuildGeometry, let existing = accessibilityByHeading[range.location] { return (range.location, existing) }
+            guard NSMaxRange(range) <= text.length, let start = position(from: beginningOfDocument, offset: range.location),
+                  let end = position(from: start, offset: range.length), let textRange = textRange(from: start, to: end) else { return nil }
+            let element = accessibilityByHeading[range.location] ?? VerseAccessibilityElement(accessibilityContainer: self)
+            element.accessibilityLabel = text.substring(with: range)
+            element.accessibilityTraits = .staticText
+            (element as? VerseAccessibilityElement)?.rectProvider = { [weak self] in
+                self?.selectionRects(for: textRange).reduce(CGRect.null) { rect, selection in
+                    selection.rect.isEmpty ? rect : rect.union(selection.rect)
+                } ?? .zero
+            }
+            accessibilityByHeading[range.location] = element
+            return (range.location, element)
+        }
+        let ordered = (headings + verses).sorted { $0.location < $1.location }.map(\.element)
+        accessibilityElements = [header] + ordered
     }
 }
 

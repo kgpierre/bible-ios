@@ -36,6 +36,13 @@ struct ReadingTypography: Codable, Equatable, Sendable {
     /// stored payload without it decodes with the default instead of discarding the others.
     var showsNotes = true
     var pointAdjustment: Double { Double(min(4, max(-2, sizeAdjustment))) * 2 }
+    /// Only the fields that change text layout or pagination. Note markers sit in the gutter, so
+    /// toggling them alone must not rebuild text, repaginate, or disturb a selection.
+    var layout: ReadingTypography {
+        var layout = self
+        layout.showsNotes = true
+        return layout
+    }
 
     init(face: ReadingFace = .serif, sizeAdjustment: Int = 0, spacing: ReadingSpacing = .standard, showsNotes: Bool = true) {
         self.face = face

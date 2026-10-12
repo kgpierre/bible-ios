@@ -5,18 +5,58 @@ import Observation
 import UniformTypeIdentifiers
 import WidgetKit
 
+/// Serializes card-library file work off the main actor: reading and decoding the library,
+/// rewriting it, writing background JPEGs, and cleaning up unused ones.
+actor CardLibraryWorker {
+    let library: CardLibrary
+
+    init(library: CardLibrary) { self.library = library }
+
+    /// The library, newest first. Retries cleanup a previous edit couldn't finish; leftover files
+    /// are harmless meanwhile.
+    func load() throws -> [ScriptureCard] {
+        let cards = try library.load().sorted { $0.updated > $1.updated }
+        try? library.removeUnreferencedBackgrounds()
+        return cards
+    }
+
+    /// Stores a newly prepared background first, then commits the card. Returns the reloaded library.
+    func save(_ card: ScriptureCard, newBackground: PreparedBackground?) throws -> [ScriptureCard] {
+        var card = card
+        if let newBackground {
+            let file = try library.storeBackground(newBackground.jpeg)
+            card.style.background = .image(file: file, source: newBackground.source, luminance: newBackground.luminance)
+        }
+        card.updated = .now
+        try library.upsert(card)
+        return try library.load().sorted { $0.updated > $1.updated }
+    }
+
+    func delete(_ id: UUID) throws -> [ScriptureCard] {
+        try library.delete(id)
+        return try library.load().sorted { $0.updated > $1.updated }
+    }
+
+    func backgroundURL(_ file: String) -> URL? { library.backgroundURL(file) }
+}
+
 /// Widget cards the user has made. Writes go to the App Group library and reload widget timelines.
 @MainActor
 @Observable
 final class CardsModel {
     private(set) var cards: [ScriptureCard] = []
+    private(set) var isSaving = false
     var errorMessage: String?
     @ObservationIgnored private let library: CardLibrary?
+    @ObservationIgnored private let worker: CardLibraryWorker?
     @ObservationIgnored private let reloadWidgets: @MainActor () -> Void
+    /// Every published library result advances this, so a slow older read never replaces a newer one.
+    @ObservationIgnored private var generation = 0
 
     init(library: CardLibrary? = CardsModel.defaultLibrary(),
          reloadWidgets: @escaping @MainActor () -> Void = { WidgetCenter.shared.reloadAllTimelines() }) {
         self.library = library
+        worker = library.map(CardLibraryWorker.init)
         self.reloadWidgets = reloadWidgets
     }
 
@@ -33,33 +73,40 @@ final class CardsModel {
         return CardLibrary.shared()
     }
 
-    func load() {
-        guard let library else { return }
-        do { cards = try library.load().sorted { $0.updated > $1.updated } }
-        catch { errorMessage = String(localized: "Your widget cards could not load. They have been kept. Try again.") }
+    func load() async {
+        guard let worker else { return }
+        generation += 1
+        let request = generation
+        do {
+            let loaded = try await worker.load()
+            guard request == generation else { return }
+            cards = loaded
+        } catch {
+            guard request == generation else { return }
+            errorMessage = String(localized: "Your widget cards could not load. They have been kept. Try again.")
+        }
     }
 
+    /// File names are validated without touching the disk, so this stays synchronous.
     func backgroundURL(for card: ScriptureCard) -> URL? {
         card.style.imageFile.flatMap { library?.backgroundURL($0) }
     }
 
     /// Saves the card, storing a newly prepared background first. Returns false and keeps the
-    /// previous card if anything fails.
+    /// previous card if anything fails before the library is committed.
     @discardableResult
-    func save(_ card: ScriptureCard, newBackground: PreparedBackground? = nil) -> Bool {
-        guard let library else {
+    func save(_ card: ScriptureCard, newBackground: PreparedBackground? = nil) async -> Bool {
+        guard let worker else {
             errorMessage = String(localized: "Widgets are unavailable in this build.")
             return false
         }
-        var card = card
+        isSaving = true
+        defer { isSaving = false }
+        generation += 1
+        let request = generation
         do {
-            if let newBackground {
-                let file = try library.storeBackground(newBackground.jpeg)
-                card.style.background = .image(file: file, source: newBackground.source, luminance: newBackground.luminance)
-            }
-            card.updated = .now
-            try library.upsert(card)
-            load()
+            let saved = try await worker.save(card, newBackground: newBackground)
+            if request == generation { cards = saved }
             reloadWidgets()
             return true
         } catch {
@@ -68,11 +115,13 @@ final class CardsModel {
         }
     }
 
-    func delete(_ card: ScriptureCard) {
-        guard let library else { return }
+    func delete(_ card: ScriptureCard) async {
+        guard let worker else { return }
+        generation += 1
+        let request = generation
         do {
-            try library.delete(card.id)
-            load()
+            let remaining = try await worker.delete(card.id)
+            if request == generation { cards = remaining }
             reloadWidgets()
         } catch {
             errorMessage = String(localized: "This widget card could not be deleted. Try again.")

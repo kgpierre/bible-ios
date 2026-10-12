@@ -32,18 +32,38 @@ final class AppState {
         search = SearchState { input, offset in try await reader.search(input, offset: offset) }
     }
 
-    /// Opens a widget link only for a chapter (and verse) in the installed catalog.
+    /// The latest widget link; an older link's late validation never navigates.
+    @ObservationIgnored private var linkRequest = UUID()
+
+    /// Opens a widget link only for a chapter (and verse) in the installed catalog. Links that
+    /// arrive before initial restoration finishes wait, so restoration cannot replace them.
     func open(_ url: URL) {
         guard let link = CardLink.parse(url) else { return }
-        guard !reader.catalog.isEmpty else { pendingLink = link; return }
+        guard !reader.catalog.isEmpty, !reader.isLoading else { pendingLink = link; return }
         pendingLink = nil
+        let request = UUID()
+        linkRequest = request
         guard let chapter = reader.catalogChapter(link.chapterID) else { return }
+        guard let verseID = link.verseID else { show(chapter, verseID: nil); return }
+        Task {
+            guard await reader.containsVerse(verseID, inChapter: chapter.id), request == linkRequest else { return }
+            show(chapter, verseID: verseID)
+        }
+    }
+
+    /// Opens a pending link once initial restoration has finished.
+    func openPendingLink() {
+        guard let link = pendingLink, let url = CardLink.url(chapterID: link.chapterID, verseID: link.verseID) else { return }
+        open(url)
+    }
+
+    private func show(_ chapter: ChapterSummary, verseID: String?) {
         summary = nil
         cardsRequest = nil
         isAppearancePresented = false
         isChapterPickerPresented = false
         isAboutPresented = false
-        reader.navigate(to: chapter, verseID: link.verseID, cueVerseIDs: link.verseID.map { [$0] } ?? [])
+        reader.navigate(to: chapter, verseID: verseID, cueVerseIDs: verseID.map { [$0] } ?? [])
         destination = .read
     }
 

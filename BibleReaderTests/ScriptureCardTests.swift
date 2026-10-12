@@ -133,17 +133,29 @@ struct ScriptureCardTests {
         #expect(CardsModel.draft(from: unavailable, editionLabel: "KJV") == nil)
     }
 
-    @Test func modelSavesStoresBackgroundAndReloadsWidgets() throws {
+    @Test func modelSavesStoresBackgroundAndReloadsWidgets() async throws {
         var reloads = 0
         let model = CardsModel(library: library()) { reloads += 1 }
         let prepared = try PreparedBackground.prepare(jpeg(.white), source: .photo)
-        #expect(model.save(card(), newBackground: prepared))
+        #expect(await model.save(card(), newBackground: prepared))
+        #expect(!model.isSaving)
         let saved = try #require(model.cards.first)
         #expect(saved.style.imageFile != nil)
         #expect(model.backgroundURL(for: saved).map { FileManager.default.fileExists(atPath: $0.path) } == true)
-        model.delete(saved)
+        await model.delete(saved)
         #expect(model.cards.isEmpty && reloads == 2)
-        #expect(!CardsModel(library: nil).save(card()))
+        #expect(await !CardsModel(library: nil).save(card()))
+    }
+
+    /// File work runs off the main actor; reads and writes are serialized in call order.
+    @Test func overlappingModelWritesKeepTheLatestLibrary() async throws {
+        let model = CardsModel(library: library()) { }
+        let first = card("Psalms 23"), second = card("John 3:16")
+        async let a = model.save(first)
+        async let b = model.save(second)
+        _ = await (a, b)
+        await model.load()
+        #expect(Set(model.cards.map(\.id)) == [first.id, second.id])
     }
 
     @Test func editorSymbolsExist() {

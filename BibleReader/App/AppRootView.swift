@@ -70,8 +70,8 @@ struct AppRootView: View {
             CardsSheet(request: request, model: state.cards) { state.cardsRequest = nil }
         }
         .onOpenURL { state.open($0) }
-        .onChange(of: state.reader.catalog.count) { _, _ in
-            if let link = state.pendingLink, let url = CardLink.url(chapterID: link.chapterID, verseID: link.verseID) { state.open(url) }
+        .onChange(of: state.reader.isLoading) { _, loading in
+            if !loading { state.openPendingLink() }
         }
         .sheet(isPresented: $state.isAboutPresented) {
             AboutView(editionNotice: state.reader.editionNotice) { state.isAboutPresented = false }

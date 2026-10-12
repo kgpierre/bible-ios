@@ -17,6 +17,10 @@ struct CardEditorView: View {
     @State private var photoItem: PhotosPickerItem?
     @State private var isPreparingImage = false
     @State private var imageError: String?
+    /// The latest background choice. Every photo, generated image, preset, or dismissal advances
+    /// it, so an older image that finishes late never replaces a newer choice.
+    @State private var backgroundGeneration = 0
+    @State private var preparation: Task<Void, Never>?
     @Environment(\.supportsImagePlayground) private var supportsImagePlayground
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.dismiss) private var dismiss
@@ -31,9 +35,12 @@ struct CardEditorView: View {
     var body: some View {
         Form {
             Section {
-                preview
-                    .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
-                    .listRowBackground(Color.clear)
+                VStack(alignment: .leading, spacing: 8) {
+                    preview
+                    CardBackgroundSourceLabel(style: card.style)
+                }
+                .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 16, trailing: 0))
+                .listRowBackground(Color.clear)
                 Picker("Size", selection: $family) {
                     ForEach([CardFamily.small, .medium, .large]) { Text($0.title).tag($0) }
                 }
@@ -83,9 +90,11 @@ struct CardEditorView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save", role: .confirm) {
                     // A pushed editor returns to the card list; a new card's root editor closes the sheet.
-                    if model.save(card, newBackground: pendingBackground) { isRoot ? onFinish() : dismiss() }
+                    Task {
+                        if await model.save(card, newBackground: pendingBackground) { isRoot ? onFinish() : dismiss() }
+                    }
                 }
-                .disabled(isPreparingImage)
+                .disabled(isPreparingImage || model.isSaving)
                 .accessibilityIdentifier("cardSaveButton")
             }
         }
@@ -102,6 +111,7 @@ struct CardEditorView: View {
             }
             photoItem = nil
         }
+        .onDisappear { cancelPreparation() }
         .task {
             guard let url = model.backgroundURL(for: card) else { return }
             let image = await Task.detached { UIImage(contentsOfFile: url.path) }.value
@@ -132,6 +142,7 @@ struct CardEditorView: View {
             ForEach(CardPreset.allCases) { preset in
                 let selected = card.style.background == .preset(preset)
                 Button {
+                    cancelPreparation()
                     card.style.background = .preset(preset)
                     pendingBackground = nil
                     pendingImage = nil
@@ -176,21 +187,35 @@ struct CardEditorView: View {
         }
     }
 
+    private func cancelPreparation() {
+        backgroundGeneration += 1
+        preparation?.cancel()
+        preparation = nil
+        isPreparingImage = false
+    }
+
     private func prepare(source: CardStyle.ImageSource, data: @escaping @Sendable () async throws -> Data) {
+        cancelPreparation()
+        let generation = backgroundGeneration
         isPreparingImage = true
         imageError = nil
-        Task {
-            defer { isPreparingImage = false }
+        preparation = Task {
+            // Only the latest request clears loading state or reports its own failure.
+            defer { if generation == backgroundGeneration { isPreparingImage = false; preparation = nil } }
             do {
                 let raw = try await data()
+                try Task.checkCancellation()
                 let prepared = try await Task.detached(priority: .userInitiated) {
                     try PreparedBackground.prepare(raw, source: source)
                 }.value
+                guard generation == backgroundGeneration, !Task.isCancelled else { return }
                 pendingBackground = prepared
                 pendingImage = UIImage(data: prepared.jpeg).map(Image.init(uiImage:))
                 // The file name is assigned on Save; the luminance drives the live preview now.
                 card.style.background = .image(file: "", source: source, luminance: prepared.luminance)
+            } catch is CancellationError {
             } catch {
+                guard generation == backgroundGeneration else { return }
                 imageError = String(localized: "That image could not be used. Choose another.")
             }
         }

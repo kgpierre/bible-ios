@@ -41,17 +41,19 @@ struct CardEntity: AppEntity {
 }
 
 struct CardQuery: EntityQuery {
+    /// An unreadable library throws rather than answering "no such card", which would otherwise
+    /// look the same as a deleted card.
     func entities(for identifiers: [UUID]) async throws -> [CardEntity] {
         let wanted = Set(identifiers)
-        return loadCards().filter { wanted.contains($0.id) }.map(CardEntity.init)
+        return try loadCards().filter { wanted.contains($0.id) }.map(CardEntity.init)
     }
 
     func suggestedEntities() async throws -> [CardEntity] {
-        loadCards().sorted { $0.updated > $1.updated }.map(CardEntity.init)
+        try loadCards().sorted { $0.updated > $1.updated }.map(CardEntity.init)
     }
 
     func defaultResult() async -> CardEntity? {
-        loadCards().max { $0.updated < $1.updated }.map(CardEntity.init)
+        (try? loadCards())?.max { $0.updated < $1.updated }.map(CardEntity.init)
     }
 }
 
@@ -74,8 +76,11 @@ struct SelectCardIntent: WidgetConfigurationIntent {
     }
 }
 
-private func loadCards() -> [ScriptureCard] {
-    (try? CardLibrary.shared()?.load()) ?? []
+private struct CardsUnavailable: Error {}
+
+private func loadCards() throws -> [ScriptureCard] {
+    guard let cards = CardLibrary.sharedCards() else { throw CardsUnavailable() }
+    return cards
 }
 
 // MARK: - Timeline
@@ -85,6 +90,8 @@ struct CardEntry: TimelineEntry {
         case card(ScriptureCard, UIImage?)
         /// No cards yet, or the chosen card was deleted.
         case empty(removed: Bool)
+        /// The library couldn't be read (for example, before first unlock); retried shortly.
+        case unavailable
     }
 
     let date: Date
@@ -112,30 +119,29 @@ struct CardProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: SelectCardIntent, in context: Context) async -> Timeline<CardEntry> {
         let now = Date.now
+        let current = entry(for: configuration, on: now, in: context)
+        if case .unavailable = current.content {
+            // A conservative retry; the app also reloads timelines whenever cards change.
+            return Timeline(entries: [current], policy: .after(now.addingTimeInterval(15 * 60)))
+        }
         guard configuration.rotate else {
             // The app reloads timelines whenever cards change.
-            return Timeline(entries: [entry(for: configuration, on: now, in: context)], policy: .never)
+            return Timeline(entries: [current], policy: .never)
         }
         let calendar = Calendar.current
         let tomorrow = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
         let dayAfter = calendar.date(byAdding: .day, value: 1, to: tomorrow) ?? tomorrow
-        return Timeline(entries: [entry(for: configuration, on: now, in: context),
-                                  entry(for: configuration, on: tomorrow, in: context)], policy: .after(dayAfter))
+        return Timeline(entries: [current, entry(for: configuration, on: tomorrow, in: context)], policy: .after(dayAfter))
     }
 
     private func entry(for configuration: SelectCardIntent, on date: Date, in context: Context) -> CardEntry {
-        let cards = loadCards()
-        let card: ScriptureCard?
-        if configuration.rotate {
-            card = CardLibrary.rotationCard(cards, on: date)
-        } else if let chosen = configuration.card {
-            card = cards.first { $0.id == chosen.id }
-            if card == nil { return CardEntry(date: date, content: .empty(removed: true)) }
-        } else {
-            card = cards.max { $0.updated < $1.updated }
+        switch CardSelection.resolve(cards: CardLibrary.sharedCards(), chosen: configuration.card?.id,
+                                     rotate: configuration.rotate, on: date) {
+        case .card(let card): CardEntry(date: date, content: .card(card, image(for: card, size: context.displaySize)))
+        case .noCards: CardEntry(date: date, content: .empty(removed: false))
+        case .removed: CardEntry(date: date, content: .empty(removed: true))
+        case .unavailable: CardEntry(date: date, content: .unavailable)
         }
-        guard let card else { return CardEntry(date: date, content: .empty(removed: false)) }
-        return CardEntry(date: date, content: .card(card, image(for: card, size: context.displaySize)))
     }
 
     /// Decodes only as many pixels as the widget shows; full-size images exceed widget memory limits.
@@ -163,7 +169,9 @@ struct CardWidgetView: View {
             cardView(card, image: image)
                 .widgetURL(CardLink.url(chapterID: card.chapterID, verseID: card.verseID))
         case .empty(let removed):
-            emptyView(removed: removed)
+            messageView(removed ? "This card was removed. Edit the widget to choose another." : "Make a widget from Saved in Bible.")
+        case .unavailable:
+            messageView("Your cards can’t be shown right now. Open Bible or check back later.")
         }
     }
 
@@ -197,9 +205,7 @@ struct CardWidgetView: View {
         }
     }
 
-    @ViewBuilder private func emptyView(removed: Bool) -> some View {
-        let message: LocalizedStringKey = removed ? "This card was removed. Edit the widget to choose another."
-                                                  : "Make a widget from Saved in Bible."
+    @ViewBuilder private func messageView(_ message: LocalizedStringKey) -> some View {
         switch widgetFamily {
         case .accessoryInline:
             Text(message).containerBackground(.clear, for: .widget)

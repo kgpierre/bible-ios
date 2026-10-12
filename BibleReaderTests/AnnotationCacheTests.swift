@@ -32,6 +32,8 @@ struct AnnotationCacheTests {
         #expect(try await store.exactAnnotations(in: [target.id])[target.id]?.count == 2)
     }
 
+    // The resolution hook that orders overlapping rebuilds exists only in DEBUG builds.
+    #if DEBUG
     /// An older Saved rebuild that finishes after a newer one must not replace its published cache.
     @Test func overlappingSavedRebuildsKeepTheNewestResult() async throws {
         let corpus = try #require(Bundle.main.url(forResource: "BibleCorpus", withExtension: "sqlite"))
@@ -59,6 +61,7 @@ struct AnnotationCacheTests {
         await store.setSavedResolutionHookForTesting(nil)
         #expect(try await color() == .rose)
     }
+    #endif
 }
 
 /// Holds the first rebuild that reaches it; later rebuilds pass straight through.
