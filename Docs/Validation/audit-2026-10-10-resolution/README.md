@@ -34,6 +34,11 @@ These recommendations depend on device measurements the audit did not make; each
 - **Index current-book source retrieval.** The audit measured ~34 ms median in Debug on simulator, off the main actor; act only if device traces show contention on the store's executor.
 - **CI matrix.** No provider is chosen. Needs an owner decision on host and how runners obtain Xcode 27.1.
 
+## Test changes
+
+- `testAboutShowsIdentityCreditsAndAttributions` looks up the credit by label across element types, as the audit's minimum-OS probe did.
+- `testKeyVersesQuestionUsesCurrentBook` skips, rather than fails, when the live model declines and the app shows its refusal message. When an answer arrives, it still requires sources from John beyond chapter 3.
+
 ## Validation
 
 | Run | Environment | Outcome |
@@ -41,6 +46,9 @@ These recommendations depend on device measurements the audit did not make; each
 | Unit tests (`-only-testing:BibleReaderTests`) | iPad Pro 13-inch (M5) · iPadOS 27.0 simulator · Debug | 109 Swift Testing tests in 21 suites and 15 XCTest cases passed. |
 | UI tests (`-only-testing:BibleReaderUITests`) | iPhone 18 Pro · iOS 27.0 (24A434) simulator · Debug | 31 passed, 0 failed, 11 skipped (iPad- and Duo-only cases). |
 | iPad UI cases (10 selected) | iPad Pro 13-inch (M5) · iPadOS 27.0 simulator · Debug | 9 passed, including rapid spread turns, two-page chapter turn/restore, top tabs/rotation, Save Chapter → Make Widget, and widget links. `testSavedScrollSurvivesSizeClassChanges` skipped (its size-class precondition was not met). |
+| Full scheme | iPhone 17 Pro · iOS 26.0 simulator · Debug | 109 Swift Testing tests and 15 XCTest unit cases passed. UI: 29 passed, 11 skipped (iPad/Duo-only), 2 failed, the same two the audit recorded on iOS 26 at `57e5eff`: the About credit selector (iOS 26 exposes it as a different element type) and the key-verses question (the live on-device model declined; the app showed its refusal message). |
+| Those two tests after the test fix | iPhone 17 Pro · iOS 26.0, and iPhone 18 Pro · iOS 27.0 | iOS 26: About passed; key verses skipped (model declined again). iOS 27: both passed, including a real answer with sources beyond John 3. |
+| Unit tests plus the 10 iPad UI cases | iPad Pro 13-inch (M5) · iPadOS 26.0 simulator · Debug | All unit tests passed. UI: 9 passed, `testSavedScrollSurvivesSizeClassChanges` skipped as on iPadOS 27. |
 | Release `build-for-testing` with `ENABLE_TESTABILITY=YES` | iPad Pro 13-inch (M5) simulator | Succeeded; no Swift warnings. |
 
-Not verified: iOS 26 runtimes for this change set, actual Duo poses, physical VoiceOver reading of headings, live Image Playground output, widget behavior on a locked or newly unlocked device, Home/Lock Screen placement, and the delayed-photo ordering through the live picker.
+Not verified: actual Duo poses, physical VoiceOver reading of headings, live Image Playground output, widget behavior on a locked or newly unlocked device, Home/Lock Screen placement, and the delayed-photo ordering through the live picker.
