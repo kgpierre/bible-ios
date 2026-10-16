@@ -18,10 +18,25 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     }
     private var wide = false
     /// Book-page mode: one page of a two-page spread. The spread owns the reading anchor and
-    /// turning, so the page neither scrolls (unless one verse overflows it) nor captures position.
+    /// turning, so the page never scrolls or captures position.
     var paged = false {
         didSet { if paged != oldValue { alwaysBounceVertical = !paged; setNeedsLayout() } }
     }
+    /// The band of the chapter a book page shows. The page holds the whole chapter, laid out
+    /// exactly as it was measured, and shows only these lines; a verse continues on the next page.
+    var pageWindow: ChapterPagination.Page? {
+        didSet {
+            guard pageWindow != oldValue else { return }
+            windowLaidOut = false
+            accessibilityNeedsUpdate = true
+            setNeedsLayout()
+        }
+    }
+    private var windowLaidOut = false
+    /// Paper over the lines that belong to the previous and next pages.
+    private let pageCovers = [UIView(), UIView()]
+    private var windowed: ChapterPagination.Page? { paged ? pageWindow : nil }
+    private var pinnedOffset: CGPoint? { windowed.map { CGPoint(x: 0, y: $0.top) } }
     var pageInnerInset: CGFloat = 0 {
         didSet { if pageInnerInset != oldValue { setNeedsLayout() } }
     }
@@ -128,6 +143,12 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             header.addArrangedSubview($0)
         }
         bookTitle.accessibilityTraits = .header
+        for cover in pageCovers {
+            cover.isHidden = true
+            cover.isUserInteractionEnabled = false
+            cover.isAccessibilityElement = false
+            addSubview(cover)
+        }
         addSubview(header)
         registerForTraitChanges([UITraitPreferredContentSizeCategory.self, UITraitAccessibilityContrast.self]) { (view: ChapterTextView, _) in
             guard let document = view.document, let state = view.readerState else { return }
@@ -136,6 +157,17 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     }
 
     override var undoManager: UndoManager? { readerState?.systemUndoManager ?? super.undoManager }
+
+    // A book page stays on its band; selection and restoration never scroll it.
+    override var contentOffset: CGPoint {
+        get { super.contentOffset }
+        set { super.contentOffset = pinnedOffset ?? newValue }
+    }
+
+    override func setContentOffset(_ contentOffset: CGPoint, animated: Bool) {
+        if let pinnedOffset { super.setContentOffset(pinnedOffset, animated: false) }
+        else { super.setContentOffset(contentOffset, animated: animated) }
+    }
 
     required init?(coder: NSCoder) { fatalError("Use the native reader initializer") }
 
@@ -258,6 +290,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                 }
             }
             attributedText = string
+            windowLaidOut = false
             eyebrow.text = document.eyebrow
             eyebrow.font = scaledFont(size: wide ? 14 : 13, style: .caption1, weight: .semibold)
             eyebrow.textColor = UIColor(resource: .readingSecondary)
@@ -335,22 +368,24 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         eyebrow.accessibilityTraits = showsHeader ? .staticText : .header
     }
 
-    /// Paged layout: the bottom of each verse's last line (headings travel with their verse) and
-    /// of all content, in text-container coordinates. Lays out the whole chapter; measure offscreen.
-    func measuredVerseEnds() -> (verses: [CGFloat], content: CGFloat)? {
-        guard let manager = textLayoutManager, let content = manager.textContentManager, let map else { return nil }
+    /// Paged layout: every line of the chapter, in text-container coordinates. Lays out the
+    /// whole chapter; measure offscreen.
+    func measuredLines() -> [ChapterPagination.Line] {
+        guard let manager = textLayoutManager, let content = manager.textContentManager, let map else { return [] }
         manager.ensureLayout(for: content.documentRange)
-        let indexByOffset = Dictionary(uniqueKeysWithValues: map.entries.enumerated().map { ($1.range.location, $0) })
-        var ends = [CGFloat](repeating: 0, count: map.entries.count)
-        var bottom: CGFloat = 0
+        var lines: [ChapterPagination.Line] = []
         manager.enumerateTextLayoutFragments(from: content.documentRange.location, options: [.ensuresLayout]) { fragment in
-            let offset = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
-            let maxY = fragment.layoutFragmentFrame.maxY
-            if let index = indexByOffset[offset] { ends[index] = maxY }
-            bottom = max(bottom, maxY)
+            let start = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
+            let origin = fragment.layoutFragmentFrame.minY
+            for line in fragment.textLineFragments where line.characterRange.length > 0 {
+                let offset = start + line.characterRange.location
+                let heading = map.sourceHeadingRanges.contains { NSLocationInRange(offset, $0) }
+                lines.append(ChapterPagination.Line(offset: offset, top: origin + line.typographicBounds.minY,
+                                                    bottom: origin + line.typographicBounds.maxY, keepsWithNext: heading))
+            }
             return true
         }
-        return (ends, bottom)
+        return lines
     }
 
     /// Text height available between the header (or top chrome) and the bottom chrome.
@@ -365,7 +400,70 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         // Text draws behind floating chrome, but must not steal its taps after scrolling.
         guard point.y >= bounds.minY + chromeInsets.top, point.y < bounds.maxY - chromeInsets.bottom else { return false }
+        // A book page answers only within its own lines, never the covered ones. While text is
+        // selected, the margin just outside the band stays live so the selection handles' knobs
+        // above the first line and below the last line can be grabbed.
+        if let band = pageBand {
+            let reach = selectedRange.length > 0 ? Self.handleReach : 0
+            if point.y < band.minY - reach || point.y >= band.maxY + reach { return false }
+        }
         return super.point(inside: point, with: event)
+    }
+
+    /// How far a selection handle's knob and touch target extend past its line.
+    static let handleReach: CGFloat = 22
+
+    /// A book page's visible lines, in content coordinates.
+    private var pageBand: CGRect? {
+        guard let window = windowed else { return nil }
+        return CGRect(x: 0, y: textContainerInset.top + window.top, width: bounds.width, height: window.height)
+    }
+
+    private var pageRange: NSRange? {
+        windowed.map { NSRange(location: $0.start, length: $0.end - $0.start) }
+    }
+
+    /// Lay out the chapter through this page's band so its line positions are exact, not
+    /// estimated, then show the band and cover the lines of other pages.
+    private func layoutPageWindow() {
+        guard let window = windowed, let manager = textLayoutManager, let content = manager.textContentManager else {
+            pageCovers.forEach { $0.isHidden = true }
+            return
+        }
+        if !windowLaidOut, map != nil,
+           let end = content.location(content.documentRange.location, offsetBy: min(window.end, map?.text.utf16.count ?? 0)),
+           let range = NSTextRange(location: content.documentRange.location, end: end) {
+            manager.ensureLayout(for: range)
+            windowLaidOut = true
+        }
+        if super.contentOffset.y != window.top { super.contentOffset = CGPoint(x: 0, y: window.top) }
+        let bandTop = textContainerInset.top + window.top
+        let canvas = UIColor(resource: .readingCanvas)
+        // Above the band: the lines of earlier pages (the first page has none; its title shows).
+        let above = CGRect(x: 0, y: window.top, width: bounds.width, height: window.start == 0 ? 0 : bandTop - window.top)
+        let below = CGRect(x: 0, y: bandTop + window.height, width: bounds.width, height: bounds.height)
+        for (cover, frame) in zip(pageCovers, [above, below]) {
+            cover.backgroundColor = canvas
+            cover.isHidden = frame.height <= 0
+            if cover.frame != frame { cover.frame = frame }
+            bringSubviewToFront(cover)
+        }
+        bringSubviewToFront(header)
+        raiseSelectionHandles()
+    }
+
+    /// Selection handles stay above the paper covers: a knob on the band's first or last line
+    /// reaches past the band, and must remain visible and draggable there. Uses UIKit's public
+    /// selection display interaction to find the handles; the covered text stays hidden.
+    private func raiseSelectionHandles() {
+        guard windowed != nil else { return }
+        for case let display as UITextSelectionDisplayInteraction in interactions {
+            for handle in display.handleViews {
+                var view: UIView = handle
+                while let parent = view.superview, parent !== self { view = parent }
+                if view.superview === self, subviews.last !== view { bringSubviewToFront(view) }
+            }
+        }
     }
 
     override func layoutSubviews() {
@@ -382,16 +480,19 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             measuredHeaderWidth = textWidth
             measuredHeaderHeight = header.systemLayoutSizeFitting(CGSize(width: textWidth, height: 0), withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel).height
         }
-        header.frame = CGRect(x: leading + gutterWidth, y: chromeInsets.top + (wide ? 20 : 8), width: textWidth, height: measuredHeaderHeight)
-        let inset = UIEdgeInsets(top: header.frame.maxY + (showsHeader ? (wide ? 30 : 26) : 16), left: leading + gutterWidth, bottom: chromeInsets.bottom + 32, right: trailing + trailingExtra)
+        let headerTop = chromeInsets.top + (wide ? 20 : 8)
+        // A book page's running head stays at the top of the page, above its band.
+        header.frame = CGRect(x: leading + gutterWidth, y: headerTop + (pinnedOffset?.y ?? 0), width: textWidth, height: measuredHeaderHeight)
+        let inset = UIEdgeInsets(top: headerTop + measuredHeaderHeight + (showsHeader ? (wide ? 30 : 26) : 16), left: leading + gutterWidth, bottom: chromeInsets.bottom + 32, right: trailing + trailingExtra)
         if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true }
         verticalScrollIndicatorInsets = UIEdgeInsets(top: chromeInsets.top, left: 0, bottom: chromeInsets.bottom, right: 0)
         super.layoutSubviews()
-        if paged {
-            // A page scrolls only when a single verse is taller than the page.
-            let overflows = contentSize.height > bounds.height + 1
-            if isScrollEnabled != overflows { isScrollEnabled = overflows }
-        } else if !isScrollEnabled { isScrollEnabled = true }
+        // Scrolling stays enabled so the text container keeps the chapter's full height (a
+        // non-scrolling text view lays out only what fits its bounds). A book page is pinned to
+        // its band instead, with no drag or indicator.
+        if !isScrollEnabled { isScrollEnabled = true }
+        if panGestureRecognizer.isEnabled == paged { panGestureRecognizer.isEnabled = !paged }
+        if showsVerticalScrollIndicator == paged { showsVerticalScrollIndicator = !paged }
         if needsAnchorRestore, bounds.width > 0, bounds.height > 0 {
             needsAnchorRestore = false
             restorePosition()
@@ -404,6 +505,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             needsSelectionFocusRestore = !becomeFirstResponder()
         }
         layoutGutters()
+        layoutPageWindow()
     }
 
     private func applyHighlights(_ highlights: [String: HighlightColor], exact: [ExactAnnotation]) {
@@ -578,6 +680,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
 
     private func restoreSelection() {
         guard let selection = readerState?.selection, let range = map?.range(for: selection), selectedRange != range else { return }
+        // A book page restores only a selection on its own lines; selections stay within one page.
+        if let page = pageRange, NSIntersectionRange(page, range) != range { return }
         selectedRange = range
     }
 
@@ -632,6 +736,19 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         quickSelectionMenu.dismissMenu()
         // The facing page resigning must not erase a selection just made on this one.
         if paged, selectedRange.length == 0, !isFirstResponder { selectionDidChange?(); return }
+        // A selection stays on the page's own lines, never the covered ones.
+        if let page = pageRange, selectedRange.length > 0 {
+            let clamped = NSIntersectionRange(page, selectedRange)
+            if clamped != selectedRange {
+                selectedRange = clamped.length > 0 ? clamped : NSRange(location: page.location, length: 0)
+                return
+            }
+        }
+        if windowed != nil {
+            // UIKit may create the handles for this selection after this callback; recheck on layout.
+            raiseSelectionHandles()
+            setNeedsLayout()
+        }
         readerState?.selection = map?.selection(for: selectedRange)
         selectionDidChange?()
     }
@@ -724,19 +841,24 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         return UIMenu(children: annotationActions + [share] + Self.removingSystemShare(suggestedActions))
     }
 
-    private static let systemShareAction = NSSelectorFromString("_share:")
-
+    /// The system text menu groups Share in the public `.share` menu; drop that group wherever it is nested.
     private static func removingSystemShare(_ elements: [UIMenuElement]) -> [UIMenuElement] {
         elements.compactMap { element in
-            if let menu = element as? UIMenu {
-                if menu.identifier == .share { return nil }
-                return menu.replacingChildren(removingSystemShare(menu.children))
-            }
-            if let command = element as? UICommand, command.action == systemShareAction { return nil }
-            return element
+            guard let menu = element as? UIMenu else { return element }
+            if menu.identifier == .share { return nil }
+            return menu.replacingChildren(removingSystemShare(menu.children))
         }
     }
 
+
+    /// The union of a range's line rectangles; on a book page, only the lines it shows.
+    private func visibleFrame(of range: UITextRange) -> CGRect {
+        let band = pageBand
+        return selectionRects(for: range).reduce(CGRect.null) { rect, selection in
+            guard !selection.rect.isEmpty, band.map({ $0.contains(CGPoint(x: $0.midX, y: selection.rect.midY)) }) ?? true else { return rect }
+            return rect.union(selection.rect)
+        }
+    }
 
     @objc private func accessibilityStatusChanged() {
         accessibilityNeedsUpdate = true
@@ -749,15 +871,34 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         let rebuildGeometry = accessibilityNeedsUpdate
         accessibilityNeedsUpdate = false
         isAccessibilityElement = false
+        // A book page reads only the text it shows: verses and headings outside its band get no
+        // elements at all, and a verse split across pages is read as the part on this page.
+        let page = pageRange
+        func shown(_ range: NSRange) -> NSRange? {
+            guard let page else { return range }
+            if range.length == 0 { return NSLocationInRange(range.location, page) ? range : nil }
+            let visible = NSIntersectionRange(page, range)
+            return visible.length > 0 ? visible : nil
+        }
         let verses: [(location: Int, element: UIAccessibilityElement)] = map.entries.compactMap { entry in
+            guard let visible = shown(entry.range) else { return nil }
             if !rebuildGeometry, !accessibilityDirtyVerses.contains(entry.verse.id), let existing = accessibilityByVerse[entry.verse.id] {
-                return (entry.range.location, existing)
+                return (visible.location, existing)
             }
-            guard let start = position(from: beginningOfDocument, offset: entry.range.location),
-                  let end = position(from: start, offset: entry.range.length), let range = textRange(from: start, to: end) else { return nil }
+            guard let start = position(from: beginningOfDocument, offset: visible.location),
+                  let end = position(from: start, offset: visible.length), let range = textRange(from: start, to: end) else { return nil }
             let existing = accessibilityByVerse[entry.verse.id]
             let element = existing ?? VerseAccessibilityElement(accessibilityContainer: self)
-            element.accessibilityLabel = "\(document.reference):\(entry.verse.label). \(entry.verse.text)"
+            if visible == entry.range {
+                element.accessibilityLabel = "\(document.reference):\(entry.verse.label). \(entry.verse.text)"
+            } else {
+                let words = (entry.verse.text as NSString).substring(with: NSRange(location: visible.location - entry.range.location, length: visible.length))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                element.accessibilityLabel = visible.location > entry.range.location
+                    ? String(localized: "\(document.reference):\(entry.verse.label), continued. \(words)",
+                             comment: "VoiceOver label for the rest of a verse that began on the previous book page")
+                    : "\(document.reference):\(entry.verse.label). \(words)"
+            }
             var annotations: [String] = []
             if let color = readerState?.highlights[entry.verse.id] { annotations.append(color.accessibilityDescription) }
             if readerState?.bookmarks.contains(entry.verse.id) == true { annotations.append(String(localized: "Bookmarked")) }
@@ -769,9 +910,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             element.accessibilityTraits = .staticText
             if rebuildGeometry || existing == nil {
                 (element as? VerseAccessibilityElement)?.rectProvider = { [weak self] in
-                    self?.selectionRects(for: range).reduce(CGRect.null) { rect, selection in
-                        selection.rect.isEmpty ? rect : rect.union(selection.rect)
-                    } ?? .zero
+                    self?.visibleFrame(of: range) ?? .zero
                 }
                 #if DEBUG
                 accessibilityFrameUpdateCount += 1
@@ -800,7 +939,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                     }]
             }
             accessibilityByVerse[entry.verse.id] = element
-            return (entry.range.location, element)
+            return (visible.location, element)
         }
         verseAccessibility = verses.map(\.element)
         accessibilityDirtyVerses.removeAll()
@@ -808,6 +947,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         // annotation actions; they are source text, not annotation targets.
         let text = map.text as NSString
         let headings: [(location: Int, element: UIAccessibilityElement)] = map.sourceHeadingRanges.compactMap { range in
+            guard shown(range) != nil else { return nil }
             if !rebuildGeometry, let existing = accessibilityByHeading[range.location] { return (range.location, existing) }
             guard NSMaxRange(range) <= text.length, let start = position(from: beginningOfDocument, offset: range.location),
                   let end = position(from: start, offset: range.length), let textRange = textRange(from: start, to: end) else { return nil }
@@ -815,9 +955,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             element.accessibilityLabel = text.substring(with: range)
             element.accessibilityTraits = .staticText
             (element as? VerseAccessibilityElement)?.rectProvider = { [weak self] in
-                self?.selectionRects(for: textRange).reduce(CGRect.null) { rect, selection in
-                    selection.rect.isEmpty ? rect : rect.union(selection.rect)
-                } ?? .zero
+                self?.visibleFrame(of: textRange) ?? .zero
             }
             accessibilityByHeading[range.location] = element
             return (range.location, element)

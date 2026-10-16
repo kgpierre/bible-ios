@@ -11,11 +11,20 @@ enum ExactAnnotationEditor {
               let start = ids.firstIndex(of: first), start + passage.parts.count <= ids.count,
               Array(ids[start..<start + passage.parts.count]) == passage.verseIDs else { throw StorageIssue.invalidPassage }
         let texts = Dictionary(uniqueKeysWithValues: document.verses.map { ($0.id, $0.text) })
+        // Labels only the verses that hold parts: a record split around a removed middle verse
+        // reads "John 3:1, 3", never "John 3:1–3". Contiguous verses still collapse to a range.
         func reference(for parts: [SavedTextPart]) -> String {
             let selected = Set(parts.map(\.verseID))
-            let verses = document.verses.filter { selected.contains($0.id) }
-            guard let first = verses.first, let last = verses.last else { return document.reference }
-            return document.reference + ":" + first.label + (first.id == last.id ? "" : "–" + last.label)
+            var runs: [(first: ChapterDocument.Verse, last: ChapterDocument.Verse)] = []
+            var previous: Int?
+            for (index, verse) in document.verses.enumerated() where selected.contains(verse.id) {
+                if let previous, previous == index - 1, !runs.isEmpty { runs[runs.count - 1].last = verse }
+                else { runs.append((verse, verse)) }
+                previous = index
+            }
+            guard !runs.isEmpty else { return document.reference }
+            let labels = runs.map { $0.first.id == $0.last.id ? $0.first.label : $0.first.label + "–" + $0.last.label }
+            return document.reference + ":" + labels.joined(separator: ", ")
         }
         guard passage.parts.allSatisfy({ part in
             guard let text = texts[part.verseID], let range = part.resolvedRange(in: text) else { return false }

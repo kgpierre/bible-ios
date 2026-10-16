@@ -11,6 +11,16 @@ extension FocusedValues {
     }
 }
 
+extension AppState {
+    /// Whether the reader is the frontmost surface, so reader-only shortcuts act on what the user
+    /// sees. Search's field, the summary's question field and the other sheets mean the user is
+    /// elsewhere (often editing text), so chapter commands must not change the hidden reader.
+    var acceptsReaderShortcuts: Bool {
+        destination == .read && summary == nil && cardsRequest == nil && !isAboutPresented
+            && !isChapterPickerPresented && reader.notesRequest == nil
+    }
+}
+
 struct ReaderCommands: Commands {
     @FocusedValue(\.readerCommandState) private var state
     var body: some Commands {
@@ -45,13 +55,14 @@ struct ReaderCommands: Commands {
                     Task { await reader.setCurrentChapterSaved(!reader.isCurrentChapterSaved) }
                 }
                 .keyboardShortcut("d", modifiers: .command)
-                .disabled(state?.reader.document == nil || state?.reader.isSaving == true)
+                .disabled(state?.acceptsReaderShortcuts != true || state?.reader.document == nil
+                          || state?.reader.isSaving == true)
                 Button("Previous Chapter") { state?.reader.moveChapter(by: -1) }
                     .keyboardShortcut("[", modifiers: .command)
-                    .disabled(state?.reader.hasAdjacentChapter(-1) != true)
+                    .disabled(state?.acceptsReaderShortcuts != true || state?.reader.hasAdjacentChapter(-1) != true)
                 Button("Next Chapter") { state?.reader.moveChapter(by: 1) }
                     .keyboardShortcut("]", modifiers: .command)
-                    .disabled(state?.reader.hasAdjacentChapter(1) != true)
+                    .disabled(state?.acceptsReaderShortcuts != true || state?.reader.hasAdjacentChapter(1) != true)
             }
         }
     }

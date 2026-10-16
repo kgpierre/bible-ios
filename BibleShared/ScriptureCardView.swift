@@ -134,7 +134,9 @@ struct CardContentView: View {
     private var accessibilityText: String {
         card.kind == .chapter
             ? String(localized: "\(card.reference), \(card.editionLabel). \(card.text)")
-            : String(localized: "\(card.text) \(card.reference)\(card.isExcerpt ? ", excerpt" : ""), \(card.editionLabel)")
+            : card.isExcerpt
+                ? String(localized: "\(card.text) \(card.reference), excerpt, \(card.editionLabel)")
+                : String(localized: "\(card.text) \(card.reference), \(card.editionLabel)")
     }
 }
 

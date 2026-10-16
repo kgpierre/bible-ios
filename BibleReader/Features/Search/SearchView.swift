@@ -69,6 +69,10 @@ struct SearchView: View {
                 guidance("No reference found for “\(state.query)”. Did you mean:")
                 ReferenceResult(passage: passage, suggestion: true) { focused = false; open(passage) }
             case .results(let page):
+                if let book = page.book {
+                    BookShortcutRow(book: book) { focused = false; open(book.passage) }
+                    Divider()
+                }
                 if page.total == 0 {
                     ContentUnavailableView {
                         Label("No Results for “\(state.query)”", systemImage: "magnifyingglass")
@@ -147,6 +151,24 @@ private struct SearchResultRow: View {
         .padding(.vertical,14)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// The explicit book offer above word results for a bare book-name query such as `Mark`.
+private struct BookShortcutRow: View {
+    let book: BookShortcut
+    let open: () -> Void
+    var body: some View {
+        Button(action: open) {
+            Label(String(localized: "Open \(book.name)"), systemImage: "book")
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(.rect)
+        }
+        .padding(.vertical, 8)
+        .accessibilityLabel(String(localized: "Open \(book.name)"))
+        .accessibilityHint(String(localized: "Opens \(book.passage.reference) in the reader."))
+        .accessibilityIdentifier("openBook")
     }
 }
 

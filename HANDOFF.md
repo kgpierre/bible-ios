@@ -1,8 +1,16 @@
+## Latest continuation — 13 October 2026, optional developer tips
+
+More → About Bible → Support Development now offers the three StoreKit consumables configured for **Bible — Quiet KJV**: small ($0.99 US), medium ($2.99 US), and large ($4.99 US). Prices and names displayed in the app come from Apple. Every feature stays free. Verified purchases finish, repeat tips work, and delayed approvals are handled by an app-owned listener. The disabled external-donation placeholder is removed. The installed app name remains Bible.
+
+See [0021](Docs/Decisions/0021-optional-developer-tips.md) for exact IDs, local testing with the separate **BibleReader-Tips** scheme, and remaining App Store steps. The standard scheme is unchanged. Debug/Release builds and focused iPhone/iPad tests passed; [validation and screenshots](Docs/Validation/tips/README.md) are saved. Real device sandbox testing and App Review remain pending.
+
+15 October audit fixes: closing Support Development now clears the awaiting-approval notice too (a declined Ask to Buy never resolves it); a later approval still thanks through the listener. Appearance offers Landscape Pages from the live window (regular width, a hinge, or an already-chosen Two Pages) instead of the device idiom, so large phones in landscape can choose it. The `AppRootView` preview injects a non-observing TipStore. 0021 notes that StoreKit transaction observation starts at every launch, for the offline network capture.
+
 ## Latest continuation — 7 October 2026, saved chapters and Scripture widgets
 
 Owner requested saving whole chapters and turning saved verses/chapters into widgets, with Apple Intelligence for backgrounds. Plan and boundaries: [0019](Docs/Decisions/0019-saved-chapters-and-widgets.md).
 
-- **Saved chapters:** More → Save Chapter / Remove Saved Chapter, and Command-D. Additive user-store migration `v4_saved_chapters` (pre-migration backup runs automatically). Saved shows "Saved chapter · N verses" rows under All and Bookmarks; Bible order puts a chapter before its verses. Delete requires the displayed record; session/system Undo covers save, remove, and delete.
+- **Saved chapters:** the Save Chapter / Remove Saved Chapter toolbar button (top right, between Summary and More), and Command-D. Additive user-store migration `v4_saved_chapters` (pre-migration backup runs automatically). Saved shows "Saved chapter · N verses" rows under All and Bookmarks; Bible order puts a chapter before its verses. Delete requires the displayed record; session/system Undo covers save, remove, and delete.
 - **Widgets:** a new `BibleWidgets` WidgetKit extension (`dev.kpierre.bible.widgets`) and App Group `group.dev.kpierre.bible` on the app and extension. Shared card code lives in `BibleShared/` (compiled into both targets). In Saved, Make Widget (context menu, leading swipe, VoiceOver action) opens a card editor with six presets, Image Playground (shown only where it's supported), Photos, ink, and typeface. Saved → Widgets lists, edits, and deletes cards. The widget supports small, medium, large, extra large, and the Lock Screen rectangular/inline families; it shows a chosen card or rotates daily, and tapping opens `dev.kpierre.bible://open?...`, validated against the catalog.
 - **Signing:** device builds need the App Group capability registered under the owner's team; automatic signing should do this on the first device build. Simulator builds sign locally with the group.
 - **Evidence (7 October 2026):** Xcode 27.1 (27A9269) through a per-process `DEVELOPER_DIR`, iPhone 18 Pro simulator on iOS 27.0, Debug. The full scheme run `.build/Widgets-full-phone.xcresult` passed 142 tests with 0 failures; 13 skipped are the iPad/Duo-only cases. That includes the new SavedChapterTests and ScriptureCardTests (with a rendered gallery in the attachments) and the UI tests `testSaveChapterAndMakeWidget` and `testWidgetLinkOpensValidatedPassage`. The unsigned simulator build embeds `BibleWidgets.appex`, and the simulated entitlements include the App Group.
@@ -60,7 +68,7 @@ About's edition notice no longer shows the internal "Unresolved" line. The corpu
 
 **Owner to-dos:**
 
-- choose the donation mechanism (guideline 3.1.1);
+- complete real-device sandbox acceptance and App Review for the chosen consumable tips (0021);
 - in App Store Connect, exclude the United Kingdom.
 
 The earlier "iPhone only" focus below is historical; iPad was out of scope again for this pass by the owner's instruction.
@@ -76,7 +84,7 @@ The app icon comes from the owner's exports, flattened to opaque. Fixed the firs
 Owner requests, all implemented:
 
 - **Smaller corpus:** 34 → 16 MB. Chapter payloads are compressed, search uses an external-content index, and a redundant index is gone. The Bible text is unchanged: the logical revision is identical and the verse and document comparisons match.
-- **About screen:** name "Bible", Kyle Pierre with kpierre.dev, a donation button, attributions, and an icon slot. The donation URL is still pending: set `AppInfo.donationURL`.
+- **About screen:** name "Bible", Kyle Pierre with kpierre.dev, a donation button, attributions, and an icon slot. The historical external-link placeholder is superseded by the StoreKit tip screen (0021).
 - **Page turn:** the curl follows your finger, the back is thin paper with faint mirrored print, response is quicker, and a soft haptic plays on commit.
 
 Also fixed a turn state mismatch that could leave the screen on the previous chapter. See decisions [0013](Docs/Decisions/0013-visual-and-performance-audit.md) and [0014](Docs/Decisions/0014-interactive-paper-turn.md). On-device feel and haptic checks are still needed.

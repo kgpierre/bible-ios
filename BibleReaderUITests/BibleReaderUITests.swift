@@ -32,6 +32,7 @@ final class BibleReaderUITests: XCTestCase {
     func testSavedFiltersDeletionUndoAndReturnToReader() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
@@ -111,6 +112,7 @@ final class BibleReaderUITests: XCTestCase {
         let app = testApplication()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
+        try requireCompactWidth(app)
         XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
         app.buttons["appearanceButton"].tap()
         app.buttons["Dark"].tap()
@@ -134,6 +136,7 @@ final class BibleReaderUITests: XCTestCase {
     func testNativeSelectionMenu() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         let firstVerse = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
@@ -154,6 +157,7 @@ final class BibleReaderUITests: XCTestCase {
     func testCrossVerseSelectionDrag() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
@@ -284,11 +288,13 @@ final class BibleReaderUITests: XCTestCase {
             spread.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.5))
                 .press(forDuration: 0.05, thenDragTo: spread.coordinate(withNormalizedOffset: CGVector(dx: to, dy: 0.5)))
         }
+        // Every page holds the whole chapter (showing one band of it), so pages are told apart by
+        // their accessibility name, "John 3, page 3 of 6".
         var turns = 0
         while !passage.label.contains("John 4"), turns < 8 {
-            let before = left.textViews.firstMatch.label
+            let before = left.label
             drag(from: 0.92, to: 0.2)
-            let turned = expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: left.textViews.firstMatch)
+            let turned = expectation(for: NSPredicate(format: "label != %@", before), evaluatedWith: left)
             wait(for: [turned], timeout: 5)
             turns += 1
         }
@@ -299,7 +305,11 @@ final class BibleReaderUITests: XCTestCase {
         drag(from: 0.08, to: 0.8)
         let back = expectation(for: NSPredicate(format: "label CONTAINS %@", "John 3"), evaluatedWith: passage)
         wait(for: [back], timeout: 5)
-        let lastSpreadVerse = left.textViews.firstMatch.label
+        XCTAssertFalse(left.label.contains("page 1 of"), left.label)
+        // The verse on the left page's first line, which may have begun on the previous page.
+        let head = left.staticTexts.firstMatch
+        let bandTop = head.frame.maxY + 16
+        let lastSpreadVerse = try XCTUnwrap(left.textViews.allElementsBoundByIndex.first { $0.frame.maxY > bandTop + 4 }?.label)
         XCTAssertFalse(lastSpreadVerse.hasPrefix("There was a man of the Pharisees"))
         // Rotation labels do not identify the inner display's aspect ratio. A tall window
         // must scroll; if the window remains wide, explicitly choose Scroll and verify the anchor.
@@ -324,7 +334,7 @@ final class BibleReaderUITests: XCTestCase {
 
     @MainActor
     func testPagePreferenceRemainsAvailableInCompactLayoutAndPersists() throws {
-        guard !isPhoneWithoutHinge else { throw XCTSkip("Page layouts are offered only on iPad and foldables") }
+        guard !isPhoneWithoutHinge else { throw XCTSkip("A compact phone without a hinge offers Pages only in a regular-width window or after Two Pages is chosen") }
         let app = testApplication()
         app.launch()
         XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
@@ -478,6 +488,31 @@ final class BibleReaderUITests: XCTestCase {
         capture(app, name: "iPad — spread after rapid turns")
     }
 
+    /// A word on the first line of a later page selects with visible handles, and the selection
+    /// menu offers the app's reference-attributed Share Passage instead of the system Share.
+    @MainActor
+    func testIPadSpreadSelectsFirstLineOfLaterPageWithoutSystemShare() throws {
+        let app = testApplication()
+        app.launch()
+        guard app.frame.width > 600 else { throw XCTSkip("iPad landscape two-page check") }
+        defer { XCUIDevice.shared.orientation = .portrait }
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        enableTwoPages(app)
+        let right = app.textViews["spreadPageRight"]
+        XCTAssertTrue(right.waitForExistence(timeout: 5))
+        // The right page's lines begin 16 points below its running head, often mid-verse.
+        let head = right.staticTexts.firstMatch
+        XCTAssertTrue(head.waitForExistence(timeout: 5))
+        let firstLine = CGVector(dx: head.frame.minX - right.frame.minX + 15, dy: head.frame.maxY - right.frame.minY + 16 + 12)
+        right.coordinate(withNormalizedOffset: .zero).withOffset(firstLine).press(forDuration: 0.6)
+        XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.menuItems["Share Passage"].exists)
+        let systemShare = app.menuItems.matching(NSPredicate(format: "label IN %@", ["Share", "Share…", "Share..."])).firstMatch
+        XCTAssertFalse(systemShare.exists, "The system Share would send the words without their reference")
+        capture(app, name: "iPad — selection on a later page's first line")
+    }
+
     @MainActor
     private func enableTwoPages(_ app: XCUIApplication) {
         app.buttons["appearanceButton"].tap()
@@ -534,6 +569,7 @@ final class BibleReaderUITests: XCTestCase {
     func testBooksSegmentsAndCollapsingNavigation() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         capture(app, name: "Updated reader navigation")
@@ -562,6 +598,7 @@ final class BibleReaderUITests: XCTestCase {
     func testSearchAndReferenceNavigation() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         app.buttons["destination-search"].tap()
         let field = searchField(app)
@@ -584,6 +621,19 @@ final class BibleReaderUITests: XCTestCase {
         capture(app, name: "Explicit reference correction")
         app.buttons["openReferenceSuggestion"].tap()
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        // A bare book name is also a word: it shows verse results plus an explicit book offer.
+        app.buttons["destination-search"].tap()
+        field.tap()
+        field.buttons["Clear text"].tap()
+        field.typeText("mark\n")
+        XCTAssertTrue(app.staticTexts["searchCount"].waitForExistence(timeout: 10))
+        let openBook = app.buttons["openBook"]
+        XCTAssertTrue(openBook.exists)
+        XCTAssertEqual(openBook.label, "Open Mark")
+        capture(app, name: "Book name with word results")
+        openBook.tap()
+        XCTAssertTrue(app.buttons["passageButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["passageButton"].label.contains("Mark 1"))
         app.buttons["passageButton"].tap()
         let reference = searchField(app, "Go to reference, e.g. John 3:16")
         XCTAssertTrue(reference.waitForExistence(timeout: 5))
@@ -802,6 +852,7 @@ final class BibleReaderUITests: XCTestCase {
     func testTypographyControlsPersistAcrossRelaunch() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
         app.buttons["appearanceButton"].tap()
         app.buttons["readingFacePicker"].tap()
@@ -893,6 +944,7 @@ final class BibleReaderUITests: XCTestCase {
     func testExactHighlightRecolorRemovalAndUndo() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch
@@ -939,6 +991,7 @@ final class BibleReaderUITests: XCTestCase {
     func testNativeTabTrackingAndCancelledTurn() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         XCTAssertTrue(app.tabBars.firstMatch.exists)
@@ -963,8 +1016,8 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["More"].tap()
         app.buttons["About Bible"].tap()
         XCTAssertTrue(app.staticTexts["Bible"].waitForExistence(timeout: 5))
-        // Support stays hidden until a donation page is configured.
-        XCTAssertFalse(app.buttons["donateButton"].exists)
+        // Optional support is available without changing any free reader features.
+        XCTAssertTrue(app.buttons["supportDevelopmentButton"].exists)
         // iOS 26 exposes the credit as a different element type than iOS 27.
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Kyle Pierre")).firstMatch.waitForExistence(timeout: 5))
         app.swipeUp()
@@ -1043,24 +1096,38 @@ final class BibleReaderUITests: XCTestCase {
         return compact.exists ? compact : tab(app, label)
     }
 
+    /// The compact 2a chrome (bottom passage capsule and destination capsules) exists only in
+    /// compact width; regular-width iPad and Duo windows are covered by the iPad-specific tests.
+    @MainActor private func requireCompactWidth(_ app: XCUIApplication) throws {
+        guard app.windows.firstMatch.horizontalSizeClass == .compact else {
+            throw XCTSkip("Compact 2a navigation check; regular width uses the top tab bar")
+        }
+    }
+
     /// Test-runner knowledge only: the app itself asks UIKit for a hinge, never a device name.
     @MainActor private var isPhoneWithoutHinge: Bool {
         UIDevice.current.userInterfaceIdiom == .phone &&
             ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.contains("Duo") != true
     }
 
+    /// Pages is offered for regular width, a hinge, or an already chosen Two Pages
+    /// (`AppearanceView.offersPageLayout`). In portrait, a phone without a hinge is compact,
+    /// and a fresh install reads with Scroll, so neither page nor fold settings appear.
     @MainActor
-    func testPhoneWithoutHingeHidesPageAndFoldSettings() throws {
+    func testCompactPortraitPhoneWithoutHingeHidesPageAndFoldSettings() throws {
         guard isPhoneWithoutHinge else { throw XCTSkip("Checks a phone without a hinge") }
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
         let app = testApplication()
         app.launch()
+        XCTAssertEqual(app.windows.firstMatch.horizontalSizeClass, .compact)
         XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
         app.buttons["appearanceButton"].tap()
         XCTAssertTrue(app.sliders["readingSizeSlider"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.descendants(matching: .any)["pageLayoutPicker"].exists)
         XCTAssertFalse(app.descendants(matching: .any)["automaticBookLayoutToggle"].exists)
         XCTAssertFalse(app.staticTexts["PAGES"].exists || app.staticTexts["Pages"].exists)
-        capture(app, name: "iPhone Appearance without page or fold settings")
+        capture(app, name: "Compact portrait iPhone Appearance without page or fold settings")
         app.buttons["appearanceDoneButton"].tap()
     }
 
@@ -1082,10 +1149,11 @@ final class BibleReaderUITests: XCTestCase {
         let app = testApplication()
         app.launch()
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
-        app.buttons["More"].tap()
-        let save = app.buttons["Save Chapter"]
+        let save = app.buttons["saveChapterButton"]
         XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertEqual(save.label, "Save Chapter")
         save.tap()
+        XCTAssertTrue(app.buttons["Remove Saved Chapter"].waitForExistence(timeout: 5))
         destination(app, "Saved").tap()
         let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "savedItem-")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 5))
@@ -1121,10 +1189,11 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         done.tap()
         destination(app, "Read").tap()
-        app.buttons["More"].tap()
-        let remove = app.buttons["Remove Saved Chapter"]
+        let remove = app.buttons["saveChapterButton"]
         XCTAssertTrue(remove.waitForExistence(timeout: 5))
+        XCTAssertEqual(remove.label, "Remove Saved Chapter")
         remove.tap()
+        XCTAssertTrue(app.buttons["Save Chapter"].waitForExistence(timeout: 5))
         destination(app, "Saved").tap()
         app.buttons["All"].tap()
         XCTAssertTrue(app.staticTexts["Your highlights and bookmarks will appear here."].waitForExistence(timeout: 5))
@@ -1183,6 +1252,7 @@ final class BibleReaderUITests: XCTestCase {
     func testAnnotationsAndChapterSurviveRelaunch() throws {
         let app = testApplication()
         app.launch()
+        try requireCompactWidth(app)
         let reader = app.textViews["chapterText"]
         XCTAssertTrue(reader.waitForExistence(timeout: 10))
         let first = reader.textViews.matching(NSPredicate(format: "label BEGINSWITH %@", "There was a man")).firstMatch

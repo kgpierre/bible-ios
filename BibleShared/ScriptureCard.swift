@@ -111,7 +111,9 @@ enum CardLink {
     }
 
     static func parse(_ url: URL) -> (chapterID: String, verseID: String?)? {
-        guard url.scheme == scheme, url.host == "open",
+        // Only the exact form `url(chapterID:verseID:)` builds: host "open" with no path.
+        guard url.scheme == scheme, url.host == "open", url.path.isEmpty || url.path == "/",
+              url.user == nil, url.password == nil, url.port == nil, url.fragment == nil,
               let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
               // Repeated parameters are ambiguous; reject rather than pick one.
               items.filter({ $0.name == "chapter" }).count == 1, items.filter({ $0.name == "verse" }).count <= 1,

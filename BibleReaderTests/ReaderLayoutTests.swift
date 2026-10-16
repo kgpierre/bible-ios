@@ -29,6 +29,15 @@ struct ReaderLayoutTests {
         #expect(!supports(width: 900, height: .nan))
     }
 
+    @Test @MainActor func pageLayoutIsOfferedForRegularWidthHingeOrChosenTwoPages() {
+        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .regular, hasHinge: false, current: .scroll))
+        #expect(!AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: false, current: .scroll))
+        #expect(!AppearanceView.offersPageLayout(horizontalSizeClass: nil, hasHinge: false, current: .scroll))
+        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: true, current: .scroll))
+        // A chosen Two Pages stays visible so it can always be turned off.
+        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: false, current: .twoPages))
+    }
+
     @Test func bookFoldCentersPagesOnTheActualDivision() throws {
         let fold = try #require(ReaderFoldLayout(size: CGSize(width: 960, height: 650),
             divisions: [CGRect(x: 420, y: 0, width: 60, height: 650)]))
@@ -115,7 +124,7 @@ struct ReaderLayoutTests {
             coordinator.update(configuration)
             let pages = try #require(container.pager.viewControllers?.compactMap { $0 as? SpreadPageController })
             #expect(pages.count == 2)
-            let visibleIDs = pages.flatMap { $0.page?.document.verses.map(\.id) ?? [] }
+            let visibleIDs = pages.compactMap(\.page).flatMap(versesStarting)
             #expect(visibleIDs.contains(verse.id))
             #expect(Set(visibleIDs).count == visibleIDs.count)
             for page in pages.compactMap(\.page) {
@@ -127,10 +136,16 @@ struct ReaderLayoutTests {
             #expect(state.anchor == anchor)
             #expect(state.selection == selection)
             #expect(state.chapterID == document.id)
-            let selectedPage = try #require(pages.compactMap(\.page).first { $0.document.verses.contains { $0.id == verse.id } })
+            let selectedPage = try #require(pages.compactMap(\.page).first { versesStarting(on: $0).contains(verse.id) })
             selectedPage.textView.layoutIfNeeded()
             #expect(selectedPage.textView.map?.selection(for: selectedPage.textView.selectedRange) == selection)
         }
+    }
+
+    /// Verses whose first words are on a book page; each page holds the whole chapter.
+    @MainActor private func versesStarting(on page: ChapterPageController) -> [String] {
+        guard let window = page.textView.pageWindow, let map = page.textView.map else { return [] }
+        return map.entries.filter { window.contains($0.range.location) }.map(\.verse.id)
     }
 
     private func supports(width: CGFloat, height: CGFloat, regular: Bool = true,

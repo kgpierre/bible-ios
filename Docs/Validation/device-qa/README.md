@@ -30,7 +30,7 @@ Mark each ✅ / ❌ with a note. Cards from the UI tests live in isolated folder
 9. Save, reopen the card from Saved → Widgets: the background persists; the Home Screen widget updates.
 
 ### Saved chapters
-10. More → Save Chapter on a long chapter (Psalm 119), then check Saved → Bookmarks. Undo from Saved. Command-D with a hardware keyboard if available.
+10. Toolbar Save Chapter button on a long chapter (Psalm 119), then check Saved → Bookmarks. Undo from Saved. Command-D with a hardware keyboard if available.
 
 ### Feel and performance (prior open gates)
 11. Page curl feel and interrupted turns; selection handles and magnifier across verses in Psalm 119; first swipe and first Search keyboard (no stall).

@@ -19,7 +19,7 @@ struct AppRootView: View {
             if ProcessInfo.processInfo.arguments.contains("--native-tabs-probe") {
                 NativeTabsProbe()
             } else if ProcessInfo.processInfo.arguments.contains("--missing-corpus") {
-                NavigationStack { ReaderUnavailableView() }
+                NavigationStack { ReaderUnavailableView(failure: ReaderOpenFailure(kind: .corpusUnavailable)) }
             } else {
                 prototype
             }
@@ -34,6 +34,10 @@ struct AppRootView: View {
         .onChange(of: state.preferences.typography, initial: true) { _, typography in state.reader.typography = typography }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { state.reader.flushPosition(protectInBackground: true) }
+            // A store that failed because the device was locked can open once the scene is active again.
+            else if state.reader.openFailure?.kind == .locked, !state.reader.isLoading {
+                Task { await state.reader.retry() }
+            }
         }
         #if DEBUG
         .onAppear {
@@ -208,7 +212,7 @@ struct AppRootView: View {
             ProgressView("Opening Bible…")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            ReaderUnavailableView(retry: state.reader.canRetry ? { Task { await state.reader.retry() } } : nil)
+            ReaderUnavailableView(failure: state.reader.openFailure, retry: state.reader.canRetry ? { Task { await state.reader.retry() } } : nil)
         }
     }
 
@@ -243,13 +247,18 @@ struct AppRootView: View {
 
     @ToolbarContentBuilder private var readerToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
-            Button("Appearance", systemImage: "textformat.size") { state.isAppearancePresented = true }
+            Button { state.isAppearancePresented = true } label: { ToolbarGlyph(systemName: "textformat.size") }
+                .accessibilityLabel("Appearance")
                 .accessibilityIdentifier("appearanceButton")
                 .popover(isPresented: $state.isAppearancePresented) {
-                    // Only offer page layouts a device can show: Two Pages needs an iPad-class or foldable
-                    // display; the folded book layout needs a hinge.
+                    // Offer Two Pages from the live window, never the device idiom: regular width can
+                    // fit facing pages (iPad, Duo inner display, large phones in landscape), a foldable
+                    // keeps it while closed, and a chosen preference stays reachable in narrow windows
+                    // so it can be changed while the reader falls back to scrolling. Book layout needs a hinge.
                     AppearanceView(preferences: state.preferences,
-                                   showsPageLayout: UIDevice.current.userInterfaceIdiom == .pad || state.hasHinge,
+                                   showsPageLayout: AppearanceView.offersPageLayout(
+                                       horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge,
+                                       current: state.preferences.pageLayout),
                                    showsFoldOptions: state.hasHinge)
                         .frame(idealWidth: 400, idealHeight: 560)
                         .presentationCompactAdaptation(.sheet)
@@ -260,12 +269,21 @@ struct AppRootView: View {
             Button {
                 state.summarizeCurrentChapter()
             } label: {
-                Image(systemName: "apple.intelligence")
+                ToolbarGlyph(systemName: "apple.intelligence")
             }
             .accessibilityLabel("Summarize current chapter")
             .accessibilityIdentifier("chapterSummaryButton")
             .disabled(state.reader.document == nil || state.reader.isLoading)
-            Menu("More", systemImage: "ellipsis") {
+            let saved = state.reader.isCurrentChapterSaved
+            Button {
+                Task { await state.reader.setCurrentChapterSaved(!saved) }
+            } label: {
+                ToolbarGlyph(systemName: saved ? "bookmark.fill" : "bookmark")
+            }
+            .accessibilityLabel(saved ? "Remove Saved Chapter" : "Save Chapter")
+            .accessibilityIdentifier("saveChapterButton")
+            .disabled(state.reader.document == nil || state.reader.isLoading || state.reader.isSaving)
+            Menu {
                 Section {
                     Button("Previous Chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
                         .disabled(!state.reader.hasAdjacentChapter(-1))
@@ -273,15 +291,6 @@ struct AppRootView: View {
                         .disabled(!state.reader.hasAdjacentChapter(1))
                 }
                 Section {
-                    if state.reader.document != nil {
-                        // Menu items expose their title only; it names the action in the reader's context.
-                        let saved = state.reader.isCurrentChapterSaved
-                        Button(saved ? "Remove Saved Chapter" : "Save Chapter",
-                               systemImage: saved ? "book.closed.fill" : "book.closed") {
-                            Task { await state.reader.setCurrentChapterSaved(!saved) }
-                        }
-                        .disabled(state.reader.isSaving)
-                    }
                     Button(state.reader.undoActionName.map { String(localized: "Undo \($0)") } ?? String(localized: "Undo"),
                            systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
                         .disabled(!state.reader.canUndo || state.reader.isSaving)
@@ -297,10 +306,23 @@ struct AppRootView: View {
                     }
                 }
                 Button("About \(AppInfo.name)", systemImage: "info.circle") { state.isAboutPresented = true }
+            } label: {
+                ToolbarGlyph(systemName: "ellipsis")
             }
+            .accessibilityLabel("More")
         }
     }
 
+}
+
+/// A reader toolbar icon in a fixed slot. Glyphs differ in width (the ribbon is narrow, "AA" is
+/// wide), so equal slots space the group's icons evenly instead of by each glyph's own width.
+private struct ToolbarGlyph: View {
+    let systemName: String
+    var body: some View {
+        Image(systemName: systemName)
+            .frame(width: 30, height: 24)
+    }
 }
 
 private extension View {
@@ -315,4 +337,7 @@ private extension View {
     }
 }
 
-#Preview { AppRootView() }
+#Preview {
+    // About reads the app-owned TipStore; a non-observing store keeps the preview off StoreKit.
+    AppRootView().environment(TipStore(observeTransactions: false))
+}

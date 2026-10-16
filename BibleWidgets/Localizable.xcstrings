@@ -1,0 +1,121 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@" : {
+
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "%@ %@, excerpt, %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@, excerpt, %3$@"
+          }
+        }
+      }
+    },
+    "%@, %@. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@. %3$@"
+          }
+        }
+      }
+    },
+    "A passage or chapter you saved, on a card you designed." : {
+
+    },
+    "Background created with Image Playground" : {
+
+    },
+    "Background: Image Playground" : {
+
+    },
+    "Card" : {
+
+    },
+    "Choose Card" : {
+
+    },
+    "Choose one of the widget cards you made in Bible, or rotate through them daily." : {
+
+    },
+    "Dawn" : {
+
+    },
+    "Evening" : {
+
+    },
+    "Extra Large" : {
+
+    },
+    "Ink" : {
+
+    },
+    "Large" : {
+
+    },
+    "Make a widget from Saved in Bible." : {
+
+    },
+    "Medium" : {
+
+    },
+    "Paper" : {
+
+    },
+    "Rose" : {
+
+    },
+    "Rotate Daily" : {
+
+    },
+    "Rotate through my cards daily ${rotate}" : {
+
+    },
+    "Sage" : {
+
+    },
+    "Scripture" : {
+
+    },
+    "Show ${card} ${rotate}" : {
+
+    },
+    "Small" : {
+
+    },
+    "This card was removed. Edit the widget to choose another." : {
+
+    },
+    "Your cards can’t be shown right now. Open Bible or check back later." : {
+
+    },
+    "^[%lld verse](inflect: true)" : {
+
+    }
+  },
+  "version" : "1.1"
+}

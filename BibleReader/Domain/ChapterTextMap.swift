@@ -75,7 +75,10 @@ struct ChapterTextMap {
         guard let swiftRange = Range(range, in: text), let first = touched(by: range).first,
               let last = touched(by: range).last else { return nil }
         let labels = first.verse.id == last.verse.id ? first.verse.label : "\(first.verse.label)–\(last.verse.label)"
-        let partial = range.location != first.range.location || NSMaxRange(range) < NSMaxRange(last.range)
-        return "\(text[swiftRange].trimmingCharacters(in: .newlines))\n— \(document.reference):\(labels), \(document.editionLabel)\(partial ? " (excerpt)" : "")"
+        // An excerpt omits part of a verse. Selecting a preceding superscription or trailing line
+        // break along with whole verses still copies those verses completely.
+        let partial = range.location > first.range.location || NSMaxRange(range) < NSMaxRange(last.range)
+        let marker = partial ? String(localized: " (excerpt)") : ""
+        return "\(text[swiftRange].trimmingCharacters(in: .newlines))\n— \(document.reference):\(labels), \(document.editionLabel)\(marker)"
     }
 }

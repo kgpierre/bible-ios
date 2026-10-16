@@ -3,11 +3,12 @@ import UIKit
 
 /// Wide landscape "Two Pages": facing book pages on iPad and regular-width phones.
 ///
-/// Each page is an ordinary `ChapterTextView` holding a slice of the chapter's verses, so
-/// selection, highlights, bookmarks, notes, copy, and VoiceOver behave as in the scrolling
-/// reader, except that a selection stays within one page. Page breaks fall between verses and
-/// come from measuring the whole chapter at page size. The spread records the first verse of
-/// its left page as the reading anchor, so scroll mode and relaunch resume at the same verse.
+/// Each page is an ordinary `ChapterTextView` holding the whole chapter and showing one band of
+/// its lines, so selection, highlights, bookmarks, notes, copy, and VoiceOver behave as in the
+/// scrolling reader, except that a selection stays within one page. Page breaks fall between
+/// lines, measured from the whole chapter at page size, so a verse continues on the next page
+/// and no page scrolls. The spread records where its left page begins as the reading anchor,
+/// so scroll mode and relaunch resume at the same words.
 struct SpreadChapterView: UIViewControllerRepresentable {
     let document: ChapterDocument
     let state: ReaderState
@@ -54,9 +55,15 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         private var configuration: SpreadChapterView?
         private var layoutKey: LayoutKey?
         private var paginations: [String: ChapterPagination] = [:]
+        private var maps: [String: ChapterTextMap] = [:]
         /// Full chapters for the current chapter and its neighbors.
         private var documents: [String: ChapterDocument] = [:]
+        /// Pages of the spread on screen and of the spreads one turn away. Each page holds a full
+        /// chapter text view laid out through its band, so the cache is pruned to that set.
         private var controllers: [PageKey: SpreadPageController] = [:]
+        #if DEBUG
+        var cachedPageKeys: Set<PageKey> { Set(controllers.keys) }
+        #endif
         /// The left page of the spread on screen.
         private var displayed: PageKey?
         private var shownRevision = -1
@@ -159,9 +166,29 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             }
             if target != displayed || relayout || visiblePages.first?.key != target { show(target, direction: .forward, animated: false) }
             shownRevision = state.navigationRevision
+            pruneControllers()
             configurePages()
             prepareNeighbors()
             updateGestures()
+        }
+
+        /// Drop cached pages beyond the spreads one turn from the one on screen. Pages UIKit
+        /// still shows are always kept, so a cached page is never duplicated under the pager.
+        private func pruneControllers() {
+            guard !curling, let displayed else { return }
+            let visible = Set(visiblePages.map(\.key))
+            func count(_ id: String) -> Int? { paginations[id].map { $0.pages.count + $0.pages.count % 2 } }
+            let previous = adjacent(-1, to: displayed.chapterID), next = adjacent(1, to: displayed.chapterID)
+            let atStart = displayed.index < 2
+            let atEnd = count(displayed.chapterID).map { displayed.index + 2 >= $0 } ?? false
+            controllers = controllers.filter { key, _ in
+                if visible.contains(key) { return true }
+                if key.chapterID == displayed.chapterID { return key.index >= displayed.index - 2 && key.index <= displayed.index + 3 }
+                // A turn across a chapter boundary needs only the neighbor's facing spread.
+                if key.chapterID == previous, atStart { return count(key.chapterID).map { key.index >= $0 - 2 } ?? true }
+                if key.chapterID == next, atEnd { return key.index < 2 }
+                return false
+            }
         }
 
         // MARK: Pagination
@@ -174,7 +201,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         private func pagination(for document: ChapterDocument) -> ChapterPagination {
             if let cached = paginations[document.id] { return cached }
             guard let container, let configuration else {
-                return ChapterPagination(verseEnds: [], contentEnd: 0, firstPageHeight: 1, pageHeight: 1)
+                return ChapterPagination(lines: [], textLength: 0, firstPageHeight: 1, pageHeight: 1)
             }
             let measurer = container.measurer
             measurer.frame = CGRect(origin: .zero, size: pageSize)
@@ -188,14 +215,13 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             measurer.configure(document: document, state: measuringState, wide: true, scheme: configuration.scheme)
             measurer.layoutIfNeeded()
             let firstHeight = measurer.pageTextHeight
-            let ends = measurer.measuredVerseEnds() ?? (verses: [], content: 0)
+            let lines = measurer.measuredLines()
             measurer.showsHeader = false
             measurer.layoutIfNeeded()
             let laterHeight = measurer.pageTextHeight
             measurer.showsHeader = true
-            // A few points of slack absorb paragraph spacing at a page's foot.
-            let pagination = ChapterPagination(verseEnds: ends.verses, contentEnd: ends.content,
-                                               firstPageHeight: firstHeight - 4, pageHeight: laterHeight - 4)
+            let pagination = ChapterPagination(lines: lines, textLength: map(for: document).text.utf16.count,
+                                               firstPageHeight: firstHeight, pageHeight: laterHeight)
             paginations[document.id] = pagination
             return pagination
         }
@@ -207,10 +233,17 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             return count + count % 2
         }
 
+        private func map(for document: ChapterDocument) -> ChapterTextMap {
+            if let cached = maps[document.id] { return cached }
+            let map = ChapterTextMap(document: document)
+            maps[document.id] = map
+            return map
+        }
+
         private func spreadStart(for document: ChapterDocument) -> PageKey {
             let pagination = pagination(for: document)
-            let verse = state.anchor.flatMap { anchor in document.verses.firstIndex { $0.id == anchor.text.verseID } }
-            let page = verse.map { pagination.page(containingVerse: $0) } ?? 0
+            let offset = state.anchor.flatMap { map(for: document).offset(for: $0.text) }
+            let page = offset.map { pagination.page(containing: $0) } ?? 0
             return PageKey(chapterID: document.id, index: page - page % 2)
         }
 
@@ -244,6 +277,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             controllers = controllers.filter { ids.contains($0.key.chapterID) }
             documents = documents.filter { ids.contains($0.key) }
             paginations = paginations.filter { ids.contains($0.key) }
+            maps = maps.filter { ids.contains($0.key) }
             preload = Task { [weak self] in
                 guard let self else { return }
                 do {
@@ -273,10 +307,9 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             if let document = documents[key.chapterID] {
                 let pagination = pagination(for: document)
                 if pagination.pages.indices.contains(key.index) {
-                    let last = key.index == pagination.pages.count - 1
-                    let page = ChapterPageController(document: document.page(pagination.pages[key.index],
-                        includesTrailingBlocks: last && pagination.trailingOnLastPage))
+                    let page = ChapterPageController(document: document)
                     page.textView.paged = true
+                    page.textView.pageWindow = pagination.pages[key.index]
                     page.textView.showsHeader = key.index == 0
                     page.textView.selectionDidChange = { [weak self] in self?.updateGestures() }
                     controller = SpreadPageController(key: key, page: page)
@@ -299,6 +332,11 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             page.configure(from: state, live: live, wide: true, scheme: configuration.scheme, insets: configuration.chromeInsets)
             let side = controller.key.index % 2 == 0 ? "Left" : "Right"
             page.textView.accessibilityIdentifier = live ? "spreadPage\(side)" : "adjacentSpreadPage"
+            // Every page holds the whole chapter, so name the page itself for assistive technologies.
+            if let count = paginations[controller.key.chapterID].map({ $0.pages.count + $0.pages.count % 2 }) {
+                page.textView.accessibilityLabel = String(localized: "\(page.document.reference), page \(controller.key.index + 1) of \(count)",
+                                                          comment: "VoiceOver name of one book page in Two Pages")
+            }
         }
 
         private func configurePages() {
@@ -330,10 +368,13 @@ struct SpreadChapterView: UIViewControllerRepresentable {
                 haptics.impactOccurred(intensity: 0.7)
             }
             if let document = documents[key.chapterID] {
-                let pagination = pagination(for: document)
-                let range = pagination.pages.indices.contains(key.index) ? pagination.pages[key.index] : nil
-                let verse = range.flatMap { $0.isEmpty ? nil : document.verses[$0.lowerBound] } ?? document.verses.last
-                if let verse { state.anchor = ReadingAnchor(text: VerseAnchor(verseID: verse.id, utf16Offset: 0), viewportY: 0.1) }
+                // The words the left page begins with, even mid-verse.
+                let pagination = pagination(for: document), map = map(for: document)
+                let start = pagination.pages.indices.contains(key.index) ? pagination.pages[key.index].start : map.text.utf16.count
+                if let entry = map.entries.first(where: { NSMaxRange($0.range) > start }) ?? map.entries.last {
+                    let local = min(max(0, start - entry.range.location), entry.range.length)
+                    state.anchor = ReadingAnchor(text: VerseAnchor(verseID: entry.verse.id, utf16Offset: local), viewportY: 0.1)
+                }
             }
             shownRevision = state.navigationRevision
             announcePage()
@@ -394,6 +435,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         }
 
         private func settle() {
+            pruneControllers()
             configurePages()
             prepareNeighbors()
             updateGestures()

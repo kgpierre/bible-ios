@@ -28,24 +28,40 @@ struct ReferenceParser: Sendable {
         text.lowercased().filter { !$0.isWhitespace && $0 != "." }
     }
 
-    func parse(_ input: String) -> ReferenceIntent {
+    func bookName(_ id: String) -> String? { books[id]?.name }
+
+    /// `allowsText` is true for Search, where input that is not a reference attempt is a word query.
+    /// Direct-reference entry passes false so unknown books keep their reference guidance.
+    func parse(_ input: String, allowsText: Bool = true) -> ReferenceIntent {
         let input = input.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "–", with: "-").replacingOccurrences(of: "—", with: "-")
         guard input.count <= 200 else { return .invalid(SearchInputError.tooLong.message) }
         guard !input.isEmpty else { return .text }
         if input.contains("\"") || input.contains("“") || input.contains("”") { return .text }
         let pattern = #"^([1-3]?\s*[\p{L}.]+(?:\s+[\p{L}.]+)*?)\s*(\d.*)?$"#
+        let unrecognized = String(localized: "Book not recognized. Try a full name, such as John 3:16.")
         guard let expression = try? NSRegularExpression(pattern: pattern),
               let match = expression.firstMatch(in: input, range: NSRange(input.startIndex..., in: input)),
               let nameRange = Range(match.range(at: 1), in: input) else {
-            return input.contains(":") ? .invalid(String(localized: "Use one reference, such as John 3:16–18.")) : .text
+            // `John:3` is a malformed reference; `love: joy` and `Mark: the end` are ordinary text.
+            let leading = Self.key(String(input.prefix { $0.isLetter || $0.isNumber || $0.isWhitespace || $0 == "." }))
+            guard input.contains(":"), !allowsText || (aliases[leading] != nil && input.contains(where: \.isNumber)) else { return .text }
+            return .invalid(String(localized: "Use one reference, such as John 3:16–18."))
         }
         let name = Self.key(String(input[nameRange]))
         let suffix = Range(match.range(at: 2), in: input).map { String(input[$0]).filter { !$0.isWhitespace } }
         let targets = aliases[name] ?? []
-        if targets.count > 1 { return .invalid(String(localized: "That book abbreviation is ambiguous. Enter the full book name.")) }
-        if let id = targets.first { return parseSuffix(suffix, bookID: id, suggested: false) }
-        guard suffix != nil else { return .text }
+        if targets.count > 1 {
+            if suffix == nil, allowsText { return .text }
+            return .invalid(String(localized: "That book abbreviation is ambiguous. Enter the full book name."))
+        }
+        if let id = targets.first {
+            guard suffix != nil || !allowsText else {
+                return books[id] == nil ? .text : .book(ParsedReference(bookID: id, chapter: "1", firstVerse: nil, lastVerse: nil))
+            }
+            return parseSuffix(suffix, bookID: id, suggested: false)
+        }
+        guard let suffix else { return .text }
         // A typo is an explicit proposal, never a navigation or query rewrite.
         var distances: [String: Int] = [:]
         // Suggest full names only: short aliases such as Jon must not tie with John
@@ -61,7 +77,10 @@ struct ReferenceParser: Sendable {
             let candidates = distances.filter { $0.value == best }.map(\.key)
             if candidates.count == 1 { return parseSuffix(suffix, bookID: candidates[0], suggested: true) }
         }
-        return .invalid(String(localized: "Book not recognized. Try a full name, such as John 3:16."))
+        // Words followed by a number (`seventy times 7`) are text unless the number is
+        // chapter:verse syntax, which only a reference attempt uses.
+        if allowsText, !suffix.contains(":") { return .text }
+        return .invalid(unrecognized)
     }
 
     private func parseSuffix(_ suffix: String?, bookID: String, suggested: Bool) -> ReferenceIntent {

@@ -1,53 +1,67 @@
 import CoreGraphics
 
-/// Splits a chapter into book pages at verse boundaries, from measured layout.
+/// Splits a chapter into book pages at line boundaries, from measured layout.
 ///
-/// Heights come from one continuous layout of the chapter at page width, so a page lays out
-/// exactly as measured. Verses are never split: a verse taller than a page gets a page of its
-/// own and scrolls there. Source headings travel with the verse they precede.
+/// Every page renders the whole chapter with the same layout used to measure it and shows only
+/// its own band of lines, so a page always fits exactly and never scrolls. A verse that does
+/// not fit continues on the next page, as in a printed book. Source headings stay with the
+/// text they introduce.
 struct ChapterPagination: Equatable {
-    /// Verse index ranges, one per page. A page may be empty only when it carries trailing blocks.
-    let pages: [Range<Int>]
-    /// Whether the final page carries the chapter's trailing source blocks.
-    let trailingOnLastPage: Bool
+    /// One measured line of the chapter, in text-container coordinates.
+    struct Line: Equatable {
+        /// UTF-16 offset of the line's first character in the chapter text.
+        let offset: Int
+        let top: CGFloat
+        let bottom: CGFloat
+        /// A source heading line, which should not end a page.
+        var keepsWithNext = false
+    }
+
+    /// The text and the band of lines one page shows.
+    struct Page: Equatable {
+        /// UTF-16 range of the chapter text on this page.
+        let start: Int
+        let end: Int
+        /// Container coordinates of the first line's top and the last line's bottom.
+        let top: CGFloat
+        let bottom: CGFloat
+
+        var height: CGFloat { bottom - top }
+        func contains(_ offset: Int) -> Bool { offset >= start && offset < end }
+    }
+
+    let pages: [Page]
 
     /// - Parameters:
-    ///   - verseEnds: bottom of each verse's last line (including any preceding headings),
-    ///     in one continuous text-container coordinate space starting at 0.
-    ///   - contentEnd: bottom of the chapter's content, including trailing blocks.
     ///   - firstPageHeight: text height available on the chapter's first page (below its title).
     ///   - pageHeight: text height available on every later page.
-    init(verseEnds: [CGFloat], contentEnd: CGFloat, firstPageHeight: CGFloat, pageHeight: CGFloat) {
-        var pages: [Range<Int>] = []
-        var start = 0
-        var top: CGFloat = 0
-        func available(_ page: Int) -> CGFloat { page == 0 ? firstPageHeight : pageHeight }
-        for index in verseEnds.indices where index > start && verseEnds[index] - top > available(pages.count) {
-            pages.append(start..<index)
-            top = verseEnds[index - 1]
-            start = index
+    init(lines: [Line], textLength: Int, firstPageHeight: CGFloat, pageHeight: CGFloat) {
+        guard !lines.isEmpty else {
+            pages = [Page(start: 0, end: textLength, top: 0, bottom: 0)]
+            return
         }
-        pages.append(start..<verseEnds.count)
-        let trailing = contentEnd - (verseEnds.last ?? 0)
-        if trailing > 0.5, contentEnd - top > available(pages.count - 1), !(pages.last?.isEmpty ?? true) {
-            pages.append(verseEnds.count..<verseEnds.count)
+        var pages: [Page] = []
+        var first = 0
+        while first < lines.count {
+            let top = pages.isEmpty ? 0 : lines[first].top
+            let available = pages.isEmpty ? firstPageHeight : pageHeight
+            var last = first
+            while last + 1 < lines.count, lines[last + 1].bottom - top <= available { last += 1 }
+            // A heading never ends a page when the text it introduces follows on the next one.
+            if last + 1 < lines.count {
+                var kept = last
+                while kept > first, lines[kept].keepsWithNext { kept -= 1 }
+                if !lines[kept].keepsWithNext { last = kept }
+            }
+            let end = last + 1 < lines.count ? lines[last + 1].offset : textLength
+            pages.append(Page(start: pages.isEmpty ? 0 : lines[first].offset, end: end, top: top, bottom: lines[last].bottom))
+            first = last + 1
         }
         self.pages = pages
-        trailingOnLastPage = trailing > 0.5
     }
 
-    /// The index of the page that contains a verse; the first page when the verse is absent.
-    func page(containingVerse index: Int) -> Int {
-        pages.firstIndex { $0.contains(index) } ?? 0
-    }
-}
-
-extension ChapterDocument {
-    /// One book page of this chapter. It keeps the chapter's identity, so annotations,
-    /// notes, copy references, and anchors resolve exactly as in the continuous reader.
-    func page(_ verses: Range<Int>, includesTrailingBlocks: Bool) -> ChapterDocument {
-        ChapterDocument(id: id, bookID: bookID, bookName: bookName, eyebrow: eyebrow, label: label,
-                        editionLabel: editionLabel, verses: Array(self.verses[verses]),
-                        trailingBlocks: includesTrailingBlocks ? trailingBlocks : nil)
+    /// The index of the page showing a UTF-16 offset; the last page for the end of the text.
+    func page(containing offset: Int) -> Int {
+        pages.firstIndex { $0.contains(offset) } ?? max(0, pages.count - 1)
     }
 }

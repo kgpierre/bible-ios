@@ -160,8 +160,25 @@ actor BibleStore {
                     created REAL NOT NULL, updated REAL NOT NULL, UNIQUE(editionID, chapterID))
                 """)
         }
-        try migrator.migrate(user)
+        // Each migration is its own transaction, so a failure leaves the store at its last applied
+        // version and the pre-migration copy in place. The reader reports it as a migration failure.
+        do { try migrator.migrate(user) } catch { throw MigrationFailure(underlying: error) }
         try Self.protectFiles(at: userURL)
+    }
+
+    /// A pending user-store migration failed and was rolled back; existing data is unchanged.
+    struct MigrationFailure: Error {
+        let underlying: any Error
+    }
+
+    /// Whether an open, backup, or migration failure was caused by a full volume, including
+    /// a SQLite write that ran out of space mid-transaction.
+    nonisolated static func isOutOfSpace(_ error: any Error) -> Bool {
+        if let failure = error as? MigrationFailure { return isOutOfSpace(failure.underlying) }
+        if case StorageIssue.insufficientSpace? = error as? StorageIssue { return true }
+        if let database = error as? DatabaseError { return database.resultCode == .SQLITE_FULL }
+        if let cocoa = error as? CocoaError { return cocoa.code == .fileWriteOutOfSpace }
+        return false
     }
 
     /// Online backup API copy, so pending journal/WAL state is included. One file is retained and
@@ -169,7 +186,12 @@ actor BibleStore {
     /// store already is backed up. Low space fails before migrating instead of risking the original.
     private static func backupBeforeMigration(_ source: DatabaseQueue, userURL: URL) throws {
         let backupURL = userURL.deletingLastPathComponent().appendingPathComponent("User-before-migration.sqlite")
-        let size = (try? FileManager.default.attributesOfItem(atPath: userURL.path)[.size] as? Int) ?? 0
+        // File size via URL resource values (not a required-reason file-timestamp API). The backup
+        // copies pending WAL content too, so the WAL counts toward the space needed.
+        let size = ["", "-wal"].reduce(0) { total, suffix in
+            let url = URL(fileURLWithPath: userURL.path + suffix)
+            return total + ((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
         if let free = try? userURL.deletingLastPathComponent().resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage,
            free < Int64(size * 2 + 1_000_000) {
             throw StorageIssue.insufficientSpace
@@ -195,10 +217,11 @@ actor BibleStore {
     }
 
     func lookupReference(_ input: String) throws -> SearchResponse {
-        switch try parser().parse(input) {
+        // Direct-reference entry is strict: a bare book opens its first chapter, unknown books are errors.
+        switch try parser().parse(input, allowsText: false) {
         case .text: return input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .empty : .invalid(String(localized: "Enter a reference such as John 3:16 or Jude 5."))
         case .invalid(let message): return .invalid(message)
-        case .reference(let parsed): return try resolve(parsed, suggested: false)
+        case .reference(let parsed), .book(let parsed): return try resolve(parsed, suggested: false)
         case .suggestion(let parsed): return try resolve(parsed, suggested: true)
         }
     }
@@ -237,10 +260,18 @@ actor BibleStore {
         let interval = ReaderPerformance.signposter.beginInterval("Local search", id: ReaderPerformance.signposter.makeSignpostID())
         defer { ReaderPerformance.signposter.endInterval("Local search", interval) }
         try Task.checkCancellation()
+        // A bare book name is also a word (Mark, Acts, Job): search its text and offer the book
+        // explicitly on the first page, never navigating on the user's behalf.
+        var book: BookShortcut?
         switch try parser().parse(input) {
         case .reference(let parsed): return try resolve(parsed, suggested: false)
         case .suggestion(let parsed): return try resolve(parsed, suggested: true)
         case .invalid(let message): return .invalid(message)
+        case .book(let parsed):
+            if offset == 0, case .reference(let passage) = try resolve(parsed, suggested: false),
+               let name = try parser().bookName(parsed.bookID) {
+                book = BookShortcut(name: name, passage: passage)
+            }
         case .text: break
         }
         let query: TextSearchQuery
@@ -275,7 +306,9 @@ actor BibleStore {
             return (ordinals, SearchPage(hits: hits, total: ordinals.count))
         }
         rankedSearch = (expression, ordinals)
-        return .results(page)
+        var result = page
+        result.book = book
+        return .results(result)
     }
 
     /// Builds the reference parser and runs one representative ranked query on the search

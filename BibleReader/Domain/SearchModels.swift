@@ -16,6 +16,9 @@ enum ReferenceIntent: Equatable, Sendable {
     case text
     case reference(ParsedReference)
     case suggestion(ParsedReference)
+    /// A bare book name such as `Mark`: also an ordinary word, so Search runs a text query and
+    /// offers the book explicitly instead of navigating.
+    case book(ParsedReference)
     case invalid(String)
 }
 
@@ -39,9 +42,16 @@ struct SearchHit: Identifiable, Equatable, Sendable {
     var plainExcerpt: String { excerpt.map(\.text).joined() }
 }
 
+/// An explicit "Open <Book>" offer shown above text results for a bare book-name query.
+struct BookShortcut: Equatable, Sendable {
+    let name: String
+    let passage: ResolvedPassage
+}
+
 struct SearchPage: Equatable, Sendable {
     var hits: [SearchHit]
     let total: Int
+    var book: BookShortcut? = nil
     var hasMore: Bool { hits.count < total }
 }
 

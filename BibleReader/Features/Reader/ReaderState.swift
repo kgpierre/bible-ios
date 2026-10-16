@@ -1,6 +1,7 @@
 import Observation
 import Foundation
 import os
+import UIKit
 
 @MainActor
 @Observable
@@ -92,7 +93,10 @@ final class ReaderState {
     }
     @ObservationIgnored private var savedRequest = UUID()
     @ObservationIgnored private var annotationRetry: AnnotationRetry?
-    var canRetry: Bool { annotationRetry != nil || store == nil }
+    /// Why local reading data last failed to open, or nil after a successful open.
+    private(set) var openFailure: ReaderOpenFailure?
+    /// Retry is offered unless the open failure cannot change without an app update.
+    var canRetry: Bool { annotationRetry != nil || (store == nil && openFailure?.isRetryable != false) }
     var navigationRevision = 0
     var navigationCollapsed = false
     var navigationCue: Set<String> = []
@@ -184,10 +188,13 @@ final class ReaderState {
             #endif
             try await refreshAnnotations()
             loadFailed = false
+            openFailure = nil
         } catch {
             loadFailed = true
-            errorTitle = String(localized: "Couldn’t Open Reading Data")
-            errorMessage = String(localized: "Local reading data could not open. Your saved data has been kept. Unlock the device and try again.")
+            let failure = ReaderOpenFailure(error, protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable)
+            openFailure = failure
+            errorTitle = failure.title
+            errorMessage = failure.message
             store = nil
         }
         isLoading = false
@@ -549,6 +556,21 @@ final class ReaderState {
             undoNames.removeLast()
             canUndo = !undoHistory.isEmpty
             undoActionName = undoNames.last
+        } catch StorageIssue.undoConflict {
+            // The saved records changed after this edit (another window or a later write), so it
+            // can never apply. Drop only this entry so earlier edits stay undoable; nothing changed.
+            undoHistory.removeLast()
+            undoNames.removeLast()
+            canUndo = !undoHistory.isEmpty
+            undoActionName = undoNames.last
+            annotationRetry = nil
+            errorTitle = String(localized: "Couldn’t Undo")
+            errorMessage = canUndo
+                ? String(localized: "This change was edited again after it was made, so it can’t be undone. The current version has been kept. Earlier changes can still be undone.")
+                : String(localized: "This change was edited again after it was made, so it can’t be undone. The current version has been kept.")
+            // Show the store's current records in place of what this entry expected.
+            try? await refreshAnnotations()
+            return
         } catch {
             if fromSystem { registerSystemUndo(undoNames.last ?? "") }
             annotationRetry = .undo
@@ -627,10 +649,42 @@ final class ReaderState {
                 try Task.checkCancellation()
                 try await store.savePosition(chapterID: chapterID, anchor: anchor)
             } catch is CancellationError { } catch {
+                if await retryPositionAfterUnlock() { return }
                 errorTitle = String(localized: "Couldn’t Save Reading Position")
                 errorMessage = String(localized: "Your reading position could not be saved. Your annotations have been kept.")
             }
         }
+    }
+
+    /// A write refused because the device is locked (Complete protection) is retried, not
+    /// reported: once protected data returns, the current position is saved. Returns false for
+    /// any other failure, which the caller reports.
+    private func retryPositionAfterUnlock() async -> Bool {
+        guard await Self.waitForProtectedData(center: .default,
+                                              isAvailable: { UIApplication.shared.isProtectedDataAvailable }) else { return false }
+        // A newer save replaced this one while waiting; it owns the write now.
+        guard !Task.isCancelled else { return true }
+        flushPosition()
+        return true
+    }
+
+    /// Waits for protected data. Observers are installed before the availability check, so an
+    /// unlock between the check and the subscription is not missed. Becoming active is also a
+    /// signal, since an unlock notification can arrive while the app is not running code.
+    /// Returns false at once when data is already available (the failure had another cause),
+    /// and true after protected data returns or when the waiting task is cancelled.
+    static func waitForProtectedData(center: NotificationCenter, isAvailable: () -> Bool) async -> Bool {
+        let (signals, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let observers = [UIApplication.protectedDataDidBecomeAvailableNotification, UIApplication.didBecomeActiveNotification].map { name in
+            center.addObserver(forName: name, object: nil, queue: nil) { _ in continuation.yield() }
+        }
+        defer {
+            for observer in observers { center.removeObserver(observer) }
+            continuation.finish()
+        }
+        guard !isAvailable() else { return false }
+        for await _ in signals where isAvailable() { break }
+        return true
     }
 
     #if DEBUG
@@ -660,7 +714,11 @@ final class ReaderState {
             defer { lease?.end() }
             do { try await store.savePosition(chapterID: chapterID, anchor: anchor) }
             catch is CancellationError { }
-            catch { errorTitle = String(localized: "Couldn’t Save Reading Position"); errorMessage = String(localized: "Your reading position could not be saved. Please try again.") }
+            catch {
+                lease?.end()
+                if await retryPositionAfterUnlock() { return }
+                errorTitle = String(localized: "Couldn’t Save Reading Position"); errorMessage = String(localized: "Your reading position could not be saved. Please try again.")
+            }
         }
     }
 }
@@ -693,4 +751,66 @@ enum HighlightColor: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
     var assetName: String { "Highlight" + rawValue.capitalized }
+}
+
+/// Specific, actionable guidance when local reading data cannot open. Every case keeps the
+/// user's data unchanged and never suggests deleting or reinstalling.
+struct ReaderOpenFailure: Equatable, Sendable {
+    enum Kind: Equatable, Sendable {
+        /// Complete protection keeps the store unreadable until the device is unlocked.
+        case locked
+        /// Too little free space to back up and migrate safely, or a write ran out of space.
+        case insufficientSpace
+        /// The store was written by a newer version of the app (a downgrade).
+        case newerUserStore
+        /// A pending migration failed and was rolled back.
+        case migrationFailed
+        /// The bundled Bible text is missing or incompatible with this build.
+        case corpusUnavailable
+        case other
+    }
+
+    let kind: Kind
+
+    init(kind: Kind) { self.kind = kind }
+
+    init(_ error: any Error, protectedDataAvailable: Bool) {
+        if BibleStore.isOutOfSpace(error) { kind = .insufficientSpace }
+        else if case StorageIssue.incompatibleUserStore? = error as? StorageIssue { kind = .newerUserStore }
+        else if case StorageIssue.incompatibleCorpus? = error as? StorageIssue { kind = .corpusUnavailable }
+        else if !protectedDataAvailable { kind = .locked }
+        else if error is BibleStore.MigrationFailure { kind = .migrationFailed }
+        else { kind = .other }
+    }
+
+    /// False when retrying cannot help until the app is updated.
+    var isRetryable: Bool { kind != .newerUserStore && kind != .corpusUnavailable }
+
+    var title: String {
+        switch kind {
+        case .locked: String(localized: "Unlock to Continue Reading")
+        case .insufficientSpace: String(localized: "Not Enough Storage")
+        case .newerUserStore: String(localized: "Update Required")
+        case .migrationFailed: String(localized: "Couldn’t Update Reading Data")
+        case .corpusUnavailable: String(localized: "Bible Text Unavailable")
+        case .other: String(localized: "Couldn’t Open Reading Data")
+        }
+    }
+
+    var message: String {
+        switch kind {
+        case .locked:
+            String(localized: "Your reading data is protected while this device is locked. Unlock the device, then try again. Your saved data has been kept.")
+        case .insufficientSpace:
+            String(localized: "There isn’t enough free storage to open your reading data safely. Free up some storage on this device, then try again. Your saved data has been kept unchanged.")
+        case .newerUserStore:
+            String(localized: "Your saved data was created by a newer version of this app. It has been kept unchanged. Update the app to open it.")
+        case .migrationFailed:
+            String(localized: "Your saved data couldn’t be updated for this version of the app. It has been kept unchanged. Try again. If this continues, check for an app update.")
+        case .corpusUnavailable:
+            String(localized: "The Bible text included with this app couldn’t be opened. Your saved data has not been changed. Check for an app update.")
+        case .other:
+            String(localized: "Local reading data couldn’t open. Your saved data has been kept. Try again.")
+        }
+    }
 }

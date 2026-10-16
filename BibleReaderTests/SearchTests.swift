@@ -54,6 +54,51 @@ struct SearchTests {
         #expect(Set(try await store.books().map(\.id)) == Set(BookDescriptions.values.keys))
     }
 
+    @Test func bareBookNamesSearchTextAndOfferTheBook() async throws {
+        let store = try store()
+        guard case .results(let mark) = try await store.search("mark") else { Issue.record("Mark was not text-searched"); return }
+        #expect(mark.total == 36)
+        #expect(mark.hits.allSatisfy { $0.excerpt.contains { $0.isMatch && $0.text.lowercased() == "mark" } })
+        #expect(mark.book?.name == "Mark")
+        #expect(mark.book?.passage.reference == "Mark 1")
+        for (input, name) in [("Acts", "Acts"), ("job", "Job"), ("Jude", "Jude"), ("Obadiah", "Obadiah"), ("1 John", "1 John")] {
+            guard case .results(let page) = try await store.search(input) else { Issue.record("No text results for \(input)"); continue }
+            #expect(page.book?.name == name, "\(input)")
+        }
+        guard case .results(let job) = try await store.search("job"), job.total > 0 else { Issue.record("Job words missing"); return }
+        // Later pages only append hits; the offer belongs to the first page.
+        guard case .results(let later) = try await store.search("the", offset: 50) else { Issue.record("Paging failed"); return }
+        #expect(later.book == nil)
+        guard case .results(let word) = try await store.search("light") else { Issue.record("Search failed"); return }
+        #expect(word.book == nil)
+        // Direct-reference entry still opens the book's first chapter.
+        guard case .reference(let opened) = try await store.lookupReference("Mark") else { Issue.record("Mark reference failed"); return }
+        #expect(opened.reference == "Mark 1")
+    }
+
+    @Test func nonReferenceColonsAndNumbersSearchText() async throws {
+        let store = try store()
+        guard case .results(let colon) = try await store.search("love: joy") else { Issue.record("love: joy was not text"); return }
+        #expect(colon.total > 0)
+        #expect(colon.book == nil)
+        guard case .results = try await store.search("seventy times 7") else { Issue.record("seventy times 7 was not text"); return }
+        guard case .results = try await store.search("Mark: the end") else { Issue.record("Mark: the end was not text"); return }
+        // Genuine reference attempts keep understandable errors or explicit suggestions.
+        for input in ["John 3:16-4:2", "John 3:16,18", "Xyzzy 3:16", "John:3"] {
+            guard case .invalid = try await store.search(input) else { Issue.record("Accepted invalid reference: \(input)"); continue }
+        }
+        guard case .suggestion(let typo) = try await store.search("Jhon 3") else { Issue.record("Missing explicit suggestion"); return }
+        #expect(typo.reference == "John 3")
+        for (input, expected) in [("John 3", "John 3"), ("Jude 5", "Jude 1:5"), ("Jude 1:5", "Jude 1:5"), ("1 John 2:1", "1 John 2:1")] {
+            guard case .reference(let passage) = try await store.search(input) else { Issue.record("Reference failed: \(input)"); continue }
+            #expect(passage.reference == expected)
+        }
+        // The direct-reference field never treats text as a query.
+        for input in ["seventy times 7", "love: joy"] {
+            guard case .invalid = try await store.lookupReference(input) else { Issue.record("Reference entry accepted text: \(input)"); continue }
+        }
+    }
+
     @Test func queryAndExcerptBoundaries() throws {
         #expect(try TextSearchQuery("light darkness")?.expression == "\"light\" AND \"darkness\"")
         #expect(try TextSearchQuery("\"light of the world\"")?.expression == "\"light of the world\"")

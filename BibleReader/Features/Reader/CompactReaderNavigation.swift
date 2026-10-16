@@ -59,7 +59,7 @@ private struct NativeReaderTabs: UIViewRepresentable {
     func updateUIView(_ container: ReaderTabBarContainer, context: Context) {
         let bar = container.bar
         context.coordinator.parent = self
-        bar.accessibilityValue = collapsed ? "Collapsed" : "Expanded"
+        bar.accessibilityValue = collapsed ? String(localized: "Collapsed") : String(localized: "Expanded")
         if container.collapsed != collapsed {
             let update = {
                 for (index, item) in (bar.items ?? []).enumerated() {

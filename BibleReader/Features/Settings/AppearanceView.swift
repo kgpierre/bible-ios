@@ -3,7 +3,7 @@ import SwiftUI
 struct AppearanceView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var preferences: ReaderPreferences
-    /// Two Pages needs a display that can fit facing pages (iPad or a foldable's inner display).
+    /// Two Pages needs a window that can fit facing pages; see `offersPageLayout`.
     var showsPageLayout = false
     /// Book layout applies only to devices with a hinge.
     var showsFoldOptions = false
@@ -90,6 +90,14 @@ struct AppearanceView: View {
         }
         .tint(Color(.accent))
         .preferredColorScheme(preferences.theme.colorScheme)
+    }
+
+    /// Whether to offer Two Pages, from live traits rather than the device idiom. Regular width is
+    /// the reader's own precondition for facing pages; a hinge keeps the choice available on a
+    /// closed foldable; a chosen Two Pages stays visible so it can always be turned off.
+    static func offersPageLayout(horizontalSizeClass: UserInterfaceSizeClass?, hasHinge: Bool,
+                                 current: ReadingPageLayout) -> Bool {
+        horizontalSizeClass == .regular || hasHinge || current == .twoPages
     }
 
     private var pagesFooter: String {
