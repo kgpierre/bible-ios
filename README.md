@@ -18,7 +18,7 @@ Appearance preferences persist locally and compose with Dynamic Type: system, li
 - assistive-technology passes;
 - an offline network capture;
 - App Store Connect setup: UK exclusion and privacy answers;
-- the donation link decision.
+- physical-device sandbox testing and review of the optional developer tips (see [0021](Docs/Decisions/0021-optional-developer-tips.md)).
 
 Latest changes and verification: [HANDOFF.md](HANDOFF.md).
 

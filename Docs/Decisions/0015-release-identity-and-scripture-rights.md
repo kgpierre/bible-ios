@@ -49,5 +49,5 @@ The deployment target is 26.0, so no fallback icon set is needed.
 ## Still open
 
 - App Store Connect: set the availability to exclude the United Kingdom, and complete the privacy answers ("Data Not Collected", which matches the bundled privacy manifest).
-- Donation link: `AppInfo.donationURL` is still `nil`. Guideline 3.1.1 allows an external donation link only for approved nonprofits; otherwise donations must use in-app purchase. Choose before enabling the button.
+- Optional support: the owner chose consumable StoreKit tips; see [0021](0021-optional-developer-tips.md) for the implementation and remaining sandbox/review steps.
 - The owner's review of the compact Saved controls (0016) and the Appearance layout.

@@ -6,9 +6,6 @@ enum AppInfo {
     static let name = "Bible"
     static let author = "Kyle Pierre"
     static let authorURL = URL(string: "https://kpierre.dev")!
-    /// Set to the donation page (for example Ko-fi, Buy Me a Coffee, or GitHub Sponsors).
-    /// While nil, the Support button stays visible but disabled.
-    static let donationURL: URL? = nil
     static let scriptureSourceURL = URL(string: "https://ebible.org/find/show.php?id=eng-kjv")!
     static let grdbURL = URL(string: "https://github.com/groue/GRDB.swift")!
 
@@ -23,7 +20,7 @@ enum AppInfo {
 struct AboutView: View {
     let editionNotice: String
     let close: () -> Void
-    @Environment(\.openURL) private var openURL
+    @Environment(TipStore.self) private var tips
 
     var body: some View {
         NavigationStack {
@@ -53,23 +50,16 @@ struct AboutView: View {
                         .accessibilityHint("Opens the author’s website")
                 }
 
-                // Shown only once a donation page exists; a permanently disabled button offers nothing.
-                if let donationURL = AppInfo.donationURL {
-                    Section {
-                        Button {
-                            openURL(donationURL)
-                        } label: {
-                            Label("Support Development", systemImage: "heart.fill")
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: 36)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                        .accessibilityIdentifier("donateButton")
-                    } footer: {
-                        Text("\(AppInfo.name) is free. If it helps you, you can support its development. Donations are optional and unlock nothing.")
+                Section {
+                    NavigationLink {
+                        TipJarView(store: tips, close: close)
+                    } label: {
+                        Label("Support Development", systemImage: "heart")
+                            .frame(minHeight: 44)
                     }
+                    .accessibilityIdentifier("supportDevelopmentButton")
+                } footer: {
+                    Text("Bible is free. Optional tips support its development and unlock nothing.")
                 }
 
                 Section("Scripture") {
