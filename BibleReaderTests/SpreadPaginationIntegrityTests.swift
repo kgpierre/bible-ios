@@ -38,14 +38,14 @@ final class SpreadPaginationIntegrityTests: XCTestCase {
         var shown: SpreadChapterView.PageKey? { (container.pager.viewControllers?.first as? SpreadPageController)?.key }
     }
 
-    @MainActor private func spread(_ state: ReaderState) throws -> Spread {
+    @MainActor private func spread(_ state: ReaderState, size: CGSize? = nil) throws -> Spread {
         let document = try XCTUnwrap(state.document)
         let configuration = SpreadChapterView(document: document, state: state, chromeInsets: insets)
         let coordinator = configuration.makeCoordinator()
         let container = SpreadContainer()
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let window = UIWindow(windowScene: scene)
-        window.frame = CGRect(origin: .zero, size: size)
+        window.frame = CGRect(origin: .zero, size: size ?? self.size)
         window.rootViewController = container
         coordinator.attach(container)
         window.isHidden = false
@@ -63,10 +63,12 @@ final class SpreadPaginationIntegrityTests: XCTestCase {
         var current = pager.viewControllers?.first as? SpreadPageController
         while let page = current, let before = spread.coordinator.pageViewController(pager, viewControllerBefore: page) as? SpreadPageController,
               before.key.chapterID == chapterID { current = before }
+        let pageSize = try XCTUnwrap(pager.viewControllers?.first?.view.bounds.size)
         var result: [ChapterPageController] = []
         while let page = current, page.key.chapterID == chapterID {
             let start = ContinuousClock.now
-            page.view.frame = CGRect(x: 0, y: 0, width: floor(size.width / 2), height: size.height)
+            // The size UIKit's mid-spine pager gives the page on screen.
+            page.view.frame = CGRect(origin: .zero, size: pageSize)
             page.view.layoutIfNeeded()
             if let text = page.page { text.textView.layoutIfNeeded(); result.append(text) }
             timings?(ContinuousClock.now - start)
@@ -91,14 +93,15 @@ final class SpreadPaginationIntegrityTests: XCTestCase {
         return lines
     }
 
-    @MainActor private func checkPagination(_ chapter: String, sizeAdjustment: Int, file: StaticString = #filePath, line: UInt = #line) async throws {
+    @MainActor private func checkPagination(_ chapter: String, sizeAdjustment: Int, size: CGSize? = nil,
+                                            file: StaticString = #filePath, line: UInt = #line) async throws {
         let state = try await reader()
         state.typography.sizeAdjustment = sizeAdjustment
         try await open(chapter, in: state)
-        let spread = try spread(state)
+        let spread = try spread(state, size: size)
         defer { spread.cleanUp() }
         let pages = try pages(of: spread)
-        let label = "\(chapter) size \(sizeAdjustment)"
+        let label = "\(chapter) size \(sizeAdjustment) at \(size ?? self.size)"
         XCTAssertGreaterThan(pages.count, 0, label, file: file, line: line)
         let windows = pages.compactMap(\.textView.pageWindow)
         XCTAssertEqual(windows.count, pages.count, label, file: file, line: line)
@@ -146,6 +149,16 @@ final class SpreadPaginationIntegrityTests: XCTestCase {
     @MainActor func testGenesis1PagesFitTheirBands() async throws {
         try await checkPagination("GEN:1", sizeAdjustment: 0)
         try await checkPagination("GEN:1", sizeAdjustment: 4)
+        try await checkPagination("GEN:1", sizeAdjustment: -4)
+    }
+
+    /// An odd window width gives each page a fractional width; the measurement must use the
+    /// same width as the visible page, or a line rewraps and the page's band cuts through it.
+    @MainActor func testPagesFitTheirBandsAtFractionalPageWidths() async throws {
+        let odd = CGSize(width: 1211, height: 834)
+        try await checkPagination("GEN:1", sizeAdjustment: 0, size: odd)
+        try await checkPagination("JHN:3", sizeAdjustment: -2, size: odd)
+        try await checkPagination("PSA:119", sizeAdjustment: -4, size: odd)
     }
 
     @MainActor func testJohn3PagesFitTheirBands() async throws {
@@ -156,6 +169,7 @@ final class SpreadPaginationIntegrityTests: XCTestCase {
     @MainActor func testPsalm119PagesFitTheirBands() async throws {
         try await checkPagination("PSA:119", sizeAdjustment: 0)
         try await checkPagination("PSA:119", sizeAdjustment: 4)
+        try await checkPagination("PSA:119", sizeAdjustment: -4)
     }
 
     /// Simulator timing for creating and laying out each Psalm 119 page (printed, not asserted:

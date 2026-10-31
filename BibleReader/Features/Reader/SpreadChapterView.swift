@@ -38,6 +38,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
     func updateUIViewController(_ container: SpreadContainer, context: Context) {
         container.touchRegion.chromeInsets = chromeInsets
         context.coordinator.update(self)
+        container.touchRegion.openBottom = context.coordinator.openBottom
     }
 
     static func dismantleUIViewController(_ container: SpreadContainer, coordinator: Coordinator) {
@@ -94,6 +95,31 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             let category: UIContentSizeCategory
             let scheme: ColorScheme
             let innerPageInset: CGFloat
+            let openBottom: OpenBottom?
+        }
+
+        /// The facing page away from the floating passage selector (bottom trailing), whose text
+        /// runs down to the screen's safe area instead of stopping above the selector.
+        struct OpenBottom: Equatable {
+            /// Whether that page has an even index (the left page, in left-to-right layouts).
+            let isEvenPage: Bool
+            let inset: CGFloat
+        }
+
+        private(set) var openBottom: OpenBottom?
+
+        private func computeOpenBottom(_ configuration: SpreadChapterView) -> OpenBottom? {
+            guard let container else { return nil }
+            // Only the window's own safe area, never the SwiftUI band reserved for the selector.
+            let screen = container.view.window?.safeAreaInsets.bottom ?? configuration.chromeInsets.bottom
+            let inset = min(configuration.chromeInsets.bottom, screen)
+            guard inset < configuration.chromeInsets.bottom else { return nil }
+            return OpenBottom(isEvenPage: container.view.effectiveUserInterfaceLayoutDirection == .leftToRight, inset: inset)
+        }
+
+        private func bottomInset(forPage index: Int) -> CGFloat? {
+            guard let openBottom, (index % 2 == 0) == openBottom.isEvenPage else { return nil }
+            return openBottom.inset
         }
 
         init(state: ReaderState) { self.state = state }
@@ -145,9 +171,10 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             container.view.backgroundColor = UIColor(resource: .readingCanvas)
             let size = container.view.bounds.size
             guard size.width > 0, size.height > 0 else { return }
+            openBottom = computeOpenBottom(configuration)
             let key = LayoutKey(size: size, insets: configuration.chromeInsets, typography: state.typography.layout,
                                 category: container.traitCollection.preferredContentSizeCategory, scheme: configuration.scheme,
-                                innerPageInset: configuration.innerPageInset)
+                                innerPageInset: configuration.innerPageInset, openBottom: openBottom)
             // Never replace pages under a live curl; the turn's completion refreshes.
             guard !curling else { return }
             let relayout = key != layoutKey
@@ -195,7 +222,9 @@ struct SpreadChapterView: UIViewControllerRepresentable {
 
         private var pageSize: CGSize {
             guard let bounds = container?.view.bounds.size else { return .zero }
-            return CGSize(width: floor(bounds.width / 2), height: bounds.height)
+            // Exactly half, as the mid-spine pager sizes each page: a rounded width can wrap a
+            // line differently from the visible page and shift its page break.
+            return CGSize(width: bounds.width / 2, height: bounds.height)
         }
 
         private func pagination(for document: ChapterDocument) -> ChapterPagination {
@@ -212,6 +241,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             measuringState.typography = state.typography
             measuringState.chapters = [document]
             measuringState.chapterID = document.id
+            measurer.pageBottomInset = bottomInset(forPage: 0)
             measurer.configure(document: document, state: measuringState, wide: true, scheme: configuration.scheme)
             measurer.layoutIfNeeded()
             let firstHeight = measurer.pageTextHeight
@@ -219,9 +249,14 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             measurer.showsHeader = false
             measurer.layoutIfNeeded()
             let laterHeight = measurer.pageTextHeight
+            // Only the bottom margin differs between the facing pages, so line positions hold.
+            measurer.pageBottomInset = bottomInset(forPage: 1)
+            measurer.layoutIfNeeded()
+            let oddHeight = measurer.pageTextHeight
+            measurer.pageBottomInset = nil
             measurer.showsHeader = true
             let pagination = ChapterPagination(lines: lines, textLength: map(for: document).text.utf16.count,
-                                               firstPageHeight: firstHeight, pageHeight: laterHeight)
+                                               firstPageHeight: firstHeight, pageHeight: laterHeight, oddPageHeight: oddHeight)
             paginations[document.id] = pagination
             return pagination
         }
@@ -328,6 +363,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             guard let configuration, let page = controller.page else { return }
             page.textView.pageInnerInset = configuration.innerPageInset
             page.textView.isLeftSpreadPage = controller.key.index % 2 == 0
+            page.textView.pageBottomInset = bottomInset(forPage: controller.key.index)
             let live = controller.key.chapterID == state.chapterID
             page.configure(from: state, live: live, wide: true, scheme: configuration.scheme, insets: configuration.chromeInsets)
             let side = controller.key.index % 2 == 0 ? "Left" : "Right"
@@ -600,9 +636,13 @@ struct SpreadChapterView: UIViewControllerRepresentable {
 /// pages for VoiceOver's three-finger scroll.
 @MainActor final class SpreadTouchRegion: UIView {
     var chromeInsets = EdgeInsets()
+    /// The facing page whose text runs below the selector's band keeps its touches there.
+    var openBottom: SpreadChapterView.Coordinator.OpenBottom?
     var onScroll: ((Int) -> Bool)?
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        guard point.y >= bounds.minY + chromeInsets.top, point.y < bounds.maxY - chromeInsets.bottom else { return false }
+        let onOpenPage = openBottom.map { (point.x < bounds.midX) == $0.isEvenPage } ?? false
+        let bottom = onOpenPage ? openBottom?.inset ?? chromeInsets.bottom : chromeInsets.bottom
+        guard point.y >= bounds.minY + chromeInsets.top, point.y < bounds.maxY - bottom else { return false }
         return super.point(inside: point, with: event)
     }
     override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {

@@ -35,7 +35,10 @@ struct ReadingTypography: Codable, Equatable, Sendable {
     /// Marks verses that have source-edition notes. Added after v1 preferences shipped, so a
     /// stored payload without it decodes with the default instead of discarding the others.
     var showsNotes = true
-    var pointAdjustment: Double { Double(min(4, max(-2, sizeAdjustment))) * 2 }
+    /// Whole 2-point steps on top of Dynamic Type.
+    static let sizeRange = -4...4
+    static func clamp(_ step: Int) -> Int { min(sizeRange.upperBound, max(sizeRange.lowerBound, step)) }
+    var pointAdjustment: Double { Double(Self.clamp(sizeAdjustment)) * 2 }
     /// Only the fields that change text layout or pagination. Note markers sit in the gutter, so
     /// toggling them alone must not rebuild text, repaginate, or disturb a selection.
     var layout: ReadingTypography {
@@ -64,16 +67,17 @@ struct ReadingTypography: Codable, Equatable, Sendable {
 final class ReaderPreferences {
     var theme: AppAppearance { didSet { save() } }
     var typography: ReadingTypography { didSet { save() } }
+    /// Facing pages by default wherever two readable pages fit; narrow windows still scroll.
     var pageLayout: ReadingPageLayout { didSet { save() } }
-    var automaticBookLayout: Bool { didSet { save() } }
     @ObservationIgnored private let defaults: UserDefaults
+    /// Version 2 made Two Pages the default. A version 1 page layout predates that default, so it
+    /// reads as Two Pages once; every other value carries over. An older `automaticBookLayout`
+    /// key is ignored: facing pages in a book pose are always on.
     private struct Payload: Codable {
-        var version = 1
+        var version = 2
         var theme: AppAppearance
         var typography: ReadingTypography
-        /// Added after v1 shipped; absent in older payloads, which read as scroll.
         var pageLayout: ReadingPageLayout?
-        var automaticBookLayout: Bool?
     }
     private static let key = "reader.appearance.v1"
 
@@ -87,19 +91,17 @@ final class ReaderPreferences {
         self.defaults = defaults ?? .standard
         #endif
         if let data = self.defaults.data(forKey: Self.key),
-           let stored = try? JSONDecoder().decode(Payload.self, from: data), stored.version == 1 {
+           let stored = try? JSONDecoder().decode(Payload.self, from: data), (1...2).contains(stored.version) {
             theme = stored.theme
             typography = stored.typography
-            pageLayout = stored.pageLayout ?? .scroll
-            automaticBookLayout = stored.automaticBookLayout ?? true
-            typography.sizeAdjustment = min(4, max(-2, typography.sizeAdjustment))
-        } else { theme = .system; typography = ReadingTypography(); pageLayout = .scroll; automaticBookLayout = true }
+            pageLayout = stored.version == 1 ? .twoPages : stored.pageLayout ?? .twoPages
+            typography.sizeAdjustment = ReadingTypography.clamp(typography.sizeAdjustment)
+        } else { theme = .system; typography = ReadingTypography(); pageLayout = .twoPages }
     }
 
     func resetReadingStyle() { typography = ReadingTypography() }
     private func save() {
-        guard let data = try? JSONEncoder().encode(Payload(theme: theme, typography: typography, pageLayout: pageLayout,
-                                                         automaticBookLayout: automaticBookLayout)) else { return }
+        guard let data = try? JSONEncoder().encode(Payload(theme: theme, typography: typography, pageLayout: pageLayout)) else { return }
         defaults.set(data, forKey: Self.key)
     }
 }

@@ -28,11 +28,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         didSet {
             guard pageWindow != oldValue else { return }
             windowLaidOut = false
+            shownBand = nil
             accessibilityNeedsUpdate = true
             setNeedsLayout()
         }
     }
     private var windowLaidOut = false
+    /// The band this page actually shows, in container coordinates, from its own layout.
+    private var shownBand: (top: CGFloat, bottom: CGFloat)?
     /// Paper over the lines that belong to the previous and next pages.
     private let pageCovers = [UIView(), UIView()]
     private var windowed: ChapterPagination.Page? { paged ? pageWindow : nil }
@@ -40,6 +43,13 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     var pageInnerInset: CGFloat = 0 {
         didSet { if pageInnerInset != oldValue { setNeedsLayout() } }
     }
+    /// A book page clear of the floating bottom controls: its text runs down to this inset
+    /// (the screen's own safe area) instead of `chromeInsets.bottom`.
+    var pageBottomInset: CGFloat? {
+        didSet { if pageBottomInset != oldValue { setNeedsLayout() } }
+    }
+    /// The bottom band this view leaves to floating chrome.
+    private var bottomChrome: CGFloat { paged ? pageBottomInset ?? chromeInsets.bottom : chromeInsets.bottom }
     var isLeftSpreadPage = true {
         didSet { if isLeftSpreadPage != oldValue { setNeedsLayout() } }
     }
@@ -269,7 +279,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             paragraph.paragraphSpacing = 6
             string.addAttributes([.font: font, .foregroundColor: UIColor(resource: .readingPrimary), .paragraphStyle: paragraph], range: NSRange(location: 0, length: string.length))
             for range in map.sourceHeadingRanges {
-                string.addAttributes([.font: scaledFont(size: 16 + state.typography.pointAdjustment, style: .subheadline, serif: state.typography.face == .serif), .foregroundColor: UIColor(resource: .readingSecondary)], range: range)
+                string.addAttributes([.font: scaledFont(size: max(12, 16 + state.typography.pointAdjustment), style: .subheadline, serif: state.typography.face == .serif), .foregroundColor: UIColor(resource: .readingSecondary)], range: range)
             }
             let italic = font.fontDescriptor.withSymbolicTraits(.traitItalic).map { UIFont(descriptor: $0, size: font.pointSize) }
             let storage = string.string as NSString
@@ -291,6 +301,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             }
             attributedText = string
             windowLaidOut = false
+            shownBand = nil
             eyebrow.text = document.eyebrow
             eyebrow.font = scaledFont(size: wide ? 14 : 13, style: .caption1, weight: .semibold)
             eyebrow.textColor = UIColor(resource: .readingSecondary)
@@ -399,7 +410,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         // Text draws behind floating chrome, but must not steal its taps after scrolling.
-        guard point.y >= bounds.minY + chromeInsets.top, point.y < bounds.maxY - chromeInsets.bottom else { return false }
+        guard point.y >= bounds.minY + chromeInsets.top, point.y < bounds.maxY - bottomChrome else { return false }
         // A book page answers only within its own lines, never the covered ones. While text is
         // selected, the margin just outside the band stays live so the selection handles' knobs
         // above the first line and below the last line can be grabbed.
@@ -416,8 +427,43 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     /// A book page's visible lines, in content coordinates.
     private var pageBand: CGRect? {
         guard let window = windowed else { return nil }
-        return CGRect(x: 0, y: textContainerInset.top + window.top, width: bounds.width, height: window.height)
+        let band = shownBand ?? (window.top, window.bottom)
+        return CGRect(x: 0, y: textContainerInset.top + band.top, width: bounds.width, height: band.bottom - band.top)
     }
+
+    /// The typographic frame of the line holding a UTF-16 offset, in container coordinates.
+    private func lineFrame(at offset: Int) -> CGRect? {
+        guard let map, offset >= 0, offset < map.text.utf16.count,
+              let manager = textLayoutManager, let content = manager.textContentManager,
+              let location = content.location(content.documentRange.location, offsetBy: offset),
+              let fragment = manager.textLayoutFragment(for: location) else { return nil }
+        let local = offset - content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
+        guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(local, $0.characterRange) })
+                ?? fragment.textLineFragments.last else { return nil }
+        return line.typographicBounds.offsetBy(dx: 0, dy: fragment.layoutFragmentFrame.minY)
+    }
+
+    /// The page's lines as this view laid them out, which can differ slightly from the
+    /// offscreen measurement. Each edge sits midway into the gap beside the neighboring line,
+    /// so accents and italic overhangs are never cut by the paper covers.
+    private func measureShownBand(_ window: ChapterPagination.Page) -> (top: CGFloat, bottom: CGFloat) {
+        guard let first = lineFrame(at: window.start), let last = lineFrame(at: max(window.start, window.end - 1)) else {
+            return (window.top, window.bottom)
+        }
+        var top = first.minY, bottom = last.maxY
+        if window.start > 0, let previous = lineFrame(at: window.start - 1), previous.maxY <= top {
+            top = (previous.maxY + top) / 2
+        }
+        if let next = lineFrame(at: window.end), next.minY >= bottom {
+            bottom = (bottom + next.minY) / 2
+        } else {
+            bottom += Self.overhang
+        }
+        return (top, bottom)
+    }
+
+    /// Room past a final line's typographic bounds for glyphs that overhang it.
+    private static let overhang: CGFloat = 4
 
     private var pageRange: NSRange? {
         windowed.map { NSRange(location: $0.start, length: $0.end - $0.start) }
@@ -430,18 +476,21 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             pageCovers.forEach { $0.isHidden = true }
             return
         }
-        if !windowLaidOut, map != nil,
-           let end = content.location(content.documentRange.location, offsetBy: min(window.end, map?.text.utf16.count ?? 0)),
+        // Through the line after the page too, so the band's lower edge can sit in the gap before it.
+        if !windowLaidOut, let length = map?.text.utf16.count,
+           let end = content.location(content.documentRange.location, offsetBy: min(window.end + 1, length)),
            let range = NSTextRange(location: content.documentRange.location, end: end) {
             manager.ensureLayout(for: range)
             windowLaidOut = true
+            shownBand = measureShownBand(window)
         }
         if super.contentOffset.y != window.top { super.contentOffset = CGPoint(x: 0, y: window.top) }
-        let bandTop = textContainerInset.top + window.top
+        let band = shownBand ?? (window.top, window.bottom)
         let canvas = UIColor(resource: .readingCanvas)
         // Above the band: the lines of earlier pages (the first page has none; its title shows).
-        let above = CGRect(x: 0, y: window.top, width: bounds.width, height: window.start == 0 ? 0 : bandTop - window.top)
-        let below = CGRect(x: 0, y: bandTop + window.height, width: bounds.width, height: bounds.height)
+        let above = CGRect(x: 0, y: window.top, width: bounds.width,
+                           height: window.start == 0 ? 0 : max(0, textContainerInset.top + band.top - window.top))
+        let below = CGRect(x: 0, y: textContainerInset.top + band.bottom, width: bounds.width, height: bounds.height)
         for (cover, frame) in zip(pageCovers, [above, below]) {
             cover.backgroundColor = canvas
             cover.isHidden = frame.height <= 0
@@ -480,10 +529,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             measuredHeaderWidth = textWidth
             measuredHeaderHeight = header.systemLayoutSizeFitting(CGSize(width: textWidth, height: 0), withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel).height
         }
-        let headerTop = chromeInsets.top + (wide ? 20 : 8)
+        // A book page never scrolls, so it needs no clearance beyond the chrome itself: tighter
+        // margins fit more of the chapter on each page.
+        let headerTop = chromeInsets.top + (paged && !showsHeader ? 10 : (wide ? 20 : 8))
         // A book page's running head stays at the top of the page, above its band.
         header.frame = CGRect(x: leading + gutterWidth, y: headerTop + (pinnedOffset?.y ?? 0), width: textWidth, height: measuredHeaderHeight)
-        let inset = UIEdgeInsets(top: headerTop + measuredHeaderHeight + (showsHeader ? (wide ? 30 : 26) : 16), left: leading + gutterWidth, bottom: chromeInsets.bottom + 32, right: trailing + trailingExtra)
+        let headerGap: CGFloat = showsHeader ? (wide ? 30 : 26) : (paged ? 12 : 16)
+        let inset = UIEdgeInsets(top: headerTop + measuredHeaderHeight + headerGap, left: leading + gutterWidth,
+                                 bottom: bottomChrome + (paged ? 8 : 32), right: trailing + trailingExtra)
         if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true }
         verticalScrollIndicatorInsets = UIEdgeInsets(top: chromeInsets.top, left: 0, bottom: chromeInsets.bottom, right: 0)
         super.layoutSubviews()

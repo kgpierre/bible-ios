@@ -173,7 +173,7 @@ struct AppRootView: View {
                 let fold = foldLayout(in: geometry)
                 // Regular-width phones (including Duo's inner display) get the same reader as
                 // iPad. Use the actual safe content area, never the device name or screen bounds.
-                if wide, state.preferences.automaticBookLayout, let fold, fold.supportsBookPages(minimumPageWidth: minimumBookPageWidth,
+                if wide, let fold, fold.supportsBookPages(minimumPageWidth: minimumBookPageWidth,
                                                          accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
                     // Book pose automatically opens facing pages without overwriting the flat-screen preference.
                     SpreadChapterView(document: document, state: state.reader,
@@ -197,7 +197,7 @@ struct AppRootView: View {
                                       chromeInsets: geometry.safeAreaInsets, isActive: active)
                         .ignoresSafeArea(.container, edges: .vertical)
                 } else if let pane = fold?.clearPane {
-                    // Scrolling fallback with an active fold (book layout off, accessibility text, or
+                    // Scrolling fallback with an active fold (accessibility text or
                     // pages too narrow): keep text out of the division rather than spanning it.
                     PaperChapterView(document: document, state: state.reader, wide: wide, isActive: active)
                         .frame(width: pane.width, height: pane.height)
@@ -251,14 +251,12 @@ struct AppRootView: View {
                 .accessibilityLabel("Appearance")
                 .accessibilityIdentifier("appearanceButton")
                 .popover(isPresented: $state.isAppearancePresented) {
-                    // Offer Two Pages from the live window, never the device idiom: regular width can
-                    // fit facing pages (iPad, Duo inner display, large phones in landscape), a foldable
-                    // keeps it while closed, and a chosen preference stays reachable in narrow windows
-                    // so it can be changed while the reader falls back to scrolling. Book layout needs a hinge.
+                    // Offer the page layout from the live window, never the device idiom: regular width
+                    // can fit facing pages (iPad, Duo inner display, large phones in landscape), and a
+                    // foldable keeps it while closed. Book-pose facing pages need a hinge and are always on.
                     AppearanceView(preferences: state.preferences,
                                    showsPageLayout: AppearanceView.offersPageLayout(
-                                       horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge,
-                                       current: state.preferences.pageLayout),
+                                       horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
                                    showsFoldOptions: state.hasHinge)
                         .frame(idealWidth: 400, idealHeight: 560)
                         .presentationCompactAdaptation(.sheet)

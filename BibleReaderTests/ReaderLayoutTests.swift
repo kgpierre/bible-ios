@@ -29,13 +29,11 @@ struct ReaderLayoutTests {
         #expect(!supports(width: 900, height: .nan))
     }
 
-    @Test @MainActor func pageLayoutIsOfferedForRegularWidthHingeOrChosenTwoPages() {
-        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .regular, hasHinge: false, current: .scroll))
-        #expect(!AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: false, current: .scroll))
-        #expect(!AppearanceView.offersPageLayout(horizontalSizeClass: nil, hasHinge: false, current: .scroll))
-        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: true, current: .scroll))
-        // A chosen Two Pages stays visible so it can always be turned off.
-        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: false, current: .twoPages))
+    @Test @MainActor func pageLayoutIsOfferedForRegularWidthOrHinge() {
+        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .regular, hasHinge: false))
+        #expect(!AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: false))
+        #expect(!AppearanceView.offersPageLayout(horizontalSizeClass: nil, hasHinge: false))
+        #expect(AppearanceView.offersPageLayout(horizontalSizeClass: .compact, hasHinge: true))
     }
 
     @Test func bookFoldCentersPagesOnTheActualDivision() throws {

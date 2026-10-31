@@ -5,7 +5,7 @@ struct AppearanceView: View {
     @Bindable var preferences: ReaderPreferences
     /// Two Pages needs a window that can fit facing pages; see `offersPageLayout`.
     var showsPageLayout = false
-    /// Book layout applies only to devices with a hinge.
+    /// Facing pages in a book pose apply only to devices with a hinge.
     var showsFoldOptions = false
 
     var body: some View {
@@ -19,18 +19,12 @@ struct AppearanceView: View {
                     .labelsHidden()
                     .accessibilityIdentifier("themePicker")
                 }
-                if showsPageLayout || showsFoldOptions {
+                if showsPageLayout {
                     Section {
-                        if showsPageLayout {
-                            Picker("Landscape Pages", selection: $preferences.pageLayout) {
-                                ForEach(ReadingPageLayout.allCases) { Text($0.title).tag($0) }
-                            }
-                            .accessibilityIdentifier("pageLayoutPicker")
+                        Picker("Landscape Pages", selection: $preferences.pageLayout) {
+                            ForEach(ReadingPageLayout.allCases) { Text($0.title).tag($0) }
                         }
-                        if showsFoldOptions {
-                            Toggle("Book Layout When Folded", isOn: $preferences.automaticBookLayout)
-                                .accessibilityIdentifier("automaticBookLayoutToggle")
-                        }
+                        .accessibilityIdentifier("pageLayoutPicker")
                     } header: {
                         Text("Pages")
                     } footer: {
@@ -46,7 +40,7 @@ struct AppearanceView: View {
                         LabeledContent("Text Size", value: sizeLabel)
                             .accessibilityHidden(true)
                         // Whole steps only: each one is a 2-point change on top of Dynamic Type.
-                        Slider(value: sizeStep, in: -2...4, step: 1) {
+                        Slider(value: sizeStep, in: Double(ReadingTypography.sizeRange.lowerBound)...Double(ReadingTypography.sizeRange.upperBound), step: 1) {
                             Text("Text Size")
                         } minimumValueLabel: {
                             Image(systemName: "textformat.size.smaller").accessibilityHidden(true)
@@ -92,21 +86,18 @@ struct AppearanceView: View {
         .preferredColorScheme(preferences.theme.colorScheme)
     }
 
-    /// Whether to offer Two Pages, from live traits rather than the device idiom. Regular width is
-    /// the reader's own precondition for facing pages; a hinge keeps the choice available on a
-    /// closed foldable; a chosen Two Pages stays visible so it can always be turned off.
-    static func offersPageLayout(horizontalSizeClass: UserInterfaceSizeClass?, hasHinge: Bool,
-                                 current: ReadingPageLayout) -> Bool {
-        horizontalSizeClass == .regular || hasHinge || current == .twoPages
+    /// Whether to offer the page layout, from live traits rather than the device idiom. Regular
+    /// width is the reader's own precondition for facing pages, and a hinge keeps the choice
+    /// available on a closed foldable. Two Pages is the default, so compact windows, which
+    /// always scroll, need no control.
+    static func offersPageLayout(horizontalSizeClass: UserInterfaceSizeClass?, hasHinge: Bool) -> Bool {
+        horizontalSizeClass == .regular || hasHinge
     }
 
     private var pagesFooter: String {
-        var parts: [String] = []
-        if showsPageLayout {
-            parts.append(String(localized: "Two Pages shows facing pages that turn like a book when the window is wide enough."))
-        }
+        var parts = [String(localized: "Two Pages shows facing pages that turn like a book when the window is wide enough.")]
         if showsFoldOptions {
-            parts.append(String(localized: "Book layout automatically uses facing pages when folded like a book. Turn it off to keep continuous scrolling while folded."))
+            parts.append(String(localized: "Facing pages always open when folded like a book."))
         }
         parts.append(String(localized: "Narrow windows and accessibility text sizes use scrolling. A selection stays within one page."))
         return parts.joined(separator: " ")

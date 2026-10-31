@@ -21,24 +21,35 @@ struct ReaderPreferencesTests {
         #expect(reset.theme == .dark)
     }
 
-    @Test @MainActor func pageLayoutPersistsAndOlderPayloadsReadAsScroll() throws {
+    @Test @MainActor func pageLayoutDefaultsToTwoPagesAndPersistsAChosenScroll() throws {
         let name = "BibleReader.Tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
-        // A payload written before the page layout existed keeps its other values.
-        defaults.set(Data(#"{"version":1,"theme":"dark","typography":{"face":"sans","sizeAdjustment":2,"spacing":"relaxed"}}"#.utf8),
+        #expect(ReaderPreferences(defaults: defaults).pageLayout == .twoPages)
+        // A version 1 payload predates the Two Pages default, including its retired book-layout
+        // option; it reads as Two Pages and keeps its other values.
+        defaults.set(Data(#"{"version":1,"theme":"dark","typography":{"face":"sans","sizeAdjustment":2,"spacing":"relaxed"},"pageLayout":"scroll","automaticBookLayout":false}"#.utf8),
                      forKey: "reader.appearance.v1")
         let legacy = ReaderPreferences(defaults: defaults)
-        #expect(legacy.pageLayout == .scroll)
-        #expect(legacy.automaticBookLayout)
+        #expect(legacy.pageLayout == .twoPages)
         #expect(legacy.theme == .dark)
         #expect(legacy.typography.face == .sans)
-        legacy.pageLayout = .twoPages
-        legacy.automaticBookLayout = false
-        #expect(ReaderPreferences(defaults: defaults).pageLayout == .twoPages)
-        #expect(!ReaderPreferences(defaults: defaults).automaticBookLayout)
+        #expect(legacy.typography.sizeAdjustment == 2)
+        legacy.pageLayout = .scroll
+        #expect(ReaderPreferences(defaults: defaults).pageLayout == .scroll)
         legacy.resetReadingStyle()
-        #expect(ReaderPreferences(defaults: defaults).pageLayout == .twoPages)
+        #expect(ReaderPreferences(defaults: defaults).pageLayout == .scroll)
+    }
+
+    @Test @MainActor func textSizeGoesBelowDefaultAndClampsStoredSteps() throws {
+        let name = "BibleReader.Tests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        #expect(ReadingTypography(sizeAdjustment: -4).pointAdjustment == -8)
+        #expect(ReadingTypography(sizeAdjustment: -9).pointAdjustment == -8)
+        defaults.set(Data(#"{"version":2,"theme":"system","typography":{"face":"serif","sizeAdjustment":-7,"spacing":"standard"}}"#.utf8),
+                     forKey: "reader.appearance.v1")
+        #expect(ReaderPreferences(defaults: defaults).typography.sizeAdjustment == -4)
     }
 
     @Test @MainActor func typographyReflowsAndPreservesSemanticSelection() async throws {

@@ -22,6 +22,15 @@ struct ChapterPaginationTests {
         #expect(pagination.page(containing: 100) == 2)
     }
 
+    @Test func oddPagesBesideTheSelectorHoldFewerLines() {
+        // Even (left) pages run to the screen edge: four lines. Odd (right) pages stop above the
+        // passage selector: three lines.
+        let pagination = ChapterPagination(lines: lines(), textLength: 100, firstPageHeight: 125, pageHeight: 125, oddPageHeight: 95)
+        #expect(pagination.pages.map(\.start) == [0, 40, 70])
+        #expect(pagination.pages.map(\.end) == [40, 70, 100])
+        #expect(pagination.pages[1].height <= 95)
+    }
+
     @Test func everyCharacterIsOnExactlyOnePage() {
         let pagination = ChapterPagination(lines: lines(37), textLength: 371, firstPageHeight: 200, pageHeight: 260)
         #expect(pagination.pages.first?.start == 0)

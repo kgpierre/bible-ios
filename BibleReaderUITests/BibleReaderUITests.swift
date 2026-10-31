@@ -249,17 +249,7 @@ final class BibleReaderUITests: XCTestCase {
         // Device Hub supplies the wide, fully open pose for Duo; XCTest orientation/window
         // queries are unreliable on its secondary display. iPad still tests native rotation.
         if !fixedDuoPose { XCUIDevice.shared.orientation = .landscapeLeft }
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
-        app.buttons["appearanceButton"].tap()
-        let layout = app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch
-        XCTAssertTrue(layout.waitForExistence(timeout: 5))
-        layout.tap()
-        let twoPages = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@ AND elementType IN %@", "Two Pages",
-                                  [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue])).firstMatch
-        XCTAssertTrue(twoPages.waitForExistence(timeout: 5))
-        twoPages.tap()
-        app.buttons["appearanceDoneButton"].tap()
+        // Two Pages is the default, so a wide window opens facing pages without a settings change.
         let left = app.textViews["spreadPageLeft"], right = app.textViews["spreadPageRight"]
         XCTAssertTrue(left.waitForExistence(timeout: 5))
         XCTAssertTrue(right.exists)
@@ -308,7 +298,7 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertFalse(left.label.contains("page 1 of"), left.label)
         // The verse on the left page's first line, which may have begun on the previous page.
         let head = left.staticTexts.firstMatch
-        let bandTop = head.frame.maxY + 16
+        let bandTop = head.frame.maxY + 12
         let lastSpreadVerse = try XCTUnwrap(left.textViews.allElementsBoundByIndex.first { $0.frame.maxY > bandTop + 4 }?.label)
         XCTAssertFalse(lastSpreadVerse.hasPrefix("There was a man of the Pharisees"))
         // Rotation labels do not identify the inner display's aspect ratio. A tall window
@@ -334,7 +324,7 @@ final class BibleReaderUITests: XCTestCase {
 
     @MainActor
     func testPagePreferenceRemainsAvailableInCompactLayoutAndPersists() throws {
-        guard !isPhoneWithoutHinge else { throw XCTSkip("A compact phone without a hinge offers Pages only in a regular-width window or after Two Pages is chosen") }
+        guard !isPhoneWithoutHinge else { throw XCTSkip("A compact phone without a hinge offers Pages only in a regular-width window") }
         let app = testApplication()
         app.launch()
         XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
@@ -342,13 +332,13 @@ final class BibleReaderUITests: XCTestCase {
         let picker = app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
         picker.tap()
-        let twoPages = app.descendants(matching: .any).matching(NSPredicate(
-            format: "label == %@ AND elementType IN %@", "Two Pages",
+        let scroll = app.descendants(matching: .any).matching(NSPredicate(
+            format: "label == %@ AND elementType IN %@", "Scroll",
             [XCUIElement.ElementType.button.rawValue, XCUIElement.ElementType.menuItem.rawValue])).firstMatch
-        XCTAssertTrue(twoPages.waitForExistence(timeout: 5))
-        twoPages.tap()
+        XCTAssertTrue(scroll.waitForExistence(timeout: 5))
+        scroll.tap()
         app.buttons["appearanceDoneButton"].tap()
-        // Choosing the preference in a narrow/portrait window must leave a usable scrolling reader.
+        // Two Pages is the default; choosing Scroll in a narrow/portrait window must persist.
         XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
         app.terminate()
@@ -356,7 +346,7 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["appearanceButton"].waitForExistence(timeout: 10))
         app.buttons["appearanceButton"].tap()
         XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        XCTAssertTrue(picker.label.contains("Two Pages") || (picker.value as? String)?.contains("Two Pages") == true)
+        XCTAssertTrue(picker.label.contains("Scroll") || (picker.value as? String)?.contains("Scroll") == true)
         capture(app, name: "Adaptive page preference persists")
     }
 
@@ -407,7 +397,7 @@ final class BibleReaderUITests: XCTestCase {
         guard ProcessInfo.processInfo.environment["BIBLE_DUO_POSE_TEST"] == "book" else {
             throw XCTSkip("Requires Device Hub in partially folded book pose")
         }
-        let app = testApplication() // Fresh preferences default to Scroll; book pose overrides temporarily.
+        let app = testApplication() // Book pose always opens facing pages.
         app.launch()
         let left = app.textViews["spreadPageLeft"]
         XCTAssertTrue(left.waitForExistence(timeout: 10))
@@ -421,14 +411,10 @@ final class BibleReaderUITests: XCTestCase {
         wait(for: [turned], timeout: 5)
         capture(app, name: "Duo — automatic book pose after page turn")
         app.buttons["appearanceButton"].tap()
-        let automatic = app.switches["automaticBookLayoutToggle"]
-        XCTAssertTrue(automatic.waitForExistence(timeout: 5))
-        XCTAssertEqual(automatic.value as? String, "1")
-        automatic.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
-        XCTAssertEqual(automatic.value as? String, "0")
+        XCTAssertTrue(app.sliders["readingSizeSlider"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["automaticBookLayoutToggle"].exists)
         app.buttons["appearanceDoneButton"].tap()
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["passageButton"].label.contains("John 3"))
+        XCTAssertTrue(left.exists)
     }
 
     @MainActor
@@ -462,7 +448,6 @@ final class BibleReaderUITests: XCTestCase {
         guard app.frame.width > 600 else { throw XCTSkip("iPad landscape two-page check") }
         defer { XCUIDevice.shared.orientation = .portrait }
         XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         enableTwoPages(app)
         let spread = app.otherElements["spreadContainer"]
         XCTAssertTrue(spread.waitForExistence(timeout: 5))
@@ -497,14 +482,13 @@ final class BibleReaderUITests: XCTestCase {
         guard app.frame.width > 600 else { throw XCTSkip("iPad landscape two-page check") }
         defer { XCUIDevice.shared.orientation = .portrait }
         XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
         enableTwoPages(app)
         let right = app.textViews["spreadPageRight"]
         XCTAssertTrue(right.waitForExistence(timeout: 5))
-        // The right page's lines begin 16 points below its running head, often mid-verse.
+        // The right page's lines begin 12 points below its running head, often mid-verse.
         let head = right.staticTexts.firstMatch
         XCTAssertTrue(head.waitForExistence(timeout: 5))
-        let firstLine = CGVector(dx: head.frame.minX - right.frame.minX + 15, dy: head.frame.maxY - right.frame.minY + 16 + 12)
+        let firstLine = CGVector(dx: head.frame.minX - right.frame.minX + 15, dy: head.frame.maxY - right.frame.minY + 12 + 12)
         right.coordinate(withNormalizedOffset: .zero).withOffset(firstLine).press(forDuration: 0.6)
         XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.menuItems["Share Passage"].exists)
@@ -513,8 +497,10 @@ final class BibleReaderUITests: XCTestCase {
         capture(app, name: "iPad — selection on a later page's first line")
     }
 
+    /// Fresh installs default to Two Pages; choose it explicitly only if the spread does not appear.
     @MainActor
     private func enableTwoPages(_ app: XCUIApplication) {
+        if app.textViews["spreadPageLeft"].waitForExistence(timeout: 10) { return }
         app.buttons["appearanceButton"].tap()
         let layout = app.descendants(matching: .any).matching(identifier: "pageLayoutPicker").firstMatch
         XCTAssertTrue(layout.waitForExistence(timeout: 5))
@@ -653,7 +639,7 @@ final class BibleReaderUITests: XCTestCase {
         guard app.frame.width > 600 else { throw XCTSkip("iPad-specific search check") }
         defer { XCUIDevice.shared.orientation = .portrait }
         XCUIDevice.shared.orientation = .landscapeLeft
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 10))
+        XCTAssertTrue(reader(app).waitForExistence(timeout: 10))
         tab(app, "Search").tap()
         let field = searchField(app)
         XCTAssertTrue(field.waitForExistence(timeout: 5))
@@ -662,7 +648,7 @@ final class BibleReaderUITests: XCTestCase {
         XCTAssertTrue(app.buttons["openReference"].waitForExistence(timeout: 10))
         capture(app, name: "iPad Search tab")
         app.buttons["openReference"].tap()
-        XCTAssertTrue(app.textViews["chapterText"].waitForExistence(timeout: 5))
+        XCTAssertTrue(reader(app).waitForExistence(timeout: 5))
         XCTAssertTrue(tab(app, "Read").isSelected)
         XCUIDevice.shared.orientation = .portrait
         tab(app, "Search").tap()
@@ -1110,9 +1096,8 @@ final class BibleReaderUITests: XCTestCase {
             ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"]?.contains("Duo") != true
     }
 
-    /// Pages is offered for regular width, a hinge, or an already chosen Two Pages
-    /// (`AppearanceView.offersPageLayout`). In portrait, a phone without a hinge is compact,
-    /// and a fresh install reads with Scroll, so neither page nor fold settings appear.
+    /// Pages is offered for regular width or a hinge (`AppearanceView.offersPageLayout`). In
+    /// portrait, a phone without a hinge is compact, so neither page nor fold settings appear.
     @MainActor
     func testCompactPortraitPhoneWithoutHingeHidesPageAndFoldSettings() throws {
         guard isPhoneWithoutHinge else { throw XCTSkip("Checks a phone without a hinge") }
@@ -1221,6 +1206,11 @@ final class BibleReaderUITests: XCTestCase {
     }
 
     @MainActor
+    /// The scrolling reader, or the left page when a wide window shows the default Two Pages.
+    private func reader(_ app: XCUIApplication) -> XCUIElement {
+        app.textViews.matching(NSPredicate(format: "identifier IN %@", ["chapterText", "spreadPageLeft"])).firstMatch
+    }
+
     private func testApplication() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["BIBLE_TEST_STORE"] = UUID().uuidString

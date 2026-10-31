@@ -35,7 +35,9 @@ struct ChapterPagination: Equatable {
     /// - Parameters:
     ///   - firstPageHeight: text height available on the chapter's first page (below its title).
     ///   - pageHeight: text height available on every later page.
-    init(lines: [Line], textLength: Int, firstPageHeight: CGFloat, pageHeight: CGFloat) {
+    ///   - oddPageHeight: text height on later odd-numbered pages (index 1, 3, …), when it differs:
+    ///     the page beside the floating passage selector stops above it; its facing page need not.
+    init(lines: [Line], textLength: Int, firstPageHeight: CGFloat, pageHeight: CGFloat, oddPageHeight: CGFloat? = nil) {
         guard !lines.isEmpty else {
             pages = [Page(start: 0, end: textLength, top: 0, bottom: 0)]
             return
@@ -44,7 +46,7 @@ struct ChapterPagination: Equatable {
         var first = 0
         while first < lines.count {
             let top = pages.isEmpty ? 0 : lines[first].top
-            let available = pages.isEmpty ? firstPageHeight : pageHeight
+            let available = pages.isEmpty ? firstPageHeight : (pages.count % 2 == 1 ? oddPageHeight ?? pageHeight : pageHeight)
             var last = first
             while last + 1 < lines.count, lines[last + 1].bottom - top <= available { last += 1 }
             // A heading never ends a page when the text it introduces follows on the next one.
