@@ -109,6 +109,10 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private var verseAccessibility: [UIAccessibilityElement] = []
     private weak var quickSelectionGesture: UILongPressGestureRecognizer?
     private lazy var quickSelectionMenu = UIEditMenuInteraction(delegate: self)
+    /// Where the quick menu last pointed. Tapping away clears the selection before the menu's
+    /// dismissal asks for its target; an empty selection's rect is the document origin, which sent
+    /// the menu flying to the top-left corner as it faded (owner report, 7 November 2026).
+    private var quickMenuTarget: CGRect = .null
     private let chapterContent: NSTextContentStorage
     private var gutterWidth: CGFloat { wide ? 40 : 36 }
     /// The words being read aloud (0023). Drawn in views beside the text, never in `textStorage`,
@@ -239,6 +243,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         case .ended:
             guard let range = selectedTextRange, !range.isEmpty else { return }
             let rect = firstRect(for: range)
+            quickMenuTarget = rect.insetBy(dx: -8, dy: -16)
             let configuration = UIEditMenuConfiguration(identifier: nil, sourcePoint: CGPoint(x: rect.midX, y: rect.minY))
             configuration.preferredArrowDirection = .down
             quickSelectionMenu.presentEditMenu(with: configuration)
@@ -253,8 +258,11 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
 
 
     func editMenuInteraction(_ interaction: UIEditMenuInteraction, targetRectFor configuration: UIEditMenuConfiguration) -> CGRect {
-        guard let range = selectedTextRange else { return .null }
-        return firstRect(for: range).insetBy(dx: -8, dy: -16)
+        if let range = selectedTextRange, !range.isEmpty {
+            let rect = firstRect(for: range)
+            if !rect.isNull, !rect.isInfinite, !rect.isEmpty { quickMenuTarget = rect.insetBy(dx: -8, dy: -16) }
+        }
+        return quickMenuTarget
     }
 
     func configure(document: ChapterDocument, state: ReaderState, wide: Bool, scheme: ColorScheme) {
