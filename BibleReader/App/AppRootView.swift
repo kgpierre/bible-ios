@@ -91,6 +91,7 @@ struct AppRootView: View {
         }
         .sheet(isPresented: $state.isReadAloudSettingsPresented) {
             NavigationStack { NarrationSettingsView(narration: state.narration, showsCloseButton: true) }
+                .tint(Color(.accent))
                 .presentationDetents([.medium, .large])
         }
         .alert("Read Aloud", isPresented: Binding(get: { narrationMessage != nil }, set: { if !$0 { dismissNarrationMessage() } })) {

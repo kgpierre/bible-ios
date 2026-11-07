@@ -8,18 +8,17 @@ struct NarrationSettingsView: View {
     var showsCloseButton = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    /// Shown while only basic voices are installed, and kept for the rest of the visit once shown,
+    /// so the finished checklist can offer the new voice.
+    @State private var showsVoiceGuide = false
 
     var body: some View {
         @Bindable var preferences = narration.preferences
         Form {
             if let reason = narration.unavailableReason {
                 Section { Text(reason) }
-            } else if !narration.voices.hasNaturalVoice {
-                Section("Get More Natural Voices") {
-                    Text("This device has only basic voices. For a more natural voice, open Settings → Accessibility → Spoken Content → Voices → English, choose a voice such as Ava or Zoe, and download its Premium or Enhanced version. It appears here when the download finishes.")
-                        .font(.subheadline)
-                        .accessibilityIdentifier("narrationMoreVoices")
-                }
+            } else if showsVoiceGuide {
+                NarrationVoiceGuide(narration: narration)
             }
             Section {
                 Picker("Speed", selection: $preferences.rate) {
@@ -57,7 +56,7 @@ struct NarrationSettingsView: View {
             }
             Section {
             } footer: {
-                Text("Read Aloud speaks with voices on this device, with no internet connection, and plays even when your device is set to silent. Download higher-quality voices in Settings → Accessibility → Spoken Content → Voices.")
+                Text("Read Aloud speaks with voices on this device, with no internet connection, and plays even when your device is set to silent. Download higher-quality voices in Settings → Accessibility → VoiceOver → Speech → Voice.")
             }
         }
         .scrollContentBackground(.hidden)
@@ -80,6 +79,7 @@ struct NarrationSettingsView: View {
         .onChange(of: preferences.versePause) { _, _ in narration.speechSettingsChanged() }
         .onChange(of: preferences.usesPronunciationHints) { _, _ in narration.speechSettingsChanged() }
         .onDisappear { narration.voices.stopSample() }
+        .onAppear { if !narration.voices.hasNaturalVoice { showsVoiceGuide = true } }
     }
 
     /// Personal Voice is used only with the user's permission, and only when they pick it (0023, Q5).

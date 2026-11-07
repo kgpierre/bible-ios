@@ -188,14 +188,23 @@ final class NarrationUITests: XCTestCase {
         XCTAssertTrue(element(app, "narrationMiniPlayer").waitForExistence(timeout: 10))
         app.buttons["narrationMenu"].tap()
         app.buttons["Read Aloud Settings…"].firstMatch.tap()
-        let pause = element(app, "narrationVersePause")
-        XCTAssertTrue(pause.waitForExistence(timeout: 5))
-        // The empty pronunciation list hides its setting until reviewed entries ship.
-        XCTAssertFalse(app.switches["Use Pronunciation Hints"].exists)
+        XCTAssertTrue(app.navigationBars["Read Aloud"].waitForExistence(timeout: 5))
+        // With only basic voices (the simulator), the checklist steps can be ticked off.
+        let step = app.buttons["voiceGuideStep-0"]
+        if step.waitForExistence(timeout: 2) {
+            XCTAssertEqual(step.value as? String, "Not done")
+            step.tap()
+            XCTAssertEqual(step.value as? String, "Done")
+        }
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "Read Aloud settings"
         shot.lifetime = .keepAlways
         add(shot)
+        let pause = element(app, "narrationVersePause")
+        for _ in 0..<4 where !pause.exists { app.swipeUp() }
+        XCTAssertTrue(pause.waitForExistence(timeout: 3))
+        // The empty pronunciation list hides its setting until reviewed entries ship.
+        XCTAssertFalse(app.switches["Use Pronunciation Hints"].exists)
         app.buttons["narrationSettingsDone"].tap()
         XCTAssertTrue(waitForDisappearance(pause, timeout: 3))
     }

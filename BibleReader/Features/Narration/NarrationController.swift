@@ -145,7 +145,7 @@ final class NarrationController {
 
     var unavailableReason: String? {
         voices.voices.isEmpty
-            ? String(localized: "No English speech voice is installed. Add one in Settings → Accessibility → Spoken Content.") : nil
+            ? String(localized: "No English speech voice is installed. Add one in Settings → Accessibility → VoiceOver → Speech → Voice.") : nil
     }
 
     // MARK: Commands
