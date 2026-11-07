@@ -5,9 +5,12 @@ import UIKit
 /// Nominal HTML line heights are deliberately not fixed native text heights.
 enum ReaderTextRole {
     case eyebrow, bookTitle, chapterSubtitle, verse, verseNumber
+    /// Running prose outside Scripture, such as Apple Intelligence answers: body size in the system face.
+    case prose
 
     func pointSize(wide: Bool) -> CGFloat {
         switch self {
+        case .prose: 17
         case .eyebrow: wide ? 14 : 13
         case .bookTitle: wide ? 46 : 40
         case .chapterSubtitle: wide ? 24 : 22
@@ -21,37 +24,53 @@ enum ReaderTextRole {
         case .eyebrow, .verseNumber: .caption
         case .bookTitle: .largeTitle
         case .chapterSubtitle: .title2
-        case .verse: .body
+        case .verse, .prose: .body
         }
     }
+
+    /// Reading text follows the in-app size adjustment, as the reader's verses do.
+    var followsReadingSize: Bool { self == .verse || self == .prose }
 
     var weight: Font.Weight {
         switch self {
         case .eyebrow, .bookTitle: .semibold
         case .verseNumber: .medium
-        case .chapterSubtitle, .verse: .regular
+        case .chapterSubtitle, .verse, .prose: .regular
         }
     }
 
     var design: Font.Design {
         switch self {
-        case .eyebrow, .verseNumber: .default
+        case .eyebrow, .verseNumber, .prose: .default
         case .bookTitle, .chapterSubtitle, .verse: .serif
         }
     }
 }
 
+extension EnvironmentValues {
+    /// The in-app reading preferences, so text outside the reader (such as the chapter overview)
+    /// follows the same size and face.
+    @Entry var readingTypography = ReadingTypography()
+}
+
 private struct ReaderTypography: ViewModifier {
     let role: ReaderTextRole
-    @ScaledMetric private var pointSize: CGFloat
+    let base: CGFloat
+    /// Dynamic Type's factor for the role's text style; the in-app adjustment is added before it,
+    /// as in the reader (`base + pointAdjustment`, then scaled).
+    @ScaledMetric private var scale: CGFloat
+    @Environment(\.readingTypography) private var typography
 
     init(role: ReaderTextRole, wide: Bool) {
         self.role = role
-        _pointSize = ScaledMetric(wrappedValue: role.pointSize(wide: wide), relativeTo: role.relativeStyle)
+        base = role.pointSize(wide: wide)
+        _scale = ScaledMetric(wrappedValue: 1, relativeTo: role.relativeStyle)
     }
 
     func body(content: Content) -> some View {
-        content.font(.system(size: pointSize, weight: role.weight, design: role.design))
+        let size = role.followsReadingSize ? max(12, base + typography.pointAdjustment) : base
+        let design = role == .verse ? (typography.face == .serif ? Font.Design.serif : .default) : role.design
+        content.font(.system(size: size * scale, weight: role.weight, design: design))
     }
 }
 

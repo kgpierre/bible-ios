@@ -100,7 +100,7 @@ struct ChapterSummaryView: View {
             }
             if let message = state.questionMessage {
                 questionBubble(state.question).id("questionError")
-                Text(message).font(.body).lineSpacing(4)
+                Text(message).readerTypography(.prose).lineSpacing(4)
                     .accessibilityIdentifier("bookQuestionStatus").accessibilityFocused($statusFocused)
             }
             Text("Questions stay within \(state.chapter.bookName). AI explanations are not Scripture. Compare them with the text.")
@@ -119,14 +119,14 @@ struct ChapterSummaryView: View {
     private func exchangeView(_ exchange: ChapterSummaryState.Exchange) -> some View {
         VStack(alignment: .leading, spacing: 22) {
             questionBubble(exchange.question)
-            Text(exchange.answer.text).font(.body).lineSpacing(4)
+            Text(exchange.answer.text).readerTypography(.prose).lineSpacing(4)
                 .textSelection(.enabled).accessibilityIdentifier("bookAnswerText")
             if exchange.answer.showsSourceText {
                 Text("Verse quotations · \(state.chapter.editionLabel)").font(.footnote).foregroundStyle(.secondary)
                 ForEach(exchange.answer.sources) { source in
                     VStack(alignment: .leading, spacing: 12) {
                         sourceButtons([source])
-                        Text(source.text).font(.body).lineSpacing(4).textSelection(.enabled)
+                        Text(source.text).readerTypography(.prose).lineSpacing(4).textSelection(.enabled)
                     }
                 }
             } else {

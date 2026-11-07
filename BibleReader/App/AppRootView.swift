@@ -75,6 +75,8 @@ struct AppRootView: View {
                     state.destination = .read
                 }
             }
+            // Overview and answers use the in-app text size and face, like the reader.
+            .environment(\.readingTypography, state.preferences.typography)
         }
         .sheet(item: Binding(get: { state.reader.notesRequest }, set: { state.reader.notesRequest = $0 })) { request in
             SourceNotesView(request: request)
