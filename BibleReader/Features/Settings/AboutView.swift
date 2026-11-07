@@ -40,7 +40,7 @@ struct AboutView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 7)
                     .listRowBackground(Color.clear)
                 }
 
