@@ -159,7 +159,8 @@ struct PaperChapterView: UIViewControllerRepresentable {
                     active?.textView.capturePosition()
                     let backwards = adjacent(-1, to: active?.document.id) == page.document.id
                     // Verse-targeted navigation must restore its anchor directly.
-                    let curl = !interrupted && configuration.animated && state.anchor == nil &&
+                    // Never curl while the scene is inactive: UIKit can drop the transition there.
+                    let curl = !interrupted && configuration.animated && configuration.scenePhase == .active && state.anchor == nil &&
                         (adjacent(1, to: active?.document.id) == page.document.id || backwards)
                     turning = curl
                     sourceID = state.chapterID

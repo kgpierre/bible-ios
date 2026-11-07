@@ -171,8 +171,10 @@ final class ReaderState {
             followChapter: { [weak self] from, to in
                 guard let self, self.chapterID == from || pendingNarrationFollow?.chapterID == from else { return }
                 // Navigating loads annotations from the user store, which is unreadable while the
-                // device is locked; in the background the reader catches up when the scene is active.
-                if UIApplication.shared.applicationState == .background || pendingNarrationFollow != nil {
+                // device is locked. And while the scene is inactive (the screenshot editor, Control
+                // Center) a page curl can be dropped, leaving the reader blank (owner report,
+                // 7 November 2026). Either way the reader catches up when the scene is active.
+                if UIApplication.shared.applicationState != .active || pendingNarrationFollow != nil {
                     pendingNarrationFollow = (to, nil)
                     return
                 }
