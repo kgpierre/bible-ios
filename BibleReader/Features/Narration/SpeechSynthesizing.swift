@@ -16,6 +16,8 @@ struct SpeechRequest: Sendable, Equatable {
     let rate: Float
     let usesAssistiveSettings: Bool
     var postDelay: TimeInterval = 0
+    /// IPA hints on ranges of `text`; the spoken string itself is unchanged.
+    var pronunciations: [NarrationLexicon.Hint] = []
 }
 
 /// Ranges are UTF-16 ranges in the request's text.
@@ -62,7 +64,9 @@ enum SpeechEvent: Sendable, Equatable {
     }
 
     func enqueue(_ request: SpeechRequest) {
-        let utterance = AVSpeechUtterance(string: request.text)
+        let utterance = request.pronunciations.isEmpty
+            ? AVSpeechUtterance(string: request.text)
+            : AVSpeechUtterance(attributedString: Self.attributed(request))
         if let id = request.voiceID, let voice = AVSpeechSynthesisVoice(identifier: id) { utterance.voice = voice }
         utterance.rate = request.rate
         utterance.prefersAssistiveTechnologySettings = request.usesAssistiveSettings
@@ -73,6 +77,16 @@ enum SpeechEvent: Sendable, Equatable {
 
     /// Immediate: a word-boundary pause requested before an utterance starts, or near its end, can
     /// be accepted and never take effect (seen on device, 7 November 2026).
+    /// The request's text with IPA notation on hinted ranges. Its string equals `request.text`.
+    nonisolated static func attributed(_ request: SpeechRequest) -> NSAttributedString {
+        let string = NSMutableAttributedString(string: request.text)
+        let length = string.length
+        for hint in request.pronunciations where NSMaxRange(hint.range) <= length {
+            string.addAttribute(NSAttributedString.Key(AVSpeechSynthesisIPANotationAttribute), value: hint.ipa, range: hint.range)
+        }
+        return string
+    }
+
     func pause() -> Bool { synthesizer.isSpeaking && synthesizer.pauseSpeaking(at: .immediate) }
     func resume() -> Bool { synthesizer.isPaused && synthesizer.continueSpeaking() }
     func stop() { synthesizer.stopSpeaking(at: .immediate) }

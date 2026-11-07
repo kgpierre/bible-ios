@@ -7,18 +7,32 @@ struct NarrationSettingsView: View {
     /// Shown when presented as its own sheet rather than pushed from Appearance.
     var showsCloseButton = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         @Bindable var preferences = narration.preferences
         Form {
             if let reason = narration.unavailableReason {
                 Section { Text(reason) }
+            } else if !narration.voices.hasNaturalVoice {
+                Section("Get More Natural Voices") {
+                    Text("This device has only basic voices. For a more natural voice, open Settings → Accessibility → Spoken Content → Voices → English, choose a voice such as Ava or Zoe, and download its Premium or Enhanced version. It appears here when the download finishes.")
+                        .font(.subheadline)
+                        .accessibilityIdentifier("narrationMoreVoices")
+                }
             }
             Section {
                 Picker("Speed", selection: $preferences.rate) {
                     ForEach(NarrationRate.allCases) { Text($0.title).tag($0) }
                 }
                 .accessibilityIdentifier("narrationSpeed")
+                Picker("Pause Between Verses", selection: $preferences.versePause) {
+                    ForEach(NarrationVersePause.allCases) { Text($0.title).tag($0) }
+                }
+                .accessibilityIdentifier("narrationVersePause")
+                if narration.hasPronunciationHints {
+                    Toggle("Use Pronunciation Hints", isOn: $preferences.usesPronunciationHints)
+                }
             }
             Section {
                 Toggle("Announce Chapters", isOn: $preferences.announcesChapters)
@@ -32,6 +46,7 @@ struct NarrationSettingsView: View {
             } footer: {
                 Text("When VoiceOver is on, Read Aloud uses your VoiceOver voice and speaking rate.")
             }
+            personalVoiceSection
             ForEach(NarrationVoice.Quality.allCases.reversed(), id: \.self) { quality in
                 let voices = narration.voices.voices.filter { $0.quality == quality }
                 if !voices.isEmpty {
@@ -47,6 +62,7 @@ struct NarrationSettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(Color(.readingCanvas))
+        .tint(Color(.accent))
         .navigationTitle("Read Aloud")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -61,7 +77,39 @@ struct NarrationSettingsView: View {
         .onChange(of: preferences.rate) { _, _ in narration.speechSettingsChanged() }
         .onChange(of: preferences.voiceID) { _, _ in narration.speechSettingsChanged() }
         .onChange(of: preferences.usesVoiceOverSettings) { _, _ in narration.speechSettingsChanged() }
+        .onChange(of: preferences.versePause) { _, _ in narration.speechSettingsChanged() }
+        .onChange(of: preferences.usesPronunciationHints) { _, _ in narration.speechSettingsChanged() }
         .onDisappear { narration.voices.stopSample() }
+    }
+
+    /// Personal Voice is used only with the user's permission, and only when they pick it (0023, Q5).
+    @ViewBuilder private var personalVoiceSection: some View {
+        switch narration.voices.personalVoiceAccess {
+        case .notDetermined:
+            Section {
+                Button("Use My Personal Voice…") { Task { await narration.voices.requestPersonalVoice() } }
+                    .accessibilityIdentifier("narrationRequestPersonalVoice")
+            } footer: {
+                Text("Read Aloud can speak with the Personal Voice you created on this device. It stays on this device.")
+            }
+        case .denied:
+            Section {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+            } header: {
+                Text("Personal Voice")
+            } footer: {
+                Text("Bible doesn’t have access to your Personal Voice. You can allow it in Settings.")
+            }
+        case .authorized where !narration.voices.hasPersonalVoice:
+            Section("Personal Voice") {
+                Text("No Personal Voice is set up on this device. You can create one in Settings → Accessibility → Personal Voice.")
+                    .font(.subheadline)
+            }
+        case .authorized, .unsupported:
+            EmptyView()
+        }
     }
 
     private func row(_ voice: NarrationVoice) -> some View {

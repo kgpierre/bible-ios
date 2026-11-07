@@ -181,6 +181,26 @@ final class NarrationUITests: XCTestCase {
     }
 
     @MainActor
+    func testReadAloudSettingsOfferVersePausesAndVoiceGuidance() throws {
+        let app = application()
+        app.launch()
+        startFromMore(app)
+        XCTAssertTrue(element(app, "narrationMiniPlayer").waitForExistence(timeout: 10))
+        app.buttons["narrationMenu"].tap()
+        app.buttons["Read Aloud Settings…"].firstMatch.tap()
+        let pause = element(app, "narrationVersePause")
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        // The empty pronunciation list hides its setting until reviewed entries ship.
+        XCTAssertFalse(app.switches["Use Pronunciation Hints"].exists)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Read Aloud settings"
+        shot.lifetime = .keepAlways
+        add(shot)
+        app.buttons["narrationSettingsDone"].tap()
+        XCTAssertTrue(waitForDisappearance(pause, timeout: 3))
+    }
+
+    @MainActor
     private func startFromMore(_ app: XCUIApplication) {
         XCTAssertTrue(reader(app).waitForExistence(timeout: 10))
         let more = app.buttons["More"].firstMatch

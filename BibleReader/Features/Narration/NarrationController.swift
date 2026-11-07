@@ -76,6 +76,7 @@ final class NarrationController {
     @ObservationIgnored private let audio: any NarrationAudioSession
     @ObservationIgnored private let nowPlaying: any NarrationNowPlaying
     @ObservationIgnored private let sleep: @MainActor (Duration) async throws -> Void
+    @ObservationIgnored private let lexicon: NarrationLexicon
 
     private struct Loaded {
         let document: ChapterDocument
@@ -118,7 +119,9 @@ final class NarrationController {
 
     init(source: NarrationSource, synthesizer: any SpeechSynthesizing, audio: any NarrationAudioSession,
          nowPlaying: any NarrationNowPlaying, preferences: NarrationPreferences, voices: NarrationVoiceCatalog,
+         lexicon: NarrationLexicon = .bundled(),
          sleep: @escaping @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+        self.lexicon = lexicon
         self.source = source
         self.synthesizer = synthesizer
         self.audio = audio
@@ -136,6 +139,9 @@ final class NarrationController {
             for await command in commands { self?.handle(command) }
         }
     }
+
+    /// Whether any reviewed pronunciation hints ship; the setting is hidden while there are none.
+    var hasPronunciationHints: Bool { !lexicon.entries.isEmpty }
 
     var unavailableReason: String? {
         voices.voices.isEmpty
@@ -339,21 +345,24 @@ final class NarrationController {
                 notifiedFallback = true
                 notice = String(localized: "Your chosen voice isn’t available on this device. Reading with \(voice.name) instead.")
             }
+            let text = speech.substring(from: offset)
             synthesizer.enqueue(SpeechRequest(
-                token: token, text: speech.substring(from: offset), voiceID: resolved.voice?.id, rate: preferences.rate.utteranceRate,
+                token: token, text: text, voiceID: resolved.voice?.id, rate: preferences.rate.utteranceRate,
                 usesAssistiveSettings: preferences.usesVoiceOverSettings && UIAccessibility.isVoiceOverRunning,
-                postDelay: Self.pause(after: segment.kind)))
+                postDelay: pause(after: segment.kind),
+                pronunciations: preferences.usesPronunciationHints ? lexicon.hints(in: text) : []))
             queued.append(token)
             baseOffsets[token] = offset
             advance(past: cursor, in: loaded)
         }
     }
 
-    private static func pause(after kind: NarrationScript.Segment.Kind) -> TimeInterval {
+    private func pause(after kind: NarrationScript.Segment.Kind) -> TimeInterval {
         switch kind {
         case .chapterAnnouncement: 0.5
         case .heading, .trailing: 0.3
-        case .verseAnnouncement, .verse: 0
+        case .verseAnnouncement: 0
+        case .verse: preferences.versePause.seconds
         }
     }
 

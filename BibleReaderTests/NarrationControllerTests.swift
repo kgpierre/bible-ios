@@ -37,7 +37,8 @@ struct NarrationControllerTests {
 
     private static let voice = NarrationVoice(id: "com.apple.voice.test", name: "Test", language: "en-US", quality: .enhanced)
 
-    private func harness(voices: [NarrationVoice] = [voice], configure: (NarrationPreferences) -> Void = { _ in }) -> Harness {
+    private func harness(voices: [NarrationVoice] = [voice], lexicon: NarrationLexicon = .empty,
+                         configure: (NarrationPreferences) -> Void = { _ in }) -> Harness {
         let recorder = Recorder()
         let preferences = NarrationPreferences(defaults: UserDefaults(suiteName: "NarrationTests-\(UUID().uuidString)")!)
         configure(preferences)
@@ -57,7 +58,9 @@ struct NarrationControllerTests {
         let audio = SilentNarrationAudioSession()
         let nowPlaying = RecordingNowPlaying()
         let controller = NarrationController(source: source, synthesizer: synth, audio: audio, nowPlaying: nowPlaying, preferences: preferences,
-                                             voices: NarrationVoiceCatalog(load: { voices }, preferredLanguage: "en-US"),
+                                             voices: NarrationVoiceCatalog(load: { voices }, preferredLanguage: "en-US",
+                                                                           personalStatus: { .unsupported }, requestPersonal: { .unsupported }),
+                                             lexicon: lexicon,
                                              sleep: { _ in try await withCheckedThrowingContinuation { recorder.sleeps.append($0) } })
         return Harness(controller: controller, synth: synth, audio: audio, nowPlaying: nowPlaying, recorder: recorder, preferences: preferences)
     }
@@ -525,5 +528,71 @@ struct NarrationControllerTests {
         #expect(h.controller.status == .paused(.user))
         h.controller.resume()
         try await until { h.synth.queue.first?.text == "God created." }
+    }
+
+    // MARK: Phase 5: verse pauses, pronunciation hints, Personal Voice access
+
+    @Test func versesEndWithTheChosenPause() async throws {
+        let h = harness { $0.versePause = .long }
+        h.controller.play(from: VerseAnchor(verseID: "t:AAA:1:1", utf16Offset: 0), in: "t:AAA:1")
+        try await until { h.synth.queue.count == 3 }
+        // Heading, verse 1, verse 2.
+        #expect(h.synth.queue.map(\.postDelay) == [0.3, NarrationVersePause.long.seconds, NarrationVersePause.long.seconds])
+        _ = try await start(h)
+        // A change requeues from the last word with the new pause.
+        h.preferences.versePause = .none
+        h.controller.speechSettingsChanged()
+        try await until { h.synth.queue.count == 3 && h.synth.current == nil }
+        #expect(h.synth.queue.map(\.postDelay) == [0.3, 0, 0])
+    }
+
+    @Test func pronunciationHintsFollowTheSetting() async throws {
+        let lexicon = NarrationLexicon(entries: [.init(word: "God", ipa: "ɡɑd", voices: ["v"], reviewed: "test")])
+        let on = harness(lexicon: lexicon)
+        #expect(on.controller.hasPronunciationHints)
+        on.controller.play(from: VerseAnchor(verseID: "t:AAA:1:1", utf16Offset: 0), in: "t:AAA:1")
+        try await until { on.synth.queue.count == 3 }
+        let verse = try #require(on.synth.queue.dropFirst().first)
+        #expect(verse.pronunciations.map { (verse.text as NSString).substring(with: $0.range) } == ["God"])
+
+        let off = harness(lexicon: lexicon) { $0.usesPronunciationHints = false }
+        off.controller.play(from: VerseAnchor(verseID: "t:AAA:1:1", utf16Offset: 0), in: "t:AAA:1")
+        try await until { off.synth.queue.count == 3 }
+        #expect(off.synth.queue.allSatisfy { $0.pronunciations.isEmpty })
+        #expect(!harness().controller.hasPronunciationHints)
+    }
+
+    @Test func newSettingsDecodeFromOlderPayloads() throws {
+        let defaults = try #require(UserDefaults(suiteName: "NarrationPrefs-\(UUID().uuidString)"))
+        defaults.set(Data(#"{"version":1,"rate":"1.5"}"#.utf8), forKey: "reader.narration.v1")
+        let older = NarrationPreferences(defaults: defaults)
+        #expect(older.rate == .fast && older.versePause == .short && older.usesPronunciationHints)
+        older.versePause = .none
+        older.usesPronunciationHints = false
+        let reloaded = NarrationPreferences(defaults: defaults)
+        #expect(reloaded.versePause == .none && !reloaded.usesPronunciationHints && reloaded.rate == .fast)
+    }
+
+    @Test func personalVoiceAccessIsRequestedOnceAndRefreshesVoices() async throws {
+        var access = NarrationVoiceCatalog.PersonalVoiceAccess.notDetermined
+        var installed = [Self.voice]
+        var requests = 0
+        let catalog = NarrationVoiceCatalog(load: { installed }, preferredLanguage: "en-US", personalStatus: { access },
+                                            requestPersonal: {
+                                                requests += 1
+                                                access = .authorized
+                                                installed.append(NarrationVoice(id: "personal", name: "My Voice", language: "en-US", quality: .personal))
+                                                return access
+                                            })
+        #expect(catalog.personalVoiceAccess == .notDetermined && !catalog.hasPersonalVoice)
+        await catalog.requestPersonalVoice()
+        #expect(requests == 1)
+        #expect(catalog.personalVoiceAccess == .authorized && catalog.hasPersonalVoice)
+        // Personal Voice is never the default; it is used only when chosen.
+        #expect(catalog.defaultVoice?.id == Self.voice.id)
+        #expect(catalog.hasNaturalVoice)
+        let basic = NarrationVoiceCatalog(load: { [NarrationVoice(id: "b", name: "Basic", language: "en-US", quality: .standard)] },
+                                          preferredLanguage: "en-US", personalStatus: { .unsupported }, requestPersonal: { .unsupported })
+        #expect(!basic.hasNaturalVoice)
     }
 }

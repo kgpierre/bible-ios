@@ -14,6 +14,27 @@ enum NarrationRate: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// A short silence after each verse, so chapters don't run together (owner request, 7 November 2026).
+/// It uses the utterance's post-delay, not SSML: an SSML utterance ignores rate (plan §4.5).
+enum NarrationVersePause: String, Codable, CaseIterable, Identifiable, Sendable {
+    case none, short, long
+    var id: Self { self }
+    var seconds: TimeInterval {
+        switch self {
+        case .none: 0
+        case .short: 0.35
+        case .long: 0.8
+        }
+    }
+    var title: String {
+        switch self {
+        case .none: String(localized: "None")
+        case .short: String(localized: "Short")
+        case .long: String(localized: "Long")
+        }
+    }
+}
+
 /// Read Aloud settings. Stores voice identifiers only; a missing voice falls back without
 /// overwriting the stored choice, so reinstalling the voice restores it.
 @MainActor @Observable
@@ -25,6 +46,9 @@ final class NarrationPreferences {
     var continuesToNextChapter: Bool { didSet { save() } }
     /// With VoiceOver running, speak with the VoiceOver voice and rate instead.
     var usesVoiceOverSettings: Bool { didSet { save() } }
+    var versePause: NarrationVersePause { didSet { save() } }
+    /// Owner-reviewed pronunciation hints for names (plan §4.5). Off uses each voice's own reading.
+    var usesPronunciationHints: Bool { didSet { save() } }
     @ObservationIgnored private let defaults: UserDefaults
 
     private struct Payload: Codable {
@@ -35,6 +59,8 @@ final class NarrationPreferences {
         var announcesVerseNumbers: Bool?
         var continuesToNextChapter: Bool?
         var usesVoiceOverSettings: Bool?
+        var versePause: NarrationVersePause?
+        var usesPronunciationHints: Bool?
     }
     private static let key = "reader.narration.v1"
 
@@ -55,6 +81,8 @@ final class NarrationPreferences {
         announcesVerseNumbers = stored?.announcesVerseNumbers ?? false
         continuesToNextChapter = stored?.continuesToNextChapter ?? true
         usesVoiceOverSettings = stored?.usesVoiceOverSettings ?? false
+        versePause = stored?.versePause ?? .short
+        usesPronunciationHints = stored?.usesPronunciationHints ?? true
     }
 
     var scriptOptions: NarrationScriptOptions {
@@ -63,7 +91,8 @@ final class NarrationPreferences {
 
     private func save() {
         let payload = Payload(voiceID: voiceID, rate: rate, announcesChapters: announcesChapters, announcesVerseNumbers: announcesVerseNumbers,
-                              continuesToNextChapter: continuesToNextChapter, usesVoiceOverSettings: usesVoiceOverSettings)
+                              continuesToNextChapter: continuesToNextChapter, usesVoiceOverSettings: usesVoiceOverSettings,
+                              versePause: versePause, usesPronunciationHints: usesPronunciationHints)
         guard let data = try? JSONEncoder().encode(payload) else { return }
         defaults.set(data, forKey: Self.key)
     }
@@ -93,15 +122,35 @@ struct NarrationVoice: Identifiable, Equatable, Sendable {
 /// voices are excluded because their privacy behavior is outside the app's control.
 @MainActor @Observable
 final class NarrationVoiceCatalog {
+    /// The app's permission to speak with the user's Personal Voice (plan phase 5).
+    enum PersonalVoiceAccess: Sendable, Equatable {
+        case notDetermined, denied, unsupported, authorized
+        init(_ status: AVSpeechSynthesizer.PersonalVoiceAuthorizationStatus) {
+            switch status {
+            case .authorized: self = .authorized
+            case .denied: self = .denied
+            case .unsupported: self = .unsupported
+            default: self = .notDetermined
+            }
+        }
+    }
+
     private(set) var voices: [NarrationVoice] = []
+    private(set) var personalVoiceAccess: PersonalVoiceAccess = .notDetermined
     @ObservationIgnored private let load: @MainActor () -> [NarrationVoice]
+    @ObservationIgnored private let personalStatus: @MainActor () -> PersonalVoiceAccess
+    @ObservationIgnored private let requestPersonal: @MainActor () async -> PersonalVoiceAccess
     @ObservationIgnored private let preferredLanguage: String
     @ObservationIgnored private let preview = AVSpeechSynthesizer()
 
     init(load: @escaping @MainActor () -> [NarrationVoice] = NarrationVoiceCatalog.installedVoices,
-         preferredLanguage: String = "en-\(Locale.current.region?.identifier ?? "US")") {
+         preferredLanguage: String = "en-\(Locale.current.region?.identifier ?? "US")",
+         personalStatus: @escaping @MainActor () -> PersonalVoiceAccess = { PersonalVoiceAccess(AVSpeechSynthesizer.personalVoiceAuthorizationStatus) },
+         requestPersonal: @escaping @MainActor () async -> PersonalVoiceAccess = NarrationVoiceCatalog.requestSystemPersonalVoice) {
         self.load = load
         self.preferredLanguage = preferredLanguage
+        self.personalStatus = personalStatus
+        self.requestPersonal = requestPersonal
         refresh()
         Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: AVSpeechSynthesizer.availableVoicesDidChangeNotification) {
@@ -110,7 +159,24 @@ final class NarrationVoiceCatalog {
         }
     }
 
+    /// Asks once; the system remembers the answer, and later calls return it without a prompt.
+    func requestPersonalVoice() async {
+        personalVoiceAccess = await requestPersonal()
+        refresh()
+    }
+
+    /// Whether any Enhanced or Premium voice is installed. Without one, Read Aloud suggests them.
+    var hasNaturalVoice: Bool { voices.contains { $0.quality == .enhanced || $0.quality == .premium } }
+    var hasPersonalVoice: Bool { voices.contains { $0.quality == .personal } }
+
+    static func requestSystemPersonalVoice() async -> PersonalVoiceAccess {
+        await withCheckedContinuation { continuation in
+            AVSpeechSynthesizer.requestPersonalVoiceAuthorization { continuation.resume(returning: PersonalVoiceAccess($0)) }
+        }
+    }
+
     func refresh() {
+        personalVoiceAccess = personalStatus()
         voices = load().sorted {
             ($0.quality, $0.language == preferredLanguage ? 1 : 0, $1.name) > ($1.quality, $1.language == preferredLanguage ? 1 : 0, $0.name)
         }

@@ -1,6 +1,6 @@
 # 0023 — Read Aloud (narration)
 
-Status: accepted for implementation planning, 31 October 2026. The owner answered the open questions in `Docs/Plans/narration-plan.md` §16 in a planning session that day. Phases 1–3 are implemented and simulator-tested, and the owner has confirmed them working on a device. Phase 4 is implemented and unit-tested, and its device matrix is pending (evidence below). Phase 0 S1 is partly done, S2–S5 remain, and Phases 5–8 remain.
+Status: accepted for implementation planning, 31 October 2026. The owner answered the open questions in `Docs/Plans/narration-plan.md` §16 in a planning session that day. Phases 1–3 are implemented and simulator-tested, and the owner has confirmed them working on a device. Phase 4 is implemented and unit-tested, and its device matrix is pending. Phase 5 is implemented and tested in the simulator, and its listening review is pending (evidence below). Phase 0 S1 is partly done, S2–S5 remain, and Phases 6–8 remain.
 
 This is an explicit owner scope change. AGENTS.md listed audio as out of scope. On-device synthesized narration of the bundled corpus is now in scope. Recorded or downloadable audio, network or cloud text-to-speech, audio export, and generated or altered Scripture remain out of scope.
 
@@ -122,6 +122,30 @@ This is an explicit owner scope change. AGENTS.md listed audio as out of scope. 
   - The pending-follow path in `ReaderState`, which has no unit test.
   - Network capture.
   - The full regression suites and iPad, which were not run for this phase.
+
+### Phase 5 — voices and pronunciation, 7 November 2026 (code and tests; listening review pending)
+
+- **Natural voices:** when no Enhanced or Premium voice is installed, the Read Aloud sheet opens with "Get More Natural Voices" and the steps to download one in Settings. Apps can't download voices or open that screen, so this is guidance only. New voices appear through `availableVoicesDidChangeNotification`.
+- **Personal Voice:**
+  - "Use My Personal Voice…" asks for permission once. The system remembers the answer.
+  - When access is denied, an Open Settings button opens the app's settings page.
+  - When access is granted but no Personal Voice exists, a note says where to create one.
+  - Personal Voice is never the default; it's used only when chosen.
+- **Pause Between Verses:** None, Short (0.35 s, the default), or Long (0.8 s). It uses each utterance's post-delay. It doesn't use SSML, because an SSML utterance ignores rate (plan §4.5). The owner asked for pauses as SSML on 6 November 2026; this delivers the pauses without losing the speed setting.
+- **Pronunciation hints:**
+  - `Domain/NarrationLexicon.swift` and `Resources/NarrationLexicon.json` hold the hints. They match whole words, case-sensitively, and the IPA is applied with `AVSpeechSynthesisIPANotationAttribute` on `AVSpeechUtterance(attributedString:)`.
+  - Entries without IPA or a review are dropped.
+  - The list ships **empty** (decision Q11), and the "Use Pronunciation Hints" toggle stays hidden until reviewed entries exist.
+- **Results (Xcode 27.2 (27B52), Debug, iPhone 18 Pro simulator, iOS 27.0):**
+  - `NarrationControllerTests`, `NarrationLexiconTests` (5), `NarrationScriptTests`, and `NarrationFollowAlongTests`: 54 passed.
+  - The full-corpus lexicon test, with hints on six common names, found the spoken string unchanged for every segment, and every hint covered exactly its word.
+  - `NarrationUITests`: 7, including the new settings test, which passed when run on its own. Its screenshot was inspected.
+  - No new warnings.
+- **Not verified:**
+  - Whether voices honor IPA, and word ranges inside hinted words (spike S2).
+  - The Personal Voice prompt and voices on a device.
+  - Enhanced and Premium voice behavior.
+  - The owner's listening review of the pause lengths.
 
 ## Open checks
 

@@ -1,7 +1,7 @@
 # Narration (Read Aloud) — Implementation Plan
 
 Date: 30 October 2026
-Status: **Phases 1–3 implemented**, simulator-tested, and confirmed by the owner on a device. **Phase 4 implemented and unit-tested** (7 November 2026), with its device matrix pending. Phase 0 S1 is partly done. Phases 5–8 remain. The owner accepted the scope change and answered every §16 question on 31 October 2026. Implementation evidence and limits are recorded in [0023](../Decisions/0023-narration.md); this plan does not itself show that any behavior works.
+Status: **Phases 1–3 implemented**, simulator-tested, and confirmed by the owner on a device. **Phases 4 and 5 implemented and tested** in the simulator (7 November 2026). Phase 4's device matrix and Phase 5's listening review are pending. Phase 0 S1 is partly done. Phases 6–8 remain. The owner accepted the scope change and answered every §16 question on 31 October 2026. Implementation evidence and limits are recorded in [0023](../Decisions/0023-narration.md); this plan does not itself show that any behavior works.
 
 UI name: **Read Aloud**. Type names keep the `Narration…` prefix.
 
