@@ -8,7 +8,11 @@ struct SourceNotesView: View {
     /// own height instead of a fixed half-screen detent with empty space beneath a short note.
     @State private var contentHeight: CGFloat?
     @State private var chromeHeight: CGFloat = 0
-    @State private var detent: PresentationDetent = .medium
+    /// Opens short, then grows to the measured height. Starting at `.medium` made a short note's
+    /// sheet slide up past its height and then drop back down (owner report, 7 November 2026);
+    /// growing keeps the motion upward.
+    private static let opening = PresentationDetent.height(180)
+    @State private var detent: PresentationDetent = Self.opening
     private var fitted: PresentationDetent? { contentHeight.map { .height(($0 + chromeHeight).rounded(.up)) } }
 
     var body: some View {
@@ -74,7 +78,7 @@ struct SourceNotesView: View {
             }
         }
         .tint(Color(.accent))
-        .presentationDetents(fitted.map { [$0, .large] } ?? [.medium, .large], selection: $detent)
+        .presentationDetents(fitted.map { [$0, .large] } ?? [Self.opening, .large], selection: $detent)
         .accessibilityIdentifier("sourceNotes")
     }
 }
