@@ -4,6 +4,9 @@ struct AppRootView: View {
     @State private var state = AppState()
     @State private var sideSafeArea = EdgeInsets()
     @State private var sideUsableSize = CGSize.zero
+    /// The top of the compact bottom controls (passage, tabs, and Read Aloud's player) in global
+    /// coordinates. The reader's safe area doesn't include them, so it reserves this directly.
+    @State private var compactChromeTop: CGFloat?
     @Environment(\.undoManager) private var undoManager
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -146,18 +149,21 @@ struct AppRootView: View {
         .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sideSafeArea = $0 }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { sideUsableSize = $0 }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if sideRailWidth != nil {
-                // Duo outer display: destinations and the passage control live in the side column,
-                // so only Read Aloud's mini player needs a bottom band.
-                SideNarrationInset(state: state)
-            } else {
-                CompactReaderNavigation(state: state)
-                    // Landscape phones are short: let the text stop at the controls' top edge rather than
-                    // scroll under them, so nothing is read through the glass at rest.
-                    .background {
-                        if verticalSizeClass == .compact { Color(.readingCanvas).ignoresSafeArea(.container, edges: .bottom) }
-                    }
+            Group {
+                if sideRailWidth != nil {
+                    // Duo outer display: destinations and the passage control live in the side column,
+                    // so only Read Aloud's mini player needs a bottom band.
+                    SideNarrationInset(state: state)
+                } else {
+                    CompactReaderNavigation(state: state)
+                        // Landscape phones are short: let the text stop at the controls' top edge rather than
+                        // scroll under them, so nothing is read through the glass at rest.
+                        .background {
+                            if verticalSizeClass == .compact { Color(.readingCanvas).ignoresSafeArea(.container, edges: .bottom) }
+                        }
+                }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { compactChromeTop = $0 }
         }
         .overlay(alignment: .bottomTrailing) {
             if let width = sideRailWidth {
@@ -259,6 +265,18 @@ struct AppRootView: View {
         }
     }
 
+    /// The reader's insets: its safe area, plus, on compact layouts, the floating bottom controls,
+    /// which include Read Aloud's player while it's active (owner report, 7 November 2026). The
+    /// reader draws edge to edge, so the bottom inset is measured from its full-bleed bottom.
+    private func readerInsets(_ geometry: GeometryProxy, wide: Bool) -> EdgeInsets {
+        var insets = geometry.safeAreaInsets
+        if !wide, let top = compactChromeTop {
+            let covered = geometry.frame(in: .global).maxY + insets.bottom - top
+            if covered.isFinite { insets.bottom = max(insets.bottom, covered) }
+        }
+        return insets
+    }
+
     @ViewBuilder private func chapter(wide: Bool, active: Bool) -> some View {
         if let document = state.reader.document {
             GeometryReader { geometry in
@@ -296,7 +314,7 @@ struct AppRootView: View {
                         .position(x: pane.midX, y: pane.midY)
                 } else {
                     PaperChapterView(document: document, state: state.reader, wide: wide,
-                                      chromeInsets: geometry.safeAreaInsets, isActive: active)
+                                      chromeInsets: readerInsets(geometry, wide: wide), isActive: active)
                         .ignoresSafeArea(.container, edges: .vertical)
                 }
             }

@@ -16,9 +16,9 @@ enum ReaderLayout {
     /// Book posture accepts a narrower 280-point column plus gutter/margins, like a small book.
     static let minimumBookPageWidth: CGFloat = 360
 
-    /// Clearance below the last line of a scrolling chapter, beyond the floating bottom chrome the
-    /// safe area already reserves, so the final verse rests well clear of the capsules.
-    static let chapterEndClearance: CGFloat = 72
+    /// Clearance between the last line of a scrolling chapter and the top of the floating bottom
+    /// controls (passage, tabs, and Read Aloud's player), which the reader measures directly.
+    static let chapterEndClearance: CGFloat = 40
     /// Side controls need this much trailing safe area (the system status/toolbar column) to fit.
     static let minimumSideRailInset: CGFloat = 60
 
