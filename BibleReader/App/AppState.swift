@@ -10,6 +10,7 @@ final class AppState {
     var isAppearancePresented = false
     var isChapterPickerPresented = false
     var isAboutPresented = false
+    var isReadAloudSettingsPresented = false
     /// The Widgets sheet: the card list, or a new card's editor from Saved.
     var cardsRequest: CardsRequest?
     let cards = CardsModel()
@@ -26,10 +27,27 @@ final class AppState {
     var destination: AppDestination = .read
     let reader: ReaderState
     let search: SearchState
+    let narration: NarrationController
 
-    init(reader: ReaderState = ReaderState()) {
+    init(reader: ReaderState = ReaderState(), narration: NarrationController? = nil) {
         self.reader = reader
         search = SearchState { input, offset in try await reader.search(input, offset: offset) }
+        self.narration = narration ?? Self.makeNarration(source: reader.narrationSource())
+    }
+
+    private static func makeNarration(source: NarrationSource) -> NarrationController {
+        var synthesizer: any SpeechSynthesizing = SystemSpeechSynthesizer()
+        var audio: any NarrationAudioSession = SystemNarrationAudioSession()
+        let nowPlaying: any NarrationNowPlaying = SystemNarrationNowPlaying()
+        #if DEBUG
+        // UI tests use deterministic speech instead of Simulator audio; "fast" exercises follow-along.
+        if let mode = ProcessInfo.processInfo.environment["BIBLE_TEST_FAKE_SPEECH"], mode == "1" || mode == "fast" {
+            synthesizer = ScriptedSpeechSynthesizer(pacing: mode == "fast" ? .milliseconds(700) : .seconds(3))
+            audio = SilentNarrationAudioSession()
+        }
+        #endif
+        return NarrationController(source: source, synthesizer: synthesizer, audio: audio, nowPlaying: nowPlaying,
+                                   preferences: NarrationPreferences(), voices: NarrationVoiceCatalog())
     }
 
     /// The latest widget link; an older link's late validation never navigates.
@@ -72,6 +90,32 @@ final class AppState {
         guard let chapter = reader.document, !reader.isLoading else { return }
         summary = reader.summaryState(for: chapter)
     }
+
+    /// Read Chapter Aloud starts at the first visible verse, or at the chapter's beginning (with
+    /// its announcement) when the reader is at the top.
+    func readCurrentChapterAloud() {
+        guard let document = reader.document, !reader.isLoading else { return }
+        let verseID = reader.anchor?.text.verseID
+        let anchor = verseID.flatMap { $0 == document.verses.first?.id ? nil : VerseAnchor(verseID: $0, utf16Offset: 0) }
+        narration.play(from: anchor, in: document.id)
+    }
+
+    /// The Read Aloud keyboard command and Magic Tap.
+    func toggleReadAloud() {
+        if narration.status.isActive { narration.togglePlayPause() } else { readCurrentChapterAloud() }
+    }
+
+    /// Shows the verse being read aloud.
+    func showNarratedVerse() {
+        guard let chapterID = narration.chapterID, let chapter = reader.catalogChapter(chapterID) else { return }
+        let verseID = narration.focus?.verseID
+        if reader.chapterID != chapterID || verseID != nil {
+            reader.navigate(to: chapter, verseID: verseID, cueVerseIDs: verseID.map { [$0] } ?? [])
+        }
+        destination = .read
+    }
+
+    var isNarrationElsewhere: Bool { narration.chapterID != nil && narration.chapterID != reader.chapterID }
 
     func makeWidget(from item: SavedItem) {
         guard let card = CardsModel.draft(from: item, editionLabel: reader.document?.editionLabel ?? "KJV") else { return }

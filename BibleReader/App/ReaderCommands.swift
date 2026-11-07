@@ -64,6 +64,23 @@ struct ReaderCommands: Commands {
                     .keyboardShortcut("]", modifiers: .command)
                     .disabled(state?.acceptsReaderShortcuts != true || state?.reader.hasAdjacentChapter(1) != true)
             }
+            // Audio is global: pausing and verse skips work from any destination once active.
+            Section {
+                let active = state?.narration.status.isActive == true
+                Button(state?.narration.status == .playing ? "Pause Reading Aloud" : active ? "Resume Reading Aloud" : "Read Chapter Aloud") {
+                    state?.toggleReadAloud()
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+                .disabled(!active && (state?.acceptsReaderShortcuts != true || state?.reader.document == nil))
+                Button("Previous Verse") { state?.narration.skipVerse(by: -1) }
+                    .keyboardShortcut("[", modifiers: [.command, .option])
+                    .disabled(!active)
+                Button("Next Verse") { state?.narration.skipVerse(by: 1) }
+                    .keyboardShortcut("]", modifiers: [.command, .option])
+                    .disabled(!active)
+                Button("Stop Reading Aloud") { state?.narration.stop() }
+                    .disabled(!active)
+            }
         }
     }
 }

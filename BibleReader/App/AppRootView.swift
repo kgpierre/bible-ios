@@ -33,10 +33,14 @@ struct AppRootView: View {
         .preferredColorScheme(state.appearance.colorScheme)
         .onChange(of: state.preferences.typography, initial: true) { _, typography in state.reader.typography = typography }
         .onChange(of: scenePhase) { _, phase in
+            // Read Aloud keeps playing in the background (audio background mode, plan §9.4).
             if phase != .active { state.reader.flushPosition(protectInBackground: true) }
             // A store that failed because the device was locked can open once the scene is active again.
             else if state.reader.openFailure?.kind == .locked, !state.reader.isLoading {
                 Task { await state.reader.retry() }
+            } else {
+                // Narration that moved on while in the background brings the reader with it.
+                state.reader.applyPendingNarrationFollow()
             }
         }
         #if DEBUG
@@ -77,6 +81,15 @@ struct AppRootView: View {
         .onChange(of: state.reader.isLoading) { _, loading in
             if !loading { state.openPendingLink() }
         }
+        .sheet(isPresented: $state.isReadAloudSettingsPresented) {
+            NavigationStack { NarrationSettingsView(narration: state.narration, showsCloseButton: true) }
+                .presentationDetents([.medium, .large])
+        }
+        .alert("Read Aloud", isPresented: Binding(get: { narrationMessage != nil }, set: { if !$0 { dismissNarrationMessage() } })) {
+            Button("OK", role: .cancel) { dismissNarrationMessage() }
+        } message: { Text(narrationMessage ?? "") }
+        // Magic Tap toggles Read Aloud only while it is active, so it never starts audio unexpectedly.
+        .accessibilityAction(.magicTap) { if state.narration.status.isActive { state.narration.togglePlayPause() } }
         .sheet(isPresented: $state.isAboutPresented) {
             AboutView(editionNotice: state.reader.editionNotice) { state.isAboutPresented = false }
         }
@@ -100,6 +113,7 @@ struct AppRootView: View {
         ZStack {
             NavigationStack {
                 chapter(wide: false, active: state.destination == .read)
+                    .environment(state.narration)
                     .background(Color(.readingCanvas).ignoresSafeArea())
                     .navigationTitle("")
                     .navigationBarTitleDisplayMode(.inline)
@@ -128,6 +142,7 @@ struct AppRootView: View {
             Tab(AppDestination.read.title, systemImage: AppDestination.read.symbol, value: AppDestination.read) {
                 NavigationStack {
                     chapter(wide: true, active: state.destination == .read)
+                        .environment(state.narration)
                         .background(Color(.readingCanvas).ignoresSafeArea())
                         .navigationTitle("")
                         .navigationBarTitleDisplayMode(.inline)
@@ -136,10 +151,13 @@ struct AppRootView: View {
                         .safeAreaInset(edge: .bottom, spacing: 0) {
                             // The passage selector floats at the bottom trailing corner, clear of
                             // the bounded reading column's start; text scrolls clear of it.
-                            PassageButton(state: state)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 12)
+                            VStack(alignment: .trailing, spacing: 10) {
+                                regularMiniPlayer
+                                PassageButton(state: state)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 12)
                         }
                 }
             }
@@ -149,6 +167,7 @@ struct AppRootView: View {
                         .frame(maxWidth: 720)
                         .frame(maxWidth: .infinity)
                         .background(Color(.readingCanvas).ignoresSafeArea())
+                        .safeAreaInset(edge: .bottom, spacing: 0) { regularMiniPlayerInset }
                 }
             }
             Tab(AppDestination.search.title, systemImage: AppDestination.search.symbol, value: AppDestination.search, role: .search) {
@@ -160,11 +179,46 @@ struct AppRootView: View {
                     .frame(maxWidth: 720)
                     .frame(maxWidth: .infinity)
                     .background(Color(.readingCanvas).ignoresSafeArea())
+                    .safeAreaInset(edge: .bottom, spacing: 0) { regularMiniPlayerInset }
                 }
             }
         }
         .tabViewStyle(.tabBarOnly)
         .tint(Color(.accent))
+    }
+
+    /// Bottom trailing above the passage selector, like 0017's floating capsule. A Duo book or
+    /// tabletop pose keeps it at the bottom: the right page and below the division.
+    @ViewBuilder private var regularMiniPlayer: some View {
+        if state.narration.status.isActive {
+            NarrationMiniPlayer(narration: state.narration, isElsewhere: state.isNarrationElsewhere,
+                                showReference: { state.showNarratedVerse() },
+                                openSettings: { state.isReadAloudSettingsPresented = true })
+                .frame(maxWidth: 440)
+        }
+    }
+
+    @ViewBuilder private var regularMiniPlayerInset: some View {
+        if state.narration.status.isActive {
+            regularMiniPlayer
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+        }
+    }
+
+    private var narrationMessage: String? {
+        switch state.narration.status {
+        case .failed(let message), .unavailable(let message): message
+        default: state.narration.notice
+        }
+    }
+
+    private func dismissNarrationMessage() {
+        switch state.narration.status {
+        case .failed, .unavailable: state.narration.stop()
+        default: state.narration.notice = nil
+        }
     }
 
     @ViewBuilder private func chapter(wide: Bool, active: Bool) -> some View {
@@ -241,8 +295,29 @@ struct AppRootView: View {
             }
             .buttonStyle(.glass)
             .controlSize(.large)
+            // Read Aloud below the division with the chapter controls (plan §6.5).
+            Button(tabletopReadAloudTitle, systemImage: tabletopReadAloudSymbol) { state.toggleReadAloud() }
+                .accessibilityIdentifier("tabletopReadAloud")
+                .buttonStyle(.glass)
+            .controlSize(.large)
         }
         .accessibilityIdentifier("tabletopReadingControls")
+    }
+
+    private var tabletopReadAloudTitle: LocalizedStringKey {
+        switch state.narration.status {
+        case .playing, .preparing: "Pause"
+        case .paused: "Resume"
+        default: "Read Chapter Aloud"
+        }
+    }
+
+    private var tabletopReadAloudSymbol: String {
+        switch state.narration.status {
+        case .playing, .preparing: "pause.fill"
+        case .paused: "play.fill"
+        default: "speaker.wave.2"
+        }
     }
 
     @ToolbarContentBuilder private var readerToolbar: some ToolbarContent {
@@ -257,7 +332,8 @@ struct AppRootView: View {
                     AppearanceView(preferences: state.preferences,
                                    showsPageLayout: AppearanceView.offersPageLayout(
                                        horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
-                                   showsFoldOptions: state.hasHinge)
+                                   showsFoldOptions: state.hasHinge,
+                                   narration: state.narration)
                         .frame(idealWidth: 400, idealHeight: 560)
                         .presentationCompactAdaptation(.sheet)
                         // Leave the reader visible above the sheet so changes show as they are made.
@@ -287,6 +363,14 @@ struct AppRootView: View {
                         .disabled(!state.reader.hasAdjacentChapter(-1))
                     Button("Next Chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
                         .disabled(!state.reader.hasAdjacentChapter(1))
+                    if state.narration.status.isActive {
+                        Button("Stop Reading Aloud", systemImage: "stop.fill") { state.narration.stop() }
+                            .accessibilityIdentifier("stopReadAloud")
+                    } else {
+                        Button("Read Chapter Aloud", systemImage: "speaker.wave.2") { state.readCurrentChapterAloud() }
+                            .disabled(state.reader.document == nil || state.reader.isLoading)
+                            .accessibilityIdentifier("readChapterAloud")
+                    }
                 }
                 Section {
                     Button(state.reader.undoActionName.map { String(localized: "Undo \($0)") } ?? String(localized: "Undo"),

@@ -13,9 +13,19 @@ struct CompactReaderNavigation: View {
 
     var body: some View {
         GlassEffectContainer(spacing: 8) {
-            ReaderNavigationLayout(stack: dynamicType.isAccessibilitySize) {
-                PassageButton(state: state)
-                destinations
+            VStack(spacing: 8) {
+                // Above the passage selector on every destination, inside the bottom inset, so
+                // final verses and chapter controls still scroll clear.
+                if state.narration.status.isActive {
+                    NarrationMiniPlayer(narration: state.narration, isElsewhere: state.isNarrationElsewhere, collapsed: collapsed,
+                                        showReference: { state.showNarratedVerse() },
+                                        openSettings: { state.isReadAloudSettingsPresented = true })
+                        .frame(maxWidth: .infinity, alignment: collapsed ? .leading : .center)
+                }
+                ReaderNavigationLayout(stack: dynamicType.isAccessibilitySize) {
+                    PassageButton(state: state)
+                    destinations
+                }
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: collapsed)

@@ -12,6 +12,12 @@ Latest owner refinements from `HANDOFF.md` take precedence: exact selected-word 
 - Card text is copied verbatim from the corpus or the exact saved excerpt; never generate or alter it. Apple Intelligence (Image Playground) may create only card backgrounds, labeled as such; photos come through the out-of-process picker.
 - The widget extension reads only the App Group card library (`group.dev.kpierre.bible`); it never opens the corpus or user database. Card files are protected until first unlock so widgets render while locked.
 
+### Read Aloud directive — 31 October 2026
+
+- Owner-requested scope change ([0023](Docs/Decisions/0023-narration.md)): on-device synthesized narration ("Read Aloud") of the bundled corpus, with follow-along, chapter continuation, background playback, and Now Playing. Plan: `Docs/Plans/narration-plan.md`.
+- Speak corpus text exactly, except the approved speech-only omissions (leading `¶`; the Psalm 119 Hebrew heading letter), which a full-corpus test checks. Announcements are separate metadata segments. Use only on-device Apple voices and authorized Personal Voice; no network speech, audio files, or logging of what is spoken.
+- Siri/App Intents and a CarPlay audio app are planned later phases; CarPlay needs an owner-requested entitlement.
+
 ### iPhone Duo directive — 27 September 2026
 
 - Begin supporting iPhone Duo with full existing feature parity, compact reading on the outer display, and the iPad-like regular-width reader on the inner display, particularly landscape facing-page swiping. Preserve the owner-selected system tabs without a sidebar and the passage control. Use system placement where bars adapt to the device.
@@ -56,7 +62,7 @@ V1 includes restored reading position; previous/next chapter; book, chapter, and
 
 Defaults: KJV with a pinned exact edition; a 66-book Protestant canon pending owner confirmation; Genesis 1 on first launch and John 3 for previews; local persistence eligible for ordinary OS backup; one active scene with resizing/restoration; English UI and text with localization-ready strings.
 
-Out of scope: accounts, iCloud sync, downloadable translations, audio, commentary, personal notes, tags, folders, plans, streaks, notifications, social features, AI features beyond the explicitly requested on-device chapter overview and Image Playground card backgrounds, widgets other than the Scripture card widget, Apple Watch, and arbitrary Bible imports. Do not build speculative infrastructure for these.
+Out of scope: accounts, iCloud sync, downloadable translations, recorded or downloadable audio (on-device Read Aloud is in scope per 0023), commentary, personal notes, tags, folders, plans, streaks, notifications, social features, AI features beyond the explicitly requested on-device chapter overview and Image Playground card backgrounds, widgets other than the Scripture card widget, Apple Watch, and arbitrary Bible imports. Do not build speculative infrastructure for these.
 
 ## 2. Design Sources
 

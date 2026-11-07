@@ -17,6 +17,7 @@ struct PaperChapterView: UIViewControllerRepresentable {
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    @Environment(NarrationController.self) private var narration: NarrationController?
 
     private var animated: Bool {
         !reduceMotion && !reduceTransparency && contrast != .increased && !voiceOver
@@ -50,6 +51,7 @@ struct PaperChapterView: UIViewControllerRepresentable {
         coordinator.turnGesture.isEnabled = false
         coordinator.curlPan?.isEnabled = false
         coordinator.preload?.cancel()
+        coordinator.narration.cancel()
         coordinator.generation = UUID()
         coordinator.active?.textView.capturePosition()
         coordinator.active?.textView.resignFirstResponder()
@@ -91,10 +93,29 @@ struct PaperChapterView: UIViewControllerRepresentable {
         private var turnInterval: OSSignpostIntervalState?
         var configuration: PaperChapterView?
         var active: ChapterPageController? { controller?.viewControllers?.first as? ChapterPageController }
-        init(state: ReaderState) { self.state = state }
+        let narration = NarrationObserver()
+        init(state: ReaderState) {
+            self.state = state
+            super.init()
+            narration.onChange = { [weak self] _ in self?.configureNarration() }
+        }
+
+        /// Read Aloud progress reaches the pages directly; only the chapter on screen follows it.
+        private func configureNarration() {
+            for page in pages.values { configureNarration(page) }
+        }
+
+        private func configureNarration(_ page: ChapterPageController) {
+            guard let configuration else { return }
+            let live = page.document.id == state.chapterID
+            page.textView.followsNarration = live && configuration.isActive && configuration.scenePhase == .active
+            page.textView.readAloud = live ? narration.readAloud : nil
+            page.textView.narrationFocus = narration.focus
+        }
 
         func update(_ configuration: PaperChapterView) {
             guard let controller else { return }
+            narration.observe(configuration.narration)
             let previous = self.configuration
             let typographyChanged = renderedTypography != nil && renderedTypography != state.typography.layout
             renderedTypography = state.typography.layout
@@ -189,6 +210,7 @@ struct PaperChapterView: UIViewControllerRepresentable {
             if let configuration {
                 page.configure(from: state, live: live, wide: configuration.wide,
                     scheme: configuration.scheme, insets: configuration.chromeInsets)
+                configureNarration(page)
             }
             page.textView.selectionDidChange = { [weak self] in self?.updateGestures() }
             return page
@@ -199,6 +221,7 @@ struct PaperChapterView: UIViewControllerRepresentable {
             for page in pages.values {
                 page.configure(from: state, live: page.document.id == state.chapterID,
                     wide: configuration.wide, scheme: configuration.scheme, insets: configuration.chromeInsets)
+                configureNarration(page)
             }
             updateGestures()
         }

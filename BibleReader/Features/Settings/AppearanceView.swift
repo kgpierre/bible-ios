@@ -7,6 +7,8 @@ struct AppearanceView: View {
     var showsPageLayout = false
     /// Facing pages in a book pose apply only to devices with a hinge.
     var showsFoldOptions = false
+    /// Read Aloud settings live on their own screen so Appearance stays about how text looks.
+    var narration: NarrationController?
 
     var body: some View {
         NavigationStack {
@@ -68,6 +70,12 @@ struct AppearanceView: View {
                 Section {
                     Button("Reset Reading Style") { preferences.resetReadingStyle() }
                         .accessibilityIdentifier("resetReadingStyle")
+                }
+                if let narration {
+                    Section {
+                        NavigationLink("Read Aloud") { NarrationSettingsView(narration: narration) }
+                            .accessibilityIdentifier("readAloudSettings")
+                    }
                 }
             }
             .scrollContentBackground(.hidden)

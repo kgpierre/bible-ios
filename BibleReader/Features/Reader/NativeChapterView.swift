@@ -111,6 +111,27 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private lazy var quickSelectionMenu = UIEditMenuInteraction(delegate: self)
     private let chapterContent: NSTextContentStorage
     private var gutterWidth: CGFloat { wide ? 40 : 36 }
+    /// The words being read aloud (0023). Drawn in views beside the text, never in `textStorage`,
+    /// so the document, highlights, selection, and copy are untouched while narration plays.
+    var narrationFocus: NarrationFocus? {
+        didSet { if narrationFocus != oldValue { narrationDirty = true; setNeedsLayout() } }
+    }
+    /// The scrolling reader keeps the spoken line in view; a book page leaves turning to its spread.
+    var followsNarration = false
+    /// Starts Read Aloud in a chapter: "Read Aloud from Here" and the VoiceOver verse action.
+    var readAloud: ((String, VerseAnchor) -> Void)? {
+        didSet { if (readAloud == nil) != (oldValue == nil) { accessibilityNeedsUpdate = true; setNeedsLayout() } }
+    }
+    /// A tint behind the spoken verse and an underline under the spoken word, so the indicator
+    /// does not rely on color alone.
+    private let narrationVerseMark = NarrationMarkView()
+    private let narrationWordMark = NarrationMarkView()
+    private var narrationDirty = false
+    private var followedRevision = -1
+    /// Following pauses for a few seconds after the reader scrolls, and stays off while the
+    /// spoken line is far from where they scrolled.
+    private var lastUserScroll: CFTimeInterval?
+    private var scrolledAwayFromNarration = false
 
     init() {
         // Explicitly assemble TextKit 2. The inherited ObjC convenience initializer can
@@ -332,6 +353,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             gutterViewport = nil
             refreshPalette()
             needsAnchorRestore = true
+            narrationDirty = true
             if changedChapter, state.anchor == nil { setContentOffset(.zero, animated: false) }
         }
         if changedNotes && !changedChapter && !changedStyle {
@@ -349,6 +371,9 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         }
         if changedNavigation {
             needsAnchorRestore = true
+            // Navigating, including to the verse being read aloud, resumes following.
+            scrolledAwayFromNarration = false
+            lastUserScroll = nil
             if state.selection == nil { selectedRange = NSRange(location: 0, length: 0) }
             if state.anchor == nil { setContentOffset(.zero, animated: false) }
         }
@@ -517,7 +542,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
 
     override func layoutSubviews() {
         let widthChanged = abs(lastWidth - bounds.width) > 0.5
-        if widthChanged { needsAnchorRestore = true; accessibilityNeedsUpdate = true; guttersDirty = true; lastWidth = bounds.width }
+        if widthChanged { needsAnchorRestore = true; accessibilityNeedsUpdate = true; guttersDirty = true; narrationDirty = true; lastWidth = bounds.width }
         let innerInset = paged ? max(0, pageInnerInset) : 0
         let column = min(max(0, bounds.width - 40 - innerInset), 640)
         let outer = max(20, (bounds.width - column - innerInset) / 2)
@@ -537,7 +562,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         let headerGap: CGFloat = showsHeader ? (wide ? 30 : 26) : (paged ? 12 : 16)
         let inset = UIEdgeInsets(top: headerTop + measuredHeaderHeight + headerGap, left: leading + gutterWidth,
                                  bottom: bottomChrome + (paged ? 8 : 32), right: trailing + trailingExtra)
-        if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true }
+        if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true; narrationDirty = true }
         verticalScrollIndicatorInsets = UIEdgeInsets(top: chromeInsets.top, left: 0, bottom: chromeInsets.bottom, right: 0)
         super.layoutSubviews()
         // Scrolling stays enabled so the text container keeps the chapter's full height (a
@@ -558,6 +583,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             needsSelectionFocusRestore = !becomeFirstResponder()
         }
         layoutGutters()
+        layoutNarration()
         layoutPageWindow()
     }
 
@@ -698,6 +724,101 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         readerState?.notesRequest = .verse(verse, in: document)
     }
 
+    // MARK: Read Aloud follow-along
+
+    /// Positions the verse tint and word underline for `narrationFocus`, then follows it in the
+    /// scrolling reader. Runs only when the focus or the layout changed.
+    private func layoutNarration() {
+        guard narrationDirty, map != nil else { return }
+        narrationDirty = false
+        guard let focus = narrationFocus, focus.chapterID == document?.id, let map,
+              let located = NarrationFollow.location(of: focus, in: map) else {
+            narrationVerseMark.isHidden = true
+            narrationWordMark.isHidden = true
+            return
+        }
+        // Added on first use, above UIKit's own text content (which must stay its first subview for
+        // text accessibility) and below the book-page covers, gutter numbers, and handles.
+        if narrationVerseMark.superview == nil {
+            insertSubview(narrationVerseMark, belowSubview: pageCovers[0])
+            insertSubview(narrationWordMark, aboveSubview: narrationVerseMark)
+        }
+        let verse = focus.segmentRange ?? located
+        let verseRects = lineRects(for: verse)
+        let wordRects = focus.wordRange.map { lineRects(for: $0) } ?? []
+        let accent = UIColor(resource: .accent).resolvedColor(with: traitCollection)
+        let contrast = traitCollection.accessibilityContrast == .high
+        narrationVerseMark.draw(verseRects.map { $0.insetBy(dx: -4, dy: 0) }) { rect in
+            UIBezierPath(roundedRect: rect, cornerRadius: 6)
+        }
+        narrationVerseMark.shape.fillColor = accent.withAlphaComponent(contrast ? 0.24 : 0.13).cgColor
+        let thickness: CGFloat = contrast ? 3 : 2
+        narrationWordMark.draw(wordRects) { rect in
+            UIBezierPath(roundedRect: CGRect(x: rect.minX, y: rect.maxY - thickness, width: rect.width, height: thickness),
+                         cornerRadius: thickness / 2)
+        }
+        narrationWordMark.shape.fillColor = accent.cgColor
+        if focus.revision != followedRevision {
+            followedRevision = focus.revision
+            if let line = (wordRects.first ?? verseRects.first) { followNarration(to: line) }
+        }
+    }
+
+    /// The text's line rectangles for a range, in content coordinates, each ending at its text
+    /// line's descent rather than including the spacing below it.
+    private func lineRects(for range: NSRange) -> [CGRect] {
+        guard let map, range.length > 0, NSMaxRange(range) <= map.text.utf16.count,
+              let start = position(from: beginningOfDocument, offset: range.location),
+              let end = position(from: start, offset: range.length),
+              let textRange = textRange(from: start, to: end) else { return [] }
+        // Lay out from the chapter start: a range laid out alone sits at an estimated position
+        // that moves once the text before it is laid out. Layout persists, so narration's
+        // forward progress adds only the new lines.
+        if let manager = textLayoutManager, let content = manager.textContentManager,
+           let endLocation = content.location(content.documentRange.location, offsetBy: NSMaxRange(range)),
+           let layoutRange = NSTextRange(location: content.documentRange.location, end: endLocation) {
+            manager.ensureLayout(for: layoutRange)
+        }
+        return selectionRects(for: textRange).compactMap { selection in
+            let rect = selection.rect
+            guard !rect.isNull, rect.width > 0.5, rect.height > 0 else { return nil }
+            // A selection rectangle includes line spacing; keep the underline at the glyphs.
+            let offset = closestPosition(to: CGPoint(x: rect.midX, y: rect.midY)).map { self.offset(from: beginningOfDocument, to: $0) }
+            guard let offset, let line = lineFrame(at: min(offset, map.text.utf16.count - 1)) else { return rect }
+            let bottom = min(rect.maxY, textContainerInset.top + line.maxY + 2)
+            return CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: max(1, bottom - rect.minY))
+        }
+    }
+
+    /// Scrolls so the spoken line stays readable, unless the reader is busy with the text:
+    /// touching or scrolling it (and for 5 seconds after), selecting, or reading it with VoiceOver.
+    private func followNarration(to line: CGRect) {
+        guard followsNarration, !paged, window != nil, !applying, !needsAnchorRestore, bounds.height > 0,
+              !isTracking, !isDragging, !isDecelerating, selectedRange.length == 0 else { return }
+        if let lastUserScroll, CACurrentMediaTime() - lastUserScroll < 5 { return }
+        if UIAccessibility.isVoiceOverRunning,
+           let focused = UIAccessibility.focusedElement(using: .notificationVoiceOver) as? UIAccessibilityElement,
+           focused.accessibilityContainer as? ChapterTextView === self { return }
+        let top = contentOffset.y + chromeInsets.top, bottom = contentOffset.y + bounds.height - bottomChrome
+        if scrolledAwayFromNarration {
+            guard NarrationFollow.isNear(line, top: top, bottom: bottom) else { return }
+            scrolledAwayFromNarration = false
+        }
+        guard let y = NarrationFollow.scrollOffset(for: line, top: top, bottom: bottom, currentOffset: contentOffset.y,
+                                                   maxOffset: contentSize.height - bounds.height) else { return }
+        let animated = !UIAccessibility.isReduceMotionEnabled
+        setContentOffset(CGPoint(x: 0, y: y), animated: animated)
+        // An animated follow records the reading anchor when it ends, like any scroll.
+        if !animated { capturePosition() }
+    }
+
+    #if DEBUG
+    /// The rectangles of the Read Aloud verse tint and word underline, for tests.
+    var narrationMarkFrames: (verse: CGRect?, word: CGRect?) {
+        (narrationVerseMark.drawnFrame, narrationWordMark.drawnFrame)
+    }
+    #endif
+
     func capturePosition() {
         // A page's selection is tracked as it changes; its spread records the reading anchor.
         guard !paged else { return }
@@ -750,10 +871,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        lastUserScroll = CACurrentMediaTime()
         if !decelerate { capturePosition() }
     }
 
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { capturePosition() }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        lastUserScroll = CACurrentMediaTime()
+        capturePosition()
+    }
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) { capturePosition() }
     func scrollViewDidScrollToTop(_ scrollView: UIScrollView) { capturePosition() }
 
@@ -762,6 +887,8 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
     private var scrollingDown = false
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        lastUserScroll = CACurrentMediaTime()
+        if narrationFocus != nil { scrolledAwayFromNarration = true }
         lastScrollY = scrollView.contentOffset.y
         scrollDirectionStart = lastScrollY
     }
@@ -890,8 +1017,14 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
             parent?.present(controller, animated: true)
         }
         let annotationActions: [UIMenuElement] = [palette, bookmark] + (highlightStatus.hasHighlights ? [remove] : [])
+        // Starts at the selected words' verse and keeps the selection.
+        var readAloudActions: [UIMenuElement] = []
+        if let readAloud, let start = map.selection(for: range)?.start {
+            readAloudActions = [UIAction(title: String(localized: "Read Aloud from Here"), image: UIImage(systemName: "speaker.wave.2"),
+                                         identifier: UIAction.Identifier("readAloudFromHere")) { _ in readAloud(document.id, start) }]
+        }
         // "Share Passage" replaces the system Share, which would send the words without their reference.
-        return UIMenu(children: annotationActions + [share] + Self.removingSystemShare(suggestedActions))
+        return UIMenu(children: annotationActions + [share] + readAloudActions + Self.removingSystemShare(suggestedActions))
     }
 
     /// The system text menu groups Share in the public `.share` menu; drop that group wherever it is nested.
@@ -991,6 +1124,20 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
                         return true
                     }]
             }
+            let readAloudName = String(localized: "Read aloud from this verse")
+            let actions = element.accessibilityCustomActions ?? []
+            if readAloud != nil {
+                if !actions.contains(where: { $0.name == readAloudName }) {
+                    let verseID = entry.verse.id, chapterID = document.id
+                    element.accessibilityCustomActions = actions + [UIAccessibilityCustomAction(name: readAloudName) { [weak self] _ in
+                        guard let readAloud = self?.readAloud else { return false }
+                        readAloud(chapterID, VerseAnchor(verseID: verseID, utf16Offset: 0))
+                        return true
+                    }]
+                }
+            } else if actions.contains(where: { $0.name == readAloudName }) {
+                element.accessibilityCustomActions = actions.filter { $0.name != readAloudName }
+            }
             accessibilityByVerse[entry.verse.id] = element
             return (visible.location, element)
         }
@@ -1028,6 +1175,42 @@ private extension HighlightColor {
     })
     /// Dynamic asset colors, resolved once instead of per highlighted verse.
     var fill: UIColor { Self.fills[self] ?? .clear }
+}
+
+/// A filled shape in the text view's content, behind or in front of the text, that never takes
+/// touches and is never read by assistive technologies.
+private final class NarrationMarkView: UIView {
+    override class var layerClass: AnyClass { CAShapeLayer.self }
+    var shape: CAShapeLayer { layer as! CAShapeLayer }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        isAccessibilityElement = false
+        accessibilityElementsHidden = true
+        isHidden = true
+    }
+    required init?(coder: NSCoder) { fatalError("Not used from a coder") }
+
+    /// What the shape covers, in the text view's content coordinates.
+    var drawnFrame: CGRect? {
+        guard !isHidden, let bounds = shape.path?.boundingBox, !bounds.isNull else { return nil }
+        return bounds.offsetBy(dx: frame.minX, dy: frame.minY)
+    }
+
+    /// Sizes the view to the rectangles' union and draws each with `path`.
+    func draw(_ rects: [CGRect], path: (CGRect) -> UIBezierPath) {
+        let union = rects.reduce(CGRect.null) { $0.union($1) }
+        guard !union.isNull, !union.isEmpty else { isHidden = true; return }
+        isHidden = false
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        frame = union
+        let combined = UIBezierPath()
+        for rect in rects { combined.append(path(rect.offsetBy(dx: -union.minX, dy: -union.minY))) }
+        shape.path = combined.cgPath
+        CATransaction.commit()
+    }
 }
 
 /// Geometry is requested only for the verse an accessibility client inspects.

@@ -145,6 +145,75 @@ final class ReaderState {
         })
     }
 
+    /// Read Aloud reads the bundled corpus only, so it never waits on annotation loads. Its position
+    /// goes through `anchor`, keeping one writer of the reading position.
+    func narrationSource() -> NarrationSource {
+        NarrationSource(
+            chapter: { [weak self] id in
+                guard let store = self?.store else { throw StorageIssue.incompatibleCorpus }
+                return try await store.chapter(id)
+            },
+            adjacentChapterID: { [weak self] id, delta in
+                guard let self, let index = catalogIndex[id], catalog.indices.contains(index + delta) else { return nil }
+                return catalog[index + delta].id
+            },
+            bookChapterCount: { [weak self] bookID in self?.books.first { $0.id == bookID }?.chapterCount ?? 0 },
+            savePosition: { [weak self] chapterID, anchor in
+                guard let self else { return }
+                if pendingNarrationFollow?.chapterID == chapterID {
+                    pendingNarrationFollow = (chapterID, anchor)
+                    recordNarrationPosition(chapterID: chapterID, anchor: anchor)
+                }
+                // A chapter the user is not viewing keeps their browsing position.
+                guard self.chapterID == chapterID, pendingNarrationFollow == nil else { return }
+                self.anchor = ReadingAnchor(text: anchor, viewportY: 0.2)
+            },
+            followChapter: { [weak self] from, to in
+                guard let self, self.chapterID == from || pendingNarrationFollow?.chapterID == from else { return }
+                // Navigating loads annotations from the user store, which is unreadable while the
+                // device is locked; in the background the reader catches up when the scene is active.
+                if UIApplication.shared.applicationState == .background || pendingNarrationFollow != nil {
+                    pendingNarrationFollow = (to, nil)
+                    return
+                }
+                guard !isNavigating, let chapter = catalogChapter(to) else { return }
+                navigate(to: chapter)
+            },
+            isAppActive: { UIApplication.shared.applicationState != .background })
+    }
+
+    /// Narration moved into a chapter while the app was in the background (newest first anchor).
+    @ObservationIgnored private var pendingNarrationFollow: (chapterID: String, anchor: VerseAnchor?)?
+    @ObservationIgnored private var narrationPositionTask: Task<Void, Never>?
+
+    /// Shows the chapter narration moved into while the app was in the background.
+    func applyPendingNarrationFollow() {
+        guard let pending = pendingNarrationFollow, let chapter = catalogChapter(pending.chapterID) else { return }
+        pendingNarrationFollow = nil
+        narrationPositionTask?.cancel()
+        navigate(to: chapter, verseID: pending.anchor?.verseID, utf16Offset: pending.anchor?.utf16Offset ?? 0)
+    }
+
+    /// Saves narration's position for a chapter the reader hasn't caught up to. A locked store is
+    /// retried after unlock, never reported; the newest position replaces any waiting one.
+    private func recordNarrationPosition(chapterID: String, anchor: VerseAnchor) {
+        guard let store else { return }
+        narrationPositionTask?.cancel()
+        let position = ReadingAnchor(text: anchor, viewportY: 0.2)
+        let lease = BackgroundWriteLease()
+        narrationPositionTask = Task {
+            defer { lease.end() }
+            do { try await store.savePosition(chapterID: chapterID, anchor: position) }
+            catch is CancellationError { }
+            catch {
+                lease.end()
+                guard await Self.waitForProtectedData(center: .default, isAvailable: { UIApplication.shared.isProtectedDataAvailable }),
+                      !Task.isCancelled else { return }
+                try? await store.savePosition(chapterID: chapterID, anchor: position)
+            }
+        }
+    }
+
     func load() async {
         guard store == nil else { return }
         let interval = ReaderPerformance.signposter.beginInterval("Reader load", id: ReaderPerformance.signposter.makeSignpostID())
@@ -641,7 +710,7 @@ final class ReaderState {
 
     private func schedulePositionSave() {
         positionTask?.cancel()
-        guard !holdUnresolvedPosition, let store, let chapterID else { return }
+        guard !holdUnresolvedPosition, pendingNarrationFollow == nil, let store, let chapterID else { return }
         let anchor = anchor
         positionTask = Task {
             do {
@@ -707,7 +776,8 @@ final class ReaderState {
 
     func flushPosition(protectInBackground: Bool = false) {
         positionTask?.cancel()
-        guard !holdUnresolvedPosition, let store, let chapterID else { return }
+        // Narration owns the position while the reader hasn't caught up to its chapter.
+        guard !holdUnresolvedPosition, pendingNarrationFollow == nil, let store, let chapterID else { return }
         let anchor = anchor
         let lease = protectInBackground ? BackgroundWriteLease() : nil
         positionTask = Task {

@@ -21,6 +21,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @Environment(\.scenePhase) fileprivate var scenePhase
+    @Environment(NarrationController.self) fileprivate var narration: NarrationController?
 
     /// Same policy as the scrolling reader: assistive settings turn pages without the curl.
     fileprivate var animated: Bool {
@@ -122,7 +123,15 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             return openBottom.inset
         }
 
-        init(state: ReaderState) { self.state = state }
+        private let narration = NarrationObserver()
+        /// A page turn Read Aloud made; VoiceOver users hear narration, not a page announcement.
+        private var announcesTurn = true
+
+        init(state: ReaderState) {
+            self.state = state
+            super.init()
+            narration.onChange = { [weak self] focus in self?.narrationChanged(focus) }
+        }
 
         private var pager: UIPageViewController? { container?.pager }
         private var curlPan: UIPanGestureRecognizer? {
@@ -154,6 +163,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
 
         func detach() {
             preload?.cancel()
+            narration.cancel()
             swipe.isEnabled = false
             curlPan?.isEnabled = false
             pager?.dataSource = nil
@@ -171,6 +181,7 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             container.view.backgroundColor = UIColor(resource: .readingCanvas)
             let size = container.view.bounds.size
             guard size.width > 0, size.height > 0 else { return }
+            narration.observe(configuration.narration)
             openBottom = computeOpenBottom(configuration)
             let key = LayoutKey(size: size, insets: configuration.chromeInsets, typography: state.typography.layout,
                                 category: container.traitCollection.preferredContentSizeCategory, scheme: configuration.scheme,
@@ -366,6 +377,8 @@ struct SpreadChapterView: UIViewControllerRepresentable {
             page.textView.pageBottomInset = bottomInset(forPage: controller.key.index)
             let live = controller.key.chapterID == state.chapterID
             page.configure(from: state, live: live, wide: true, scheme: configuration.scheme, insets: configuration.chromeInsets)
+            page.textView.readAloud = live ? narration.readAloud : nil
+            page.textView.narrationFocus = narration.focus
             let side = controller.key.index % 2 == 0 ? "Left" : "Right"
             page.textView.accessibilityIdentifier = live ? "spreadPage\(side)" : "adjacentSpreadPage"
             // Every page holds the whole chapter, so name the page itself for assistive technologies.
@@ -413,7 +426,8 @@ struct SpreadChapterView: UIViewControllerRepresentable {
                 }
             }
             shownRevision = state.navigationRevision
-            announcePage()
+            if announcesTurn { announcePage() }
+            announcesTurn = true
         }
 
         /// The left page of the neighboring spread, when both of its pages are ready.
@@ -437,8 +451,9 @@ struct SpreadChapterView: UIViewControllerRepresentable {
         }
 
         @discardableResult
-        private func turn(by delta: Int) -> Bool {
+        private func turn(by delta: Int, announces: Bool = true) -> Bool {
             guard turnsAllowed, let configuration, let target = spread(delta) else { return false }
+            announcesTurn = announces
             let source = state.chapterID
             let revision = state.navigationRevision
             let direction: UIPageViewController.NavigationDirection = delta > 0 ? .forward : .reverse
@@ -466,8 +481,25 @@ struct SpreadChapterView: UIViewControllerRepresentable {
                 didShow(key, from: source)
             } else {
                 displayed = visiblePages.first?.key
+                announcesTurn = true
             }
             settle()
+        }
+
+        // MARK: Read Aloud follow-along
+
+        /// Every page shows the spoken words where they fall; when they reach the next spread, turn
+        /// once. A reader who flipped elsewhere stays there, and a selection or a neighbor still
+        /// loading defers the turn to the next update.
+        private func narrationChanged(_ focus: NarrationFocus?) {
+            for controller in controllers.values { controller.page?.textView.narrationFocus = focus }
+            guard let focus, let displayed, focus.chapterID == displayed.chapterID, !curling,
+                  let document = documents[focus.chapterID],
+                  let location = NarrationFollow.location(of: focus, in: map(for: document)) else { return }
+            let page = pagination(for: document).page(containing: location.location)
+            if NarrationFollow.spreadAction(focusPage: page, displayedLeftPage: displayed.index) == .turnForward {
+                turn(by: 1, announces: false)
+            }
         }
 
         private func settle() {
