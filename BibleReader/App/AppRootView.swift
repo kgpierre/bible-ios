@@ -2,9 +2,12 @@ import SwiftUI
 
 struct AppRootView: View {
     @State private var state = AppState()
+    @State private var sideSafeArea = EdgeInsets()
+    @State private var sideUsableSize = CGSize.zero
     @Environment(\.undoManager) private var undoManager
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var minimumPageWidth = ReaderLayout.minimumPageWidth
     @ScaledMetric(relativeTo: .body) private var minimumBookPageWidth = ReaderLayout.minimumBookPageWidth
@@ -59,7 +62,10 @@ struct AppRootView: View {
         Group {
             // Regular width uses the system top tab bar without a sidebar (owner choice); books stay
             // in the passage picker. Compact width, including narrow iPad windows, keeps 2a's bottom chrome.
-            if horizontalSizeClass == .regular { regularLayout } else { compactLayout }
+            // A phone in landscape can be regular width but is compact in height: the system tab bar would
+            // float over the text with the passage capsule stranded above it. Use the 2a bottom row there.
+            if ReaderLayout.usesTopTabLayout(horizontalCompact: horizontalSizeClass != .regular,
+                                             verticalCompact: verticalSizeClass == .compact) { regularLayout } else { compactLayout }
         }
         .background(Color(.readingCanvas))
         .sheet(item: $state.summary) { summary in
@@ -134,7 +140,36 @@ struct AppRootView: View {
             .destination(.search, selected: state.destination)
         }
         .background(Color(.readingCanvas).ignoresSafeArea())
-        .safeAreaInset(edge: .bottom, spacing: 0) { CompactReaderNavigation(state: state) }
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sideSafeArea = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { sideUsableSize = $0 }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if sideRailWidth != nil {
+                // Duo outer display: destinations and the passage control live in the side column,
+                // so only Read Aloud's mini player needs a bottom band.
+                SideNarrationInset(state: state)
+            } else {
+                CompactReaderNavigation(state: state)
+                    // Landscape phones are short: let the text stop at the controls' top edge rather than
+                    // scroll under them, so nothing is read through the glass at rest.
+                    .background {
+                        if verticalSizeClass == .compact { Color(.readingCanvas).ignoresSafeArea(.container, edges: .bottom) }
+                    }
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let width = sideRailWidth {
+                SideReaderNavigation(state: state, columnWidth: width)
+                    .ignoresSafeArea(.container, edges: .trailing)
+            }
+        }
+    }
+
+    /// The trailing system column's width when the compact reader is on a presentation that stacks
+    /// the status and toolbar at the side; nil for ordinary phones.
+    private var sideRailWidth: CGFloat? {
+        ReaderLayout.sideRailWidth(safeLeading: sideSafeArea.leading, safeTrailing: sideSafeArea.trailing,
+                                   accessibilitySize: dynamicTypeSize.isAccessibilitySize,
+                                   verticalCompact: verticalSizeClass == .compact, usableSize: sideUsableSize)
     }
 
     private var regularLayout: some View {

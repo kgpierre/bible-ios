@@ -561,7 +561,7 @@ final class ChapterTextView: UITextView, UITextViewDelegate, UIGestureRecognizer
         header.frame = CGRect(x: leading + gutterWidth, y: headerTop + (pinnedOffset?.y ?? 0), width: textWidth, height: measuredHeaderHeight)
         let headerGap: CGFloat = showsHeader ? (wide ? 30 : 26) : (paged ? 12 : 16)
         let inset = UIEdgeInsets(top: headerTop + measuredHeaderHeight + headerGap, left: leading + gutterWidth,
-                                 bottom: bottomChrome + (paged ? 8 : 32), right: trailing + trailingExtra)
+                                 bottom: bottomChrome + (paged ? 8 : ReaderLayout.chapterEndClearance), right: trailing + trailingExtra)
         if textContainerInset != inset { textContainerInset = inset; guttersDirty = true; accessibilityNeedsUpdate = true; narrationDirty = true }
         verticalScrollIndicatorInsets = UIEdgeInsets(top: chromeInsets.top, left: 0, bottom: chromeInsets.bottom, right: 0)
         super.layoutSubviews()

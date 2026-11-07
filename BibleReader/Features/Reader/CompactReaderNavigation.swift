@@ -6,6 +6,7 @@ struct CompactReaderNavigation: View {
     @Environment(\.dynamicTypeSize) private var dynamicType
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     private var collapsed: Bool {
         state.destination == .read && state.reader.navigationCollapsed && !dynamicType.isAccessibilitySize
@@ -22,7 +23,7 @@ struct CompactReaderNavigation: View {
                                         openSettings: { state.isReadAloudSettingsPresented = true })
                         .frame(maxWidth: .infinity, alignment: collapsed ? .leading : .center)
                 }
-                ReaderNavigationLayout(stack: dynamicType.isAccessibilitySize) {
+                ReaderNavigationLayout(stack: dynamicType.isAccessibilitySize, compactHeight: verticalSizeClass == .compact) {
                     PassageButton(state: state)
                     destinations
                 }
@@ -38,7 +39,7 @@ struct CompactReaderNavigation: View {
     private var destinations: some View {
         NativeReaderTabs(selection: $state.destination, collapsed: collapsed)
             .frame(minWidth: 156, idealWidth: 168, maxWidth: .infinity)
-            .frame(height: 64)
+            .frame(height: verticalSizeClass == .compact ? ReaderNavigationLayout.compactHeightBarHeight : 64)
     }
 }
 
@@ -137,6 +138,8 @@ private final class ReaderTabBarContainer: UIView {
 
 struct PassageButton: View {
     @Bindable var state: AppState
+    /// A narrow stacked label for the side rail (book, chapter, chevron).
+    var vertical = false
 
     private var passageLabel: String { state.reader.document?.reference ?? String(localized: "Chapters") }
     private var shortPassageLabel: String {
@@ -149,6 +152,7 @@ struct PassageButton: View {
         Button {
             state.isChapterPickerPresented = true
         } label: {
+            if vertical { verticalLabel } else {
             // Each option is a complete label, so ViewThatFits compares against the proposed
             // width directly. Nesting it in an HStack re-proposed its own measured width,
             // where rounding could reject a label that fits ("Jhn 3" beside empty space).
@@ -158,10 +162,11 @@ struct PassageButton: View {
                 label(Text("Chapters").lineLimit(1))
             }
             .contentShape(.capsule)
+            }
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color(.readingPrimary))
-        .glassEffect(.regular.interactive(), in: .capsule)
+        .glassEffect(.regular.interactive(), in: vertical ? AnyShape(.rect(cornerRadius: 28)) : AnyShape(.capsule))
         .accessibilityLabel("Choose chapter, \(state.reader.document?.reference ?? "Bible")")
         .accessibilityIdentifier("passageButton")
         .popover(isPresented: $state.isChapterPickerPresented) {
@@ -172,6 +177,25 @@ struct PassageButton: View {
 }
 
 extension PassageButton {
+    private var verticalLabel: some View {
+        let book = state.reader.document.flatMap { document in state.reader.books.first { $0.id == document.bookID } }
+        return VStack(spacing: 2) {
+            Text(book?.shortName ?? String(localized: "Chapters"))
+                .font(.footnote.weight(.semibold))
+            if let label = state.reader.document?.label {
+                Text(label).font(.title3.weight(.semibold))
+            }
+            Image(systemName: "chevron.down").font(.caption.weight(.semibold))
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
+        // Fills the rail's width so it matches the destinations and the system toolbar column.
+        .frame(minWidth: ReaderLayout.minimumControlTarget, maxWidth: .infinity, minHeight: 64)
+        .contentShape(.rect(cornerRadius: 28))
+    }
+
     private func label(_ title: some View) -> some View {
         HStack(spacing: 6) {
             title.font(.body.weight(.semibold))
@@ -203,9 +227,13 @@ struct NativeTabsProbe: View {
 /// chooses the longest label that fits instead of an exact, rounding-sensitive ideal width.
 private struct ReaderNavigationLayout: Layout {
     var stack: Bool
+    /// Landscape phones: the tab capsule lays its labels beside the icons and is wider, so it gets a
+    /// bounded region (not all remaining width) and both controls share one baseline.
+    var compactHeight = false
+    static let compactHeightBarHeight: CGFloat = 56
     private let spacing: CGFloat = 10
-    private let tabsWidth: CGFloat = 168
-    private let barHeight: CGFloat = 64
+    private var tabsWidth: CGFloat { compactHeight ? 280 : 168 }
+    private var barHeight: CGFloat { compactHeight ? Self.compactHeightBarHeight : 64 }
 
     private func metrics(_ proposal: ProposedViewSize, _ views: Subviews)
         -> (passage: CGSize, available: CGFloat, width: CGFloat, stacked: Bool) {
@@ -233,7 +261,126 @@ private struct ReaderNavigationLayout: Layout {
             subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
                               proposal: ProposedViewSize(width: available, height: passage.height))
             subviews[1].place(at: CGPoint(x: bounds.minX + passage.width + spacing, y: bounds.midY), anchor: .leading,
-                              proposal: ProposedViewSize(width: bounds.width - passage.width - spacing, height: barHeight))
+                              proposal: ProposedViewSize(width: compactHeight ? min(tabsWidth, bounds.width - passage.width - spacing) : bounds.width - passage.width - spacing, height: barHeight))
+        }
+    }
+}
+
+/// Duo outer display: Read/Saved/Search as a vertical glass capsule beneath the system's vertical
+/// toolbar, with the passage control above it. Lives in the trailing safe-area column the system
+/// reserves for the status bar and toolbar, so reading text never runs under it.
+struct SideReaderNavigation: View {
+    @Bindable var state: AppState
+    let columnWidth: CGFloat
+    @Namespace private var glass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// One width for the passage control and destinations, matching the system's vertical toolbar
+    /// pill above them (owner request, 7 November 2026). Destinations keep 44-point targets.
+    private var railWidth: CGFloat { min(ReaderLayout.sideRailControlWidth, max(ReaderLayout.minimumControlTarget + 3, columnWidth - 8)) }
+
+    var body: some View {
+        GlassEffectContainer(spacing: 8) {
+            VStack(spacing: 10) {
+                PassageButton(state: state, vertical: true)
+                    .frame(width: railWidth)
+                VStack(spacing: 2) {
+                    ForEach(AppDestination.allCases) { destination in
+                        SideTabButton(destination: destination, selected: state.destination == destination, glass: glass) {
+                            state.destination = destination
+                        }
+                    }
+                }
+                .padding(2)
+                .frame(width: railWidth)
+                // Not interactive as a whole: each destination answers touch on its own lens, so a
+                // press never lights up all three (owner feedback, 7 November 2026).
+                .glassEffect(.regular, in: .rect(cornerRadius: 28))
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("sideDestinations")
+            }
+        }
+        // The selection lens morphs between destinations, from taps and keyboard shortcuts alike;
+        // Reduce Motion moves it without animation.
+        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: state.destination)
+        // Centered on the system toolbar column above, which sits left of the safe-area column's middle.
+        .padding(.leading, max(0, ReaderLayout.sideRailCenterInset - railWidth / 2))
+        .frame(width: columnWidth, alignment: .leading)
+        .padding(.bottom, 8)
+    }
+}
+
+/// Icon-only on the Duo outer display (owner refinement, 7 November 2026): the narrow rail has no
+/// room for labels. VoiceOver and Large Content Viewer still name each destination. The rail only
+/// appears below accessibility sizes, where the bottom bars keep visible labels.
+private struct SideTabButton: View {
+    let destination: AppDestination
+    let selected: Bool
+    let glass: Namespace.ID
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: destination.symbol + (selected && destination != .search ? ".fill" : ""))
+                .font(.title3)
+                .foregroundStyle(selected ? Color(.accent) : Color(.readingSecondary))
+                .frame(maxWidth: .infinity, minHeight: 48)
+        }
+        .buttonStyle(SideTabButtonStyle(selected: selected, glass: glass))
+        .accessibilityLabel(destination.localizedTitle)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityShowsLargeContentViewer {
+            Image(systemName: destination.symbol)
+            Text(destination.localizedTitle)
+        }
+        .help(destination.localizedTitle)
+        .accessibilityIdentifier("destination-" + destination.rawValue)
+    }
+}
+
+/// The selection is a tinted glass lens, like the system tab bar's; one ID across destinations lets
+/// the container morph it from the old tab to the new one. A pressed destination gets its own clear
+/// lens, so touch feedback stays on the item under the finger.
+private struct SideTabButtonStyle: ButtonStyle {
+    let selected: Bool
+    let glass: Namespace.ID
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                if selected {
+                    Capsule()
+                        .fill(.clear)
+                        .glassEffect(.regular.tint(Color(.accent).opacity(0.28)), in: .capsule)
+                        .glassEffectID("selection", in: glass)
+                } else if configuration.isPressed {
+                    Capsule()
+                        .fill(.clear)
+                        .glassEffect(.regular, in: .capsule)
+                }
+            }
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: configuration.isPressed)
+            .contentShape(.capsule)
+    }
+}
+
+/// The bottom band reserved for Read Aloud's mini player when navigation moves to the side rail.
+struct SideNarrationInset: View {
+    @Bindable var state: AppState
+    @Environment(\.dynamicTypeSize) private var dynamicType
+
+    var body: some View {
+        if state.narration.status.isActive {
+            NarrationMiniPlayer(narration: state.narration, isElsewhere: state.isNarrationElsewhere,
+                                collapsed: state.destination == .read && state.reader.navigationCollapsed && !dynamicType.isAccessibilitySize,
+                                showReference: { state.showNarratedVerse() },
+                                openSettings: { state.isReadAloudSettingsPresented = true })
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
         }
     }
 }
