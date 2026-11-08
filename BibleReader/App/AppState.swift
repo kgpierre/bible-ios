@@ -18,6 +18,9 @@ final class AppState {
     var pendingLink: (chapterID: String, verseID: String?)?
     /// Whether this device reports a hinge (a foldable); fold-only settings appear only then.
     var hasHinge = false
+    /// Whether the system currently offers the outer display for the chapter card (iOS 27 scene
+    /// accessory); nil until it reports.
+    var outerDisplayAvailable: Bool?
     var savedSelection: String?
     var savedFilter: SavedFilter = .all
     var savedSort: SavedSort = .recent

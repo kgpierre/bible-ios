@@ -19,31 +19,9 @@ enum ReaderLayout {
     /// Clearance between the last line of a scrolling chapter and the top of the floating bottom
     /// controls (passage, tabs, and Read Aloud's player), which the reader measures directly.
     static let chapterEndClearance: CGFloat = 40
-    /// Side controls need this much trailing safe area (the system status/toolbar column) to fit.
-    static let minimumSideRailInset: CGFloat = 60
-
-    /// Width of the trailing system column when navigation should move into it (the Duo outer
-    /// display's presentation: status and toolbar stacked at one side). Derived only from live
-    /// asymmetric safe areas, so a symmetric landscape phone or a plain portrait phone is untouched.
-    /// Accessibility sizes keep the bottom bars, whose two-row layout already fits every label.
-    static func sideRailWidth(safeLeading: CGFloat, safeTrailing: CGFloat, accessibilitySize: Bool,
-                              verticalCompact: Bool = false, usableSize: CGSize) -> CGFloat? {
-        // A landscape phone (compact height) never takes the rail, even if one side's inset is large.
-        guard !accessibilitySize, !verticalCompact, safeTrailing >= minimumSideRailInset, safeLeading <= 20 else { return nil }
-        // The system's own toolbar shares the column, so the rail needs a tall, portrait container.
-        // A rotated (landscape) outer display is too short and keeps the bottom row (7 November 2026).
-        guard usableSize.height >= minimumSideRailHeight, usableSize.height > usableSize.width else { return nil }
-        return safeTrailing
-    }
-
-    /// Width and center of the Duo rail's controls, matched to the system's vertical toolbar pill as
-    /// measured on the iPhone Duo outer display simulator (iOS 27.2): about 48 points wide, centered
-    /// 36 points in from the trailing column's leading edge. Recheck on hardware.
+    /// Width of the lens capsule in the Duo's vertical bar, matched to the system's vertical
+    /// toolbar pill as measured on the iPhone Duo outer display simulator (iOS 27.2). Recheck on hardware.
     static let sideRailControlWidth: CGFloat = 48
-    static let sideRailCenterInset: CGFloat = 36
-
-    /// Room for the system toolbar column plus the passage control and three destinations.
-    static let minimumSideRailHeight: CGFloat = 560
 
     /// Regular-width windows with room in height (iPad, Duo inner display) use the system top tab bar
     /// and a trailing passage capsule. Compact width, or compact height such as a landscape phone,

@@ -252,9 +252,9 @@ private struct PassageGlass: ViewModifier {
     }
 }
 
-/// The bottom-trailing chapter control on regular width and the Duo outer display, with Read Aloud's
-/// player while it's active. On the outer display the two share one glass capsule; regular width
-/// and accessibility sizes stack the player above it (owner direction, 7 November 2026).
+/// The bottom-trailing chapter control beside the system tab bar (regular width and the iPhone Duo),
+/// with Read Aloud's player while it's active. Where there's room they share one glass capsule;
+/// accessibility sizes stack the player above it (owner direction, 7 November 2026).
 struct PassageControls: View {
     @Bindable var state: AppState
     /// One capsule beside each other when true; otherwise stacked.
@@ -298,65 +298,7 @@ struct PassageControls: View {
     }
 }
 
-/// Duo outer display: Read/Saved/Search as a vertical glass capsule beneath the system's vertical
-/// toolbar. Lives in the trailing safe-area column the system reserves for the status bar and
-/// toolbar, so reading text never runs under it. The passage control sits bottom trailing in the
-/// reading area instead (`PassageControls`): the system toolbar moves down when the Dynamic Island
-/// expands, and a taller rail ran into it (owner report, 7 November 2026).
-struct SideReaderNavigation: View {
-    @Bindable var state: AppState
-    let columnWidth: CGFloat
-    private static let destinations = AppDestination.allCases
-
-    var body: some View {
-        SideLensStack(count: Self.destinations.count,
-                      selectedIndex: Self.destinations.firstIndex(of: state.destination),
-                      onRelease: { state.destination = Self.destinations[$0] }) { hovered in
-            ForEach(Array(Self.destinations.enumerated()), id: \.element) { index, destination in
-                SideTabButton(destination: destination, selected: state.destination == destination,
-                              highlighted: (hovered ?? Self.destinations.firstIndex(of: state.destination)) == index) {
-                    state.destination = destination
-                }
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("sideDestinations")
-        // Centered on the system toolbar column above, which sits left of the safe-area column's middle.
-        .padding(.leading, max(0, ReaderLayout.sideRailCenterInset - ReaderLayout.sideRailControlWidth / 2))
-        .frame(width: columnWidth, alignment: .leading)
-        .padding(.bottom, 8)
-    }
-}
-
-/// Icon-only on the Duo outer display (owner refinement, 7 November 2026): the narrow rail has no
-/// room for labels. VoiceOver and Large Content Viewer still name each destination. The rail only
-/// appears below accessibility sizes, where the bottom bars keep visible labels.
-private struct SideTabButton: View {
-    let destination: AppDestination
-    let selected: Bool
-    /// Under the finger while pressing or dragging across the rail; otherwise the selected destination.
-    let highlighted: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: destination.symbol + (highlighted && destination != .search ? ".fill" : ""))
-                .font(.title3)
-                .foregroundStyle(highlighted ? Color(.accent) : Color(.readingSecondary))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .accessibilityLabel(destination.localizedTitle)
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityShowsLargeContentViewer {
-            Image(systemName: destination.symbol)
-            Text(destination.localizedTitle)
-        }
-        .help(destination.localizedTitle)
-        .accessibilityIdentifier("destination-" + destination.rawValue)
-    }
-}
-
-/// A vertical glass capsule of controls in the Duo outer display's trailing column, with a lens
+/// A vertical glass capsule of controls in the Duo's vertical bar, with a lens
 /// like the system tab bar's (owner requests, 7 November 2026): touching lifts a clear glass lens
 /// behind the control under the finger, the lens follows a drag, and releasing over a control
 /// reports its index. A plain tap is left to the control itself; releasing well outside the capsule

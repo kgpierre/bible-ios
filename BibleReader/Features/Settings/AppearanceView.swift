@@ -7,6 +7,8 @@ struct AppearanceView: View {
     var showsPageLayout = false
     /// Facing pages in a book pose apply only to devices with a hinge.
     var showsFoldOptions = false
+    /// Whether the system currently offers the outer display; nil before it reports.
+    var outerDisplayAvailable: Bool?
     /// Read Aloud settings live on their own screen so Appearance stays about how text looks.
     var narration: NarrationController?
 
@@ -67,6 +69,16 @@ struct AppearanceView: View {
                 } footer: {
                     Text("Marks verses that have marginal notes from the source edition. Tap a marked verse number to read them.")
                 }
+                if showsFoldOptions, #available(iOS 27.0, *) {
+                    Section {
+                        Toggle("Show Chapter on Outer Display", isOn: $preferences.showsChapterOnOuterDisplay)
+                            .accessibilityIdentifier("outerDisplayChapterToggle")
+                    } header: {
+                        Text("Foldable")
+                    } footer: {
+                        Text(outerDisplayFooter)
+                    }
+                }
                 Section {
                     Button("Reset Reading Style") { preferences.resetReadingStyle() }
                         .accessibilityIdentifier("resetReadingStyle")
@@ -109,6 +121,14 @@ struct AppearanceView: View {
         }
         parts.append(String(localized: "Narrow windows and accessibility text sizes use scrolling. A selection stays within one page."))
         return parts.joined(separator: " ")
+    }
+
+    /// Says plainly when the system isn't offering the outer display, so the option never seems
+    /// to work when it can't.
+    private var outerDisplayFooter: String {
+        let about = String(localized: "While unfolded, shows the book and chapter you’re reading on the outer display.")
+        guard preferences.showsChapterOnOuterDisplay, outerDisplayAvailable == false else { return about }
+        return about + " " + String(localized: "The system isn’t offering the outer display right now.")
     }
 
     private var sizeStep: Binding<Double> {

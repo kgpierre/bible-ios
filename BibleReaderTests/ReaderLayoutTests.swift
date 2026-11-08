@@ -6,26 +6,12 @@ import UIKit
 
 struct ReaderLayoutTests {
     /// The usable (safe-area) size observed on the Duo outer display simulator.
-    private let duoOuter = CGSize(width: 382, height: 644)
 
-    @Test func sideRailAppearsOnlyForAsymmetricTrailingSystemColumn() {
-        // Observed on the Duo outer display simulator: 0 leading, 84 trailing, plain compact width.
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 0, safeTrailing: 84, accessibilitySize: false, usableSize: duoOuter) == 84)
-        // Ordinary portrait phone, and a symmetric landscape phone, keep the bottom bars.
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 0, safeTrailing: 0, accessibilitySize: false, usableSize: duoOuter) == nil)
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 62, safeTrailing: 62, accessibilitySize: false, usableSize: duoOuter) == nil)
-        // Compact height (landscape phone) never takes the rail; it also keeps the 2a row, not the top tabs.
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 0, safeTrailing: 84, accessibilitySize: false, verticalCompact: true, usableSize: duoOuter) == nil)
+    @Test func wideLayoutNeedsRegularWidthAndHeight() {
+        // Compact height (landscape phone) keeps the 2a row, not the top tabs.
         #expect(!ReaderLayout.usesTopTabLayout(horizontalCompact: false, verticalCompact: true))
         #expect(!ReaderLayout.usesTopTabLayout(horizontalCompact: true, verticalCompact: false))
         #expect(ReaderLayout.usesTopTabLayout(horizontalCompact: false, verticalCompact: false))
-        // Accessibility sizes keep the two-row bottom arrangement.
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 0, safeTrailing: 84, accessibilitySize: true, usableSize: duoOuter) == nil)
-        // A rotated outer display is short and wide: the system toolbar fills the column, so no rail.
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 0, safeTrailing: 84, accessibilitySize: false,
-                                           usableSize: CGSize(width: 560, height: 340)) == nil)
-        #expect(ReaderLayout.sideRailWidth(safeLeading: 0, safeTrailing: 84, accessibilitySize: false,
-                                           usableSize: CGSize(width: 382, height: 500)) == nil)
     }
 
     @Test func regularWidthPhoneSizedWindowCanShowFacingPages() {

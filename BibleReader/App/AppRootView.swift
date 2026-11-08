@@ -2,13 +2,12 @@ import SwiftUI
 
 struct AppRootView: View {
     @State private var state = AppState()
-    @State private var sideSafeArea = EdgeInsets()
-    @State private var sideUsableSize = CGSize.zero
+    /// Whether the system stacks its bars in a vertical column (iPhone Duo), from its own trait.
+    @State private var hasVerticalBar = false
     /// The regular-width window's width, so bottom-trailing controls stay on its trailing half.
     @State private var regularWidth: CGFloat = 0
     @State private var regularHeight: CGFloat = 0
-    /// The regular-width reader's trailing safe area: wide when the system stacks the toolbar in a
-    /// trailing column (Duo inner display) rather than across the top.
+    /// The reader's trailing safe area, which includes a trailing vertical bar.
     @State private var readTrailingInset: CGFloat = 0
     /// The top of the compact bottom controls (passage, tabs, and Read Aloud's player) in global
     /// coordinates. The reader's safe area doesn't include them, so it reserves this directly.
@@ -40,7 +39,9 @@ struct AppRootView: View {
             #endif
         }
         .focusedSceneValue(\.readerCommandState, state)
+        .modifier(OuterDisplayChapter(state: state))
         .background { HingeProbe { state.hasHinge = $0 }.frame(width: 0, height: 0).accessibilityHidden(true) }
+        .background { VerticalBarProbe { hasVerticalBar = $0 }.frame(width: 0, height: 0).accessibilityHidden(true) }
         .onChange(of: undoManager, initial: true) { _, manager in state.reader.connectUndoManager(manager) }
         .preferredColorScheme(state.appearance.colorScheme)
         .onChange(of: state.preferences.typography, initial: true) { _, typography in state.reader.typography = typography }
@@ -73,8 +74,12 @@ struct AppRootView: View {
             // in the passage picker. Compact width, including narrow iPad windows, keeps 2a's bottom chrome.
             // A phone in landscape can be regular width but is compact in height: the system tab bar would
             // float over the text with the passage capsule stranded above it. Use the 2a bottom row there.
-            if ReaderLayout.usesTopTabLayout(horizontalCompact: horizontalSizeClass != .regular,
-                                             verticalCompact: verticalSizeClass == .compact) { regularLayout } else { compactLayout }
+            // Where the system stacks its bars in a vertical column (the iPhone Duo's displays), its own
+            // tab bar joins that column, with native selection and drag behavior, rather than a custom
+            // rail (owner request, 7 November 2026).
+            if usesWideLayout { systemTabLayout(wide: true) }
+            else if hasVerticalBar { systemTabLayout(wide: false) }
+            else { compactLayout }
         }
         .background(Color(.readingCanvas))
         .sheet(item: Binding(get: { state.reader.notesRequest }, set: { state.reader.notesRequest = $0 })) { request in
@@ -127,7 +132,7 @@ struct AppRootView: View {
                     .navigationTitle("")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarBackground(.hidden, for: .navigationBar)
-                    .toolbar { readerToolbar(rail: sideRailWidth != nil) }
+                    .toolbar { readerToolbar(rail: false) }
             }
             .destination(.read, selected: state.destination)
             NavigationStack {
@@ -144,73 +149,51 @@ struct AppRootView: View {
         }
         .background(Color(.readingCanvas).ignoresSafeArea())
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Group {
-                if sideRailWidth != nil {
-                    // Duo outer display: destinations live in the side column; the passage control
-                    // (and Read Aloud's player above it) sits bottom trailing, beside the rail.
-                    PassageControls(state: state, mergesPlayer: true,
-                                    collapsed: state.destination == .read && state.reader.navigationCollapsed
-                                        && !dynamicTypeSize.isAccessibilitySize)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
-                } else {
-                    CompactReaderNavigation(state: state)
-                        // Landscape phones are short: let the text stop at the controls' top edge rather than
-                        // scroll under them, so nothing is read through the glass at rest.
-                        .background {
-                            if verticalSizeClass == .compact { Color(.readingCanvas).ignoresSafeArea(.container, edges: .bottom) }
-                        }
+            CompactReaderNavigation(state: state)
+                // Landscape phones are short: let the text stop at the controls' top edge rather than
+                // scroll under them, so nothing is read through the glass at rest.
+                .background {
+                    if verticalSizeClass == .compact { Color(.readingCanvas).ignoresSafeArea(.container, edges: .bottom) }
                 }
-            }
-            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { compactChromeTop = $0 }
-        }
-        // Measured outside the bottom controls, which depend on the result: inside them, Read Aloud's
-        // taller bottom bar made the container too short for the rail, so folding while narrating
-        // stuck on the bottom bar (owner report, 7 November 2026).
-        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sideSafeArea = $0 }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { sideUsableSize = $0 }
-        .overlay(alignment: .bottomTrailing) {
-            if let width = sideRailWidth {
-                SideReaderNavigation(state: state, columnWidth: width)
-                    .ignoresSafeArea(.container, edges: .trailing)
-            }
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { compactChromeTop = $0 }
         }
     }
 
-    /// The trailing system column's width when the compact reader is on a presentation that stacks
-    /// the status and toolbar at the side; nil for ordinary phones.
-    private var sideRailWidth: CGFloat? {
-        ReaderLayout.sideRailWidth(safeLeading: sideSafeArea.leading, safeTrailing: sideSafeArea.trailing,
-                                   accessibilitySize: dynamicTypeSize.isAccessibilitySize,
-                                   verticalCompact: verticalSizeClass == .compact, usableSize: sideUsableSize)
+    private var usesWideLayout: Bool {
+        ReaderLayout.usesTopTabLayout(horizontalCompact: horizontalSizeClass != .regular,
+                                      verticalCompact: verticalSizeClass == .compact)
     }
 
-    private var regularLayout: some View {
+    /// The system tab bar: across the top on regular width (iPad, owner choice in 0017), or in the
+    /// vertical bar where the system places one (iPhone Duo). The passage control floats bottom
+    /// trailing either way.
+    private func systemTabLayout(wide: Bool) -> some View {
         TabView(selection: $state.destination) {
             Tab(AppDestination.read.title, systemImage: AppDestination.read.symbol, value: AppDestination.read) {
                 NavigationStack {
-                    chapter(wide: true, active: state.destination == .read)
+                    chapter(wide: wide, active: state.destination == .read)
                         .environment(state.narration)
                         .background(Color(.readingCanvas).ignoresSafeArea())
-                        .overlay(alignment: .topTrailing) { readerPanels(wide: true) }
+                        .overlay(alignment: .topTrailing) { readerPanels(wide: wide) }
                         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.trailing } action: { readTrailingInset = $0 }
                         .navigationTitle("")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbarBackground(.hidden, for: .navigationBar)
-                        .toolbar { readerToolbar(rail: false) }
+                        .toolbar { readerToolbar(rail: hasVerticalBar) }
                         .safeAreaInset(edge: .bottom, spacing: 0) {
                             // The passage selector floats at the bottom trailing corner, clear of
                             // the bounded reading column's start; text scrolls clear of it. Read
                             // Aloud's player joins it in one capsule while active, within the trailing
                             // half, so facing pages and a book fold keep it on the right page (owner
                             // requests, 7 November 2026).
-                            PassageControls(state: state, mergesPlayer: true, playerMaxWidth: regularPlayerMaxWidth)
+                            PassageControls(state: state, mergesPlayer: true,
+                                            collapsed: !wide && state.destination == .read && state.reader.navigationCollapsed
+                                                && !dynamicTypeSize.isAccessibilitySize,
+                                            playerMaxWidth: regularPlayerMaxWidth)
                                 .frame(maxWidth: regularTrailingHalf, alignment: .trailing)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 12)
+                                .padding(.horizontal, wide ? 20 : 16)
+                                .padding(.bottom, wide ? 12 : 8)
                         }
                 }
             }
@@ -289,7 +272,7 @@ struct AppRootView: View {
     /// reader draws edge to edge, so the bottom inset is measured from its full-bleed bottom.
     private func readerInsets(_ geometry: GeometryProxy, wide: Bool) -> EdgeInsets {
         var insets = geometry.safeAreaInsets
-        if !wide, let top = compactChromeTop {
+        if !wide, !hasVerticalBar, let top = compactChromeTop {
             let covered = geometry.frame(in: .global).maxY + insets.bottom - top
             if covered.isFinite { insets.bottom = max(insets.bottom, covered) }
         }
@@ -397,8 +380,8 @@ struct AppRootView: View {
 
     @ToolbarContentBuilder private func readerToolbar(rail: Bool) -> some ToolbarContent {
         if rail {
-            // Duo outer display: one custom item the system still places below the status area (and
-            // moves when the Dynamic Island expands), so the controls can carry the rail's drag lens.
+            // The Duo's vertical bar: one custom item the system still places below the status area
+            // (and moves when the Dynamic Island expands), so the controls carry the tab bar's lens.
             ToolbarItem(placement: .topBarTrailing) { sideToolbar }
                 .sharedBackgroundVisibility(.hidden)
         } else {
@@ -435,7 +418,7 @@ struct AppRootView: View {
     /// vertical toolbar UIKit couldn't always resolve that button and fell back to the window's
     /// top-left corner, on the left page.
     private func readerPanels(wide: Bool) -> some View {
-        let vertical = wide && readTrailingInset >= ReaderLayout.minimumSideRailInset
+        let vertical = wide && hasVerticalBar
         // A vertical toolbar column: point right at it, at the height of its first controls. A top
         // toolbar: point up at its trailing group from just below it.
         let edge: Edge = vertical ? .trailing : .top
@@ -451,6 +434,7 @@ struct AppRootView: View {
                                    showsPageLayout: AppearanceView.offersPageLayout(
                                        horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
                                    showsFoldOptions: state.hasHinge,
+                                   outerDisplayAvailable: state.outerDisplayAvailable,
                                    narration: state.narration)
                         .frame(idealWidth: width, idealHeight: 560)
                         .presentationCompactAdaptation(.sheet)
@@ -593,4 +577,59 @@ private extension View {
 #Preview {
     // About reads the app-owned TipStore; a non-observing store keeps the preview off StoreKit.
     AppRootView().environment(TipStore(observeTransactions: false))
+}
+
+/// Opt-in (owner request, 7 November 2026): while a foldable is open, offer the book and chapter to
+/// the system as a non-interactive scene accessory (iOS 27). The system decides whether and where it
+/// appears; on the iPhone Duo simulator (iOS 27.2) it reported the accessory unavailable while
+/// unfolded. The app stays fully functional without it, and the card shows only the chapter's
+/// labels, never Scripture text.
+private struct OuterDisplayChapter: ViewModifier {
+    @Bindable var state: AppState
+
+    func body(content: Content) -> some View {
+        if #available(iOS 27.0, *) {
+            content.sceneAccessory {
+                ExternalNonInteractiveAccessory(isEnabled: .constant(isEnabled)) {
+                    OuterChapterCard(document: state.reader.document, colorScheme: state.preferences.theme.colorScheme)
+                }
+                .onAvailabilityChange { state.outerDisplayAvailable = $0 }
+            }
+        } else {
+            content
+        }
+    }
+
+    private var isEnabled: Bool {
+        state.preferences.showsChapterOnOuterDisplay && state.hasHinge && state.reader.document != nil
+    }
+}
+
+/// The chapter heading as the reader shows it: eyebrow, book, and chapter, on the reading canvas.
+private struct OuterChapterCard: View {
+    let document: ChapterDocument?
+    let colorScheme: ColorScheme?
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if let document {
+                Text(document.eyebrow)
+                    .font(.footnote.weight(.semibold)).tracking(0.6)
+                    .foregroundStyle(Color(.readingSecondary))
+                Text(document.bookName)
+                    .font(.system(.largeTitle, design: .serif).weight(.semibold))
+                    .foregroundStyle(Color(.readingPrimary))
+                Text("Chapter \(document.label)")
+                    .font(.system(.title2, design: .serif))
+                    .foregroundStyle(Color(.readingSecondary))
+            }
+        }
+        .multilineTextAlignment(.center)
+        .minimumScaleFactor(0.6)
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.readingCanvas))
+        .preferredColorScheme(colorScheme)
+        .accessibilityElement(children: .combine)
+    }
 }
