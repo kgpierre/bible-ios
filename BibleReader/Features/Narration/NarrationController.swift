@@ -66,6 +66,9 @@ final class NarrationController {
     private(set) var sleepDeadline: Date?
     /// The spoken verse, for example "John 3:16", or the chapter during an announcement.
     private(set) var reference: String?
+    /// The spoken verse's source label ("16"), nil during chapter announcements; for controls that
+    /// already show the chapter beside it.
+    private(set) var verseLabel: String?
     /// A one-time message, such as a missing chosen voice.
     var notice: String?
 
@@ -524,8 +527,12 @@ final class NarrationController {
         let segment = loaded.script.segments[token.segment]
         let verse = segment.verseID.flatMap { id in loaded.document.verses.first { $0.id == id } }
         switch segment.kind {
-        case .chapterAnnouncement, .trailing: reference = loaded.document.reference
-        case .heading, .verseAnnouncement, .verse: reference = verse.map { "\(loaded.document.reference):\($0.label)" } ?? loaded.document.reference
+        case .chapterAnnouncement, .trailing:
+            reference = loaded.document.reference
+            verseLabel = nil
+        case .heading, .verseAnnouncement, .verse:
+            reference = verse.map { "\(loaded.document.reference):\($0.label)" } ?? loaded.document.reference
+            verseLabel = verse?.label
         }
         focusRevision += 1
         focus = NarrationFocus(chapterID: token.chapterID, verseID: segment.verseID, kind: segment.kind, segmentRange: segment.displayRange,
@@ -544,6 +551,7 @@ final class NarrationController {
             clearCursor()
             chapterID = finished
             reference = finishedReference
+            verseLabel = nil
             status = .paused(.sleepTimer)
             setSleepTimer(.off)
             return
@@ -563,6 +571,7 @@ final class NarrationController {
     private func clearCursor() {
         focus = nil
         reference = nil
+        verseLabel = nil
         chapterID = nil
         current = nil
     }

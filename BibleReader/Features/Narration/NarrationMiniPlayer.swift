@@ -8,6 +8,10 @@ struct NarrationMiniPlayer: View {
     var isElsewhere = false
     /// Icon and reference only, like collapsed tab labels while reading.
     var collapsed = false
+    /// Inside another glass capsule beside the passage control (the Duo outer display): no glass or
+    /// spacer of its own, the verse alone when the chapter beside it already names the book and
+    /// chapter, and controls that don't fit move into the options menu.
+    var embedded = false
     let showReference: () -> Void
     let openSettings: () -> Void
     @Environment(\.dynamicTypeSize) private var dynamicType
@@ -25,6 +29,22 @@ struct NarrationMiniPlayer: View {
                 }
                 .padding(12)
                 .glassEffect(.regular, in: .rect(cornerRadius: 24))
+            } else if embedded {
+                Group {
+                    if collapsed {
+                        HStack(spacing: 2) { playPause; referenceButton }
+                    } else {
+                        // Widest first; every visible control keeps a 44-point target.
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 2) { referenceButton; controls; menu() }
+                            HStack(spacing: 0) { controls; menu([.showVerse]) }
+                            HStack(spacing: 0) { playPause; nextVerse; stop; menu([.showVerse, .previous]) }
+                            HStack(spacing: 0) { playPause; stop; menu([.showVerse, .previous, .next]) }
+                        }
+                    }
+                }
+                .padding(.trailing, 6)
+                .frame(minHeight: 52)
             } else if collapsed {
                 HStack(spacing: 2) { playPause; referenceButton }
                     .padding(.horizontal, 6)
@@ -40,6 +60,8 @@ struct NarrationMiniPlayer: View {
         .foregroundStyle(Color(.readingPrimary))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Read Aloud")
+        // The spoken reference, even where a narrow capsule leaves no room to show it.
+        .accessibilityValue(narration.reference == nil ? "" : fullReferenceText)
         .accessibilityIdentifier("narrationMiniPlayer")
     }
 
@@ -47,10 +69,21 @@ struct NarrationMiniPlayer: View {
         HStack(spacing: 0) {
             iconButton("Previous Verse", "backward.fill", id: "narrationPreviousVerse") { narration.skipVerse(by: -1) }
             playPause
-            iconButton("Next Verse", "forward.fill", id: "narrationNextVerse") { narration.skipVerse(by: 1) }
-            iconButton("Stop Reading Aloud", "stop.fill", id: "narrationStop") { narration.stop() }
+            nextVerse
+            stop
         }
     }
+
+    private var nextVerse: some View {
+        iconButton("Next Verse", "forward.fill", id: "narrationNextVerse") { narration.skipVerse(by: 1) }
+    }
+
+    private var stop: some View {
+        iconButton("Stop Reading Aloud", "stop.fill", id: "narrationStop") { narration.stop() }
+    }
+
+    /// Actions moved into the options menu when the embedded player is too narrow for them.
+    private enum MenuExtra { case showVerse, previous, next }
 
     private var playPause: some View {
         iconButton(isPlaying ? "Pause" : "Resume", isPlaying ? "pause.fill" : "play.fill", id: "narrationPlayPause") {
@@ -69,18 +102,42 @@ struct NarrationMiniPlayer: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        // The full reference even where the passage control beside it shows the chapter.
+        .accessibilityLabel(fullReferenceText)
         .accessibilityHint("Shows this verse in the reader")
         .accessibilityAddTraits(.updatesFrequently)
         .accessibilityIdentifier("narrationReference")
     }
 
     private var referenceText: String {
+        if embedded, !isElsewhere, narration.reference != nil {
+            return narration.verseLabel.map { String(localized: "Verse \($0)") } ?? String(localized: "Read Aloud")
+        }
+        return fullReferenceText
+    }
+
+    private var fullReferenceText: String {
         let reference = narration.reference ?? String(localized: "Preparing…")
         return isElsewhere ? String(localized: "Reading Aloud: \(reference)") : reference
     }
 
-    private var menu: some View {
+    private var menu: some View { menu() }
+
+    private func menu(_ extras: [MenuExtra] = []) -> some View {
         Menu {
+            if !extras.isEmpty {
+                Section {
+                    if extras.contains(.showVerse) {
+                        Button("Show Current Verse", systemImage: "text.viewfinder", action: showReference)
+                    }
+                    if extras.contains(.previous) {
+                        Button("Previous Verse", systemImage: "backward.fill") { narration.skipVerse(by: -1) }
+                    }
+                    if extras.contains(.next) {
+                        Button("Next Verse", systemImage: "forward.fill") { narration.skipVerse(by: 1) }
+                    }
+                }
+            }
             Picker("Speed", systemImage: "gauge.with.dots.needle.67percent", selection: Binding(get: { narration.preferences.rate }, set: {
                 narration.preferences.rate = $0
                 narration.speechSettingsChanged()

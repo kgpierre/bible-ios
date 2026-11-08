@@ -12,26 +12,26 @@ final class NarrationUITests: XCTestCase {
         startFromMore(app)
         let player = element(app, "narrationMiniPlayer")
         XCTAssertTrue(player.waitForExistence(timeout: 10))
-        let reference = app.buttons["narrationReference"]
+        let reference = progress(app)
         // The announcement, then verses. XCTest's idle waits are slow next to scripted pacing, so
         // check for any John 3 verse rather than a specific one.
         XCTAssertTrue(reference.waitForExistence(timeout: 5))
-        XCTAssertTrue(wait(for: reference, labelContaining: "John 3:", timeout: 10))
+        XCTAssertTrue(wait(for: reference, valueContaining: "John 3:", timeout: 10))
         capture(app, name: "Read Aloud — playing")
 
         let playPause = app.buttons["narrationPlayPause"]
         XCTAssertEqual(playPause.label, "Pause")
         playPause.tap()
         XCTAssertTrue(wait(for: playPause, labelContaining: "Resume", timeout: 3))
-        let paused = reference.label
+        let paused = text(reference)
         sleep(3)
-        XCTAssertEqual(reference.label, paused, "Paused narration must not advance")
+        XCTAssertEqual(text(reference), paused, "Paused narration must not advance")
         playPause.tap()
         XCTAssertTrue(wait(for: playPause, labelContaining: "Pause", timeout: 3))
 
-        let before = reference.label
+        let before = text(reference)
         app.buttons["narrationNextVerse"].tap()
-        let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@ AND label BEGINSWITH 'John 3:'", before), object: reference)
+        let moved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@ AND value BEGINSWITH 'John 3:'", before), object: reference)
         XCTAssertEqual(XCTWaiter().wait(for: [moved], timeout: 5), .completed)
 
         // Audio continues across destinations, so the controls stay available.
@@ -95,13 +95,13 @@ final class NarrationUITests: XCTestCase {
         XCTAssertTrue(app.menuItems["Blue"].waitForExistence(timeout: 5))
         let readAloud = try XCTUnwrap(revealMenuItem(app, "Read Aloud from Here"), "Read Aloud from Here should be in the selection menu")
         readAloud.tap()
-        let reference = app.buttons["narrationReference"]
+        let reference = progress(app)
         XCTAssertTrue(reference.waitForExistence(timeout: 5))
         // Starting here skips the chapter announcement and verse 1. XCTest's idle waits are slow
         // next to scripted pacing, so allow a few verses of progress (the unit test checks the exact anchor).
-        XCTAssertTrue(wait(for: reference, labelContaining: "John 3:", timeout: 5))
-        let started = Int(reference.label.split(separator: ":").last ?? "") ?? 0
-        XCTAssertTrue((2...6).contains(started), "Started at \(reference.label)")
+        XCTAssertTrue(wait(for: reference, valueContaining: "John 3:", timeout: 5))
+        let started = Int(text(reference).split(separator: ":").last ?? "") ?? 0
+        XCTAssertTrue((2...6).contains(started), "Started at \(text(reference))")
         capture(app, name: "Read Aloud from Here")
 
         // Annotation still saves while narration plays.
@@ -123,12 +123,15 @@ final class NarrationUITests: XCTestCase {
         guard app.textViews["chapterText"].exists else { throw XCTSkip("Scrolling reader check") }
         let verse = reader.textViews.matching(NSPredicate(format: "label CONTAINS %@", "For God so loved the world")).firstMatch
         startFromMore(app)
-        let reference = app.buttons["narrationReference"]
+        let reference = progress(app)
         XCTAssertTrue(reference.waitForExistence(timeout: 5))
-        XCTAssertTrue(wait(for: reference, labelContaining: "John 3:17", timeout: 45), "Narration should reach John 3:17")
+        XCTAssertTrue(wait(for: reference, valueContaining: "John 3:17", timeout: 45), "Narration should reach John 3:17")
         XCTAssertTrue(verse.exists)
         let window = app.windows.firstMatch.frame
-        XCTAssertTrue(window.contains(CGPoint(x: verse.frame.midX, y: verse.frame.minY)),
+        // Without following, 3:16 would still be below the window. Its first line may already have
+        // scrolled above a short viewport (the Duo outer display stacks the player over the passage
+        // control), so check that the verse is in view rather than its first line.
+        XCTAssertTrue(window.intersects(verse.frame),
                       "The reader follows narration: John 3:16 \(verse.frame) should be on screen \(window)")
         capture(app, name: "Read Aloud — following in the scrolling reader")
     }
@@ -149,7 +152,7 @@ final class NarrationUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [turned], timeout: 45), .completed, "Two Pages should turn with narration")
         capture(app, name: "Read Aloud — Two Pages turned")
         XCTAssertTrue(wait(for: app.buttons["passageButton"], labelContaining: "4", timeout: 60), "The reader follows into John 4")
-        XCTAssertTrue(app.buttons["narrationReference"].label.hasPrefix("John 4"))
+        XCTAssertTrue(text(progress(app)).hasPrefix("John 4"))
     }
 
     // MARK: Helpers
@@ -223,6 +226,19 @@ final class NarrationUITests: XCTestCase {
     @MainActor
     private func reader(_ app: XCUIApplication) -> XCUIElement {
         app.textViews.matching(NSPredicate(format: "identifier IN %@", ["chapterText", "spreadPageLeft"])).firstMatch
+    }
+
+    /// The player reports the spoken reference as its value, even where a narrow capsule hides it.
+    @MainActor
+    private func progress(_ app: XCUIApplication) -> XCUIElement { element(app, "narrationMiniPlayer") }
+
+    @MainActor
+    private func text(_ element: XCUIElement) -> String { element.value as? String ?? "" }
+
+    @MainActor
+    private func wait(for element: XCUIElement, valueContaining text: String, timeout: TimeInterval) -> Bool {
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@", text), object: element)
+        return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
     }
 
     @MainActor

@@ -4,6 +4,9 @@ struct AppRootView: View {
     @State private var state = AppState()
     @State private var sideSafeArea = EdgeInsets()
     @State private var sideUsableSize = CGSize.zero
+    /// The regular-width window's width, so bottom-trailing controls stay on its trailing half.
+    @State private var regularWidth: CGFloat = 0
+    @State private var regularHeight: CGFloat = 0
     /// The top of the compact bottom controls (passage, tabs, and Read Aloud's player) in global
     /// coordinates. The reader's safe area doesn't include them, so it reserves this directly.
     @State private var compactChromeTop: CGFloat?
@@ -130,7 +133,7 @@ struct AppRootView: View {
                     .navigationTitle("")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarBackground(.hidden, for: .navigationBar)
-                    .toolbar { readerToolbar }
+                    .toolbar { readerToolbar(rail: sideRailWidth != nil) }
             }
             .destination(.read, selected: state.destination)
             NavigationStack {
@@ -146,14 +149,18 @@ struct AppRootView: View {
             .destination(.search, selected: state.destination)
         }
         .background(Color(.readingCanvas).ignoresSafeArea())
-        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sideSafeArea = $0 }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { sideUsableSize = $0 }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             Group {
                 if sideRailWidth != nil {
-                    // Duo outer display: destinations and the passage control live in the side column,
-                    // so only Read Aloud's mini player needs a bottom band.
-                    SideNarrationInset(state: state)
+                    // Duo outer display: destinations live in the side column; the passage control
+                    // (and Read Aloud's player above it) sits bottom trailing, beside the rail.
+                    PassageControls(state: state, mergesPlayer: true,
+                                    collapsed: state.destination == .read && state.reader.navigationCollapsed
+                                        && !dynamicTypeSize.isAccessibilitySize)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
                 } else {
                     CompactReaderNavigation(state: state)
                         // Landscape phones are short: let the text stop at the controls' top edge rather than
@@ -165,6 +172,11 @@ struct AppRootView: View {
             }
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { compactChromeTop = $0 }
         }
+        // Measured outside the bottom controls, which depend on the result: inside them, Read Aloud's
+        // taller bottom bar made the container too short for the rail, so folding while narrating
+        // stuck on the bottom bar (owner report, 7 November 2026).
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sideSafeArea = $0 }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { sideUsableSize = $0 }
         .overlay(alignment: .bottomTrailing) {
             if let width = sideRailWidth {
                 SideReaderNavigation(state: state, columnWidth: width)
@@ -191,15 +203,16 @@ struct AppRootView: View {
                         .navigationTitle("")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbarBackground(.hidden, for: .navigationBar)
-                        .toolbar { readerToolbar }
+                        .toolbar { readerToolbar(rail: false) }
                         .safeAreaInset(edge: .bottom, spacing: 0) {
                             // The passage selector floats at the bottom trailing corner, clear of
-                            // the bounded reading column's start; text scrolls clear of it.
-                            VStack(alignment: .trailing, spacing: 10) {
-                                regularMiniPlayer
-                                PassageButton(state: state)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            // the bounded reading column's start; text scrolls clear of it. Read
+                            // Aloud's player joins it in one capsule while active, within the trailing
+                            // half, so facing pages and a book fold keep it on the right page (owner
+                            // requests, 7 November 2026).
+                            PassageControls(state: state, mergesPlayer: true, playerMaxWidth: regularPlayerMaxWidth)
+                                .frame(maxWidth: regularTrailingHalf, alignment: .trailing)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
                             .padding(.horizontal, 20)
                             .padding(.bottom, 12)
                         }
@@ -228,19 +241,29 @@ struct AppRootView: View {
             }
         }
         .tabViewStyle(.tabBarOnly)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { regularWidth = $0.width; regularHeight = $0.height }
         .tint(Color(.accent))
     }
 
-    /// Bottom trailing above the passage selector, like 0017's floating capsule. A Duo book or
-    /// tabletop pose keeps it at the bottom: the right page and below the division.
+    /// Saved and Search: bottom trailing, where the reader's passage capsule carries it, like
+    /// 0017's floating capsule.
     @ViewBuilder private var regularMiniPlayer: some View {
         if state.narration.status.isActive {
             NarrationMiniPlayer(narration: state.narration, isElsewhere: state.isNarrationElsewhere,
                                 showReference: { state.showNarratedVerse() },
                                 openSettings: { state.isReadAloudSettingsPresented = true })
-                .frame(maxWidth: 440)
+                .frame(maxWidth: regularPlayerMaxWidth)
         }
     }
+
+    /// The trailing half of the window, less the controls' 20-point margin.
+    /// Only wide windows can show facing pages (or a book fold); a tall one keeps the full width.
+    private var regularTrailingHalf: CGFloat {
+        regularWidth > regularHeight ? max(320, regularWidth / 2 - 20) : .infinity
+    }
+
+    /// A stacked player (accessibility sizes, Saved, Search): at most 440, within the trailing half.
+    private var regularPlayerMaxWidth: CGFloat { min(440, regularTrailingHalf) }
 
     @ViewBuilder private var regularMiniPlayerInset: some View {
         if state.narration.status.isActive {
@@ -376,79 +399,129 @@ struct AppRootView: View {
         }
     }
 
-    @ToolbarContentBuilder private var readerToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            Button { state.isAppearancePresented = true } label: { ToolbarGlyph(systemName: "textformat.size") }
-                .accessibilityLabel("Appearance")
-                .accessibilityIdentifier("appearanceButton")
-                .popover(isPresented: $state.isAppearancePresented) {
-                    // Offer the page layout from the live window, never the device idiom: regular width
-                    // can fit facing pages (iPad, Duo inner display, large phones in landscape), and a
-                    // foldable keeps it while closed. Book-pose facing pages need a hinge and are always on.
-                    AppearanceView(preferences: state.preferences,
-                                   showsPageLayout: AppearanceView.offersPageLayout(
-                                       horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
-                                   showsFoldOptions: state.hasHinge,
-                                   narration: state.narration)
-                        .frame(idealWidth: 400, idealHeight: 560)
-                        .presentationCompactAdaptation(.sheet)
-                        // Leave the reader visible above the sheet so changes show as they are made.
-                        .presentationDetents([.medium, .large])
-                        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-                }
-            Button {
-                state.summarizeCurrentChapter()
-            } label: {
-                ToolbarGlyph(systemName: "apple.intelligence")
+    @ToolbarContentBuilder private func readerToolbar(rail: Bool) -> some ToolbarContent {
+        if rail {
+            // Duo outer display: one custom item the system still places below the status area (and
+            // moves when the Dynamic Island expands), so the controls can carry the rail's drag lens.
+            ToolbarItem(placement: .topBarTrailing) { sideToolbar }
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                appearanceButton
+                summaryButton
+                saveChapterButton
+                moreMenu
             }
-            .accessibilityLabel("Summarize current chapter")
-            .accessibilityIdentifier("chapterSummaryButton")
-            .disabled(state.reader.document == nil || state.reader.isLoading)
-            let saved = state.reader.isCurrentChapterSaved
-            Button {
-                Task { await state.reader.setCurrentChapterSaved(!saved) }
-            } label: {
-                ToolbarGlyph(systemName: saved ? "bookmark.fill" : "bookmark")
-            }
-            .accessibilityLabel(saved ? "Remove Saved Chapter" : "Save Chapter")
-            .accessibilityIdentifier("saveChapterButton")
-            .disabled(state.reader.document == nil || state.reader.isLoading || state.reader.isSaving)
-            Menu {
-                Section {
-                    Button("Previous Chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
-                        .disabled(!state.reader.hasAdjacentChapter(-1))
-                    Button("Next Chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
-                        .disabled(!state.reader.hasAdjacentChapter(1))
-                    if state.narration.status.isActive {
-                        Button("Stop Reading Aloud", systemImage: "stop.fill") { state.narration.stop() }
-                            .accessibilityIdentifier("stopReadAloud")
-                    } else {
-                        Button("Read Chapter Aloud", systemImage: "speaker.wave.2") { state.readCurrentChapterAloud() }
-                            .disabled(state.reader.document == nil || state.reader.isLoading)
-                            .accessibilityIdentifier("readChapterAloud")
-                    }
-                }
-                Section {
-                    Button(state.reader.undoActionName.map { String(localized: "Undo \($0)") } ?? String(localized: "Undo"),
-                           systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
-                        .disabled(!state.reader.canUndo || state.reader.isSaving)
-                        .accessibilityIdentifier("undoAnnotation")
-                    if let document = state.reader.document {
-                        Button("Chapter Notes", systemImage: "note.text") {
-                            state.reader.notesRequest = .chapter(document)
-                        }
-                        .disabled(!document.verses.contains { !$0.notes.isEmpty })
-                        ShareLink(item: "\(document.reference) — \(document.editionLabel)") {
-                            Label("Share Reference", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                }
-                Button("About \(AppInfo.name)", systemImage: "info.circle") { state.isAboutPresented = true }
-            } label: {
-                ToolbarGlyph(systemName: "ellipsis")
-            }
-            .accessibilityLabel("More")
         }
+    }
+
+    private var sideToolbar: some View {
+        SideLensStack(count: 4, onRelease: { index in
+            switch index {
+            case 0: state.isAppearancePresented = true
+            case 1: if canSummarize { state.summarizeCurrentChapter() }
+            case 2: if canSaveChapter { toggleSavedChapter() }
+            // SwiftUI can't open a menu from code; More opens with a tap.
+            default: break
+            }
+        }) {
+            appearanceButton
+            summaryButton
+            saveChapterButton
+            moreMenu
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color(.readingPrimary))
+    }
+
+    private var canSummarize: Bool { state.reader.document != nil && !state.reader.isLoading }
+    private var canSaveChapter: Bool { state.reader.document != nil && !state.reader.isLoading && !state.reader.isSaving }
+
+    private func toggleSavedChapter() {
+        let saved = state.reader.isCurrentChapterSaved
+        Task { await state.reader.setCurrentChapterSaved(!saved) }
+    }
+
+    private var appearanceButton: some View {
+        Button { state.isAppearancePresented = true } label: { ToolbarGlyph(systemName: "textformat.size") }
+            .accessibilityLabel("Appearance")
+            .accessibilityIdentifier("appearanceButton")
+            .popover(isPresented: $state.isAppearancePresented) {
+                // Offer the page layout from the live window, never the device idiom: regular width
+                // can fit facing pages (iPad, Duo inner display, large phones in landscape), and a
+                // foldable keeps it while closed. Book-pose facing pages need a hinge and are always on.
+                AppearanceView(preferences: state.preferences,
+                               showsPageLayout: AppearanceView.offersPageLayout(
+                                   horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
+                               showsFoldOptions: state.hasHinge,
+                               narration: state.narration)
+                    .frame(idealWidth: 400, idealHeight: 560)
+                    .presentationCompactAdaptation(.sheet)
+                    // Leave the reader visible above the sheet so changes show as they are made.
+                    .presentationDetents([.medium, .large])
+                    .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+            }
+    }
+
+    private var summaryButton: some View {
+        Button {
+            state.summarizeCurrentChapter()
+        } label: {
+            ToolbarGlyph(systemName: "apple.intelligence")
+        }
+        .accessibilityLabel("Summarize current chapter")
+        .accessibilityIdentifier("chapterSummaryButton")
+        .disabled(state.reader.document == nil || state.reader.isLoading)
+    }
+
+    @ViewBuilder private var saveChapterButton: some View {
+        let saved = state.reader.isCurrentChapterSaved
+        Button {
+            Task { await state.reader.setCurrentChapterSaved(!saved) }
+        } label: {
+            ToolbarGlyph(systemName: saved ? "bookmark.fill" : "bookmark")
+        }
+        .accessibilityLabel(saved ? "Remove Saved Chapter" : "Save Chapter")
+        .accessibilityIdentifier("saveChapterButton")
+        .disabled(state.reader.document == nil || state.reader.isLoading || state.reader.isSaving)
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            Section {
+                Button("Previous Chapter", systemImage: "chevron.left") { state.reader.moveChapter(by: -1) }
+                    .disabled(!state.reader.hasAdjacentChapter(-1))
+                Button("Next Chapter", systemImage: "chevron.right") { state.reader.moveChapter(by: 1) }
+                    .disabled(!state.reader.hasAdjacentChapter(1))
+                if state.narration.status.isActive {
+                    Button("Stop Reading Aloud", systemImage: "stop.fill") { state.narration.stop() }
+                        .accessibilityIdentifier("stopReadAloud")
+                } else {
+                    Button("Read Chapter Aloud", systemImage: "speaker.wave.2") { state.readCurrentChapterAloud() }
+                        .disabled(state.reader.document == nil || state.reader.isLoading)
+                        .accessibilityIdentifier("readChapterAloud")
+                }
+            }
+            Section {
+                Button(state.reader.undoActionName.map { String(localized: "Undo \($0)") } ?? String(localized: "Undo"),
+                       systemImage: "arrow.uturn.backward") { Task { await state.reader.undo() } }
+                    .disabled(!state.reader.canUndo || state.reader.isSaving)
+                    .accessibilityIdentifier("undoAnnotation")
+                if let document = state.reader.document {
+                    Button("Chapter Notes", systemImage: "note.text") {
+                        state.reader.notesRequest = .chapter(document)
+                    }
+                    .disabled(!document.verses.contains { !$0.notes.isEmpty })
+                    ShareLink(item: "\(document.reference) — \(document.editionLabel)") {
+                        Label("Share Reference", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+            Button("About \(AppInfo.name)", systemImage: "info.circle") { state.isAboutPresented = true }
+        } label: {
+            ToolbarGlyph(systemName: "ellipsis")
+        }
+        .accessibilityLabel("More")
     }
 
 }

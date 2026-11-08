@@ -138,8 +138,8 @@ private final class ReaderTabBarContainer: UIView {
 
 struct PassageButton: View {
     @Bindable var state: AppState
-    /// A narrow stacked label for the side rail (book, chapter, chevron).
-    var vertical = false
+    /// Inside another glass capsule (beside Read Aloud's player), so it draws no glass of its own.
+    var embedded = false
 
     private var passageLabel: String { state.reader.document?.reference ?? String(localized: "Chapters") }
     private var shortPassageLabel: String {
@@ -152,7 +152,6 @@ struct PassageButton: View {
         Button {
             state.isChapterPickerPresented = true
         } label: {
-            if vertical { verticalLabel } else {
             // Each option is a complete label, so ViewThatFits compares against the proposed
             // width directly. Nesting it in an HStack re-proposed its own measured width,
             // where rounding could reject a label that fits ("Jhn 3" beside empty space).
@@ -162,11 +161,10 @@ struct PassageButton: View {
                 label(Text("Chapters").lineLimit(1))
             }
             .contentShape(.capsule)
-            }
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color(.readingPrimary))
-        .glassEffect(.regular.interactive(), in: vertical ? AnyShape(.rect(cornerRadius: 28)) : AnyShape(.capsule))
+        .modifier(PassageGlass(enabled: !embedded))
         .accessibilityLabel("Choose chapter, \(state.reader.document?.reference ?? "Bible")")
         .accessibilityIdentifier("passageButton")
         .popover(isPresented: $state.isChapterPickerPresented) {
@@ -177,25 +175,6 @@ struct PassageButton: View {
 }
 
 extension PassageButton {
-    private var verticalLabel: some View {
-        let book = state.reader.document.flatMap { document in state.reader.books.first { $0.id == document.bookID } }
-        return VStack(spacing: 2) {
-            Text(book?.shortName ?? String(localized: "Chapters"))
-                .font(.footnote.weight(.semibold))
-            if let label = state.reader.document?.label {
-                Text(label).font(.title3.weight(.semibold))
-            }
-            Image(systemName: "chevron.down").font(.caption.weight(.semibold))
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 4)
-        // Fills the rail's width so it matches the destinations and the system toolbar column.
-        .frame(minWidth: ReaderLayout.minimumControlTarget, maxWidth: .infinity, minHeight: 64)
-        .contentShape(.rect(cornerRadius: 28))
-    }
-
     private func label(_ title: some View) -> some View {
         HStack(spacing: 6) {
             title.font(.body.weight(.semibold))
@@ -266,47 +245,148 @@ private struct ReaderNavigationLayout: Layout {
     }
 }
 
+private struct PassageGlass: ViewModifier {
+    let enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled { content.glassEffect(.regular.interactive(), in: .capsule) } else { content }
+    }
+}
+
+/// The bottom-trailing chapter control on regular width and the Duo outer display, with Read Aloud's
+/// player while it's active. On the outer display the two share one glass capsule; regular width
+/// and accessibility sizes stack the player above it (owner direction, 7 November 2026).
+struct PassageControls: View {
+    @Bindable var state: AppState
+    /// One capsule beside each other when true; otherwise stacked.
+    let mergesPlayer: Bool
+    var collapsed = false
+    /// A stacked player's widest extent; nil fills the band.
+    var playerMaxWidth: CGFloat?
+    @Environment(\.dynamicTypeSize) private var dynamicType
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GlassEffectContainer(spacing: 8) {
+            if !state.narration.status.isActive {
+                PassageButton(state: state)
+            } else if mergesPlayer && !dynamicType.isAccessibilitySize {
+                HStack(spacing: 0) {
+                    // The chapter keeps its full label; the player drops controls into its menu instead.
+                    PassageButton(state: state, embedded: true)
+                        .fixedSize()
+                    Divider().frame(height: 28)
+                    player(embedded: true)
+                }
+                .glassEffect(.regular, in: .capsule)
+            } else {
+                VStack(alignment: .trailing, spacing: 8) {
+                    player(embedded: false)
+                        .frame(maxWidth: collapsed ? nil : playerMaxWidth ?? .infinity, alignment: .trailing)
+                    PassageButton(state: state)
+                }
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: collapsed)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: state.narration.status.isActive)
+    }
+
+    private func player(embedded: Bool) -> some View {
+        NarrationMiniPlayer(narration: state.narration, isElsewhere: state.isNarrationElsewhere,
+                            collapsed: collapsed, embedded: embedded,
+                            showReference: { state.showNarratedVerse() },
+                            openSettings: { state.isReadAloudSettingsPresented = true })
+    }
+}
+
 /// Duo outer display: Read/Saved/Search as a vertical glass capsule beneath the system's vertical
-/// toolbar, with the passage control above it. Lives in the trailing safe-area column the system
-/// reserves for the status bar and toolbar, so reading text never runs under it.
+/// toolbar. Lives in the trailing safe-area column the system reserves for the status bar and
+/// toolbar, so reading text never runs under it. The passage control sits bottom trailing in the
+/// reading area instead (`PassageControls`): the system toolbar moves down when the Dynamic Island
+/// expands, and a taller rail ran into it (owner report, 7 November 2026).
 struct SideReaderNavigation: View {
     @Bindable var state: AppState
     let columnWidth: CGFloat
     @Namespace private var glass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The finger's position along the rail while dragging across it, like the system tab bar's
+    /// lifted lens (owner request, 7 November 2026).
+    @State private var dragY: CGFloat?
+    private static let itemHeight: CGFloat = 48, itemSpacing: CGFloat = 2, inset: CGFloat = 2
+    private static let destinations = AppDestination.allCases
 
-    /// One width for the passage control and destinations, matching the system's vertical toolbar
-    /// pill above them (owner request, 7 November 2026). Destinations keep 44-point targets.
+    /// The destinations' width, matching the system's vertical toolbar pill above them (owner
+    /// request, 7 November 2026). Destinations keep 44-point targets.
     private var railWidth: CGFloat { min(ReaderLayout.sideRailControlWidth, max(ReaderLayout.minimumControlTarget + 3, columnWidth - 8)) }
 
     var body: some View {
         GlassEffectContainer(spacing: 8) {
-            VStack(spacing: 10) {
-                PassageButton(state: state, vertical: true)
-                    .frame(width: railWidth)
-                VStack(spacing: 2) {
-                    ForEach(AppDestination.allCases) { destination in
-                        SideTabButton(destination: destination, selected: state.destination == destination, glass: glass) {
-                            state.destination = destination
-                        }
+            VStack(spacing: Self.itemSpacing) {
+                ForEach(Self.destinations) { destination in
+                    SideTabButton(destination: destination, selected: state.destination == destination,
+                                  highlighted: (dragIndex.map { Self.destinations[$0] } ?? state.destination) == destination,
+                                  showsLens: dragY == nil, glass: glass) {
+                        state.destination = destination
                     }
                 }
-                .padding(2)
-                .frame(width: railWidth)
-                // Not interactive as a whole: each destination answers touch on its own lens, so a
-                // press never lights up all three (owner feedback, 7 November 2026).
-                .glassEffect(.regular, in: .rect(cornerRadius: 28))
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("sideDestinations")
             }
+            .padding(Self.inset)
+            .frame(width: railWidth)
+            .overlay(alignment: .top) {
+                // The selection lens lifts into a larger clear lens that follows the finger, then
+                // settles on the destination under it when released.
+                if let dragY {
+                    Capsule()
+                        .fill(.clear)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .glassEffectID("selection", in: glass)
+                        .frame(width: railWidth + 10, height: Self.itemHeight + 10)
+                        .offset(y: lensCenter(for: dragY) - (Self.itemHeight + 10) / 2)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            // Simultaneous, with a small minimum distance, so ordinary taps stay plain button taps
+            // (and VoiceOver and keyboard use the buttons directly).
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 6)
+                    .onChanged { value in dragY = value.location.y }
+                    .onEnded { value in
+                        state.destination = Self.destinations[index(at: value.location.y)]
+                        dragY = nil
+                    }
+            )
+            .sensoryFeedback(.selection, trigger: dragIndex) { old, new in old != nil && new != nil }
+            // Not interactive as a whole: each destination answers touch on its own lens, so a
+            // press never lights up all three (owner feedback, 7 November 2026).
+            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("sideDestinations")
         }
         // The selection lens morphs between destinations, from taps and keyboard shortcuts alike;
         // Reduce Motion moves it without animation.
         .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: state.destination)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: dragY == nil)
         // Centered on the system toolbar column above, which sits left of the safe-area column's middle.
         .padding(.leading, max(0, ReaderLayout.sideRailCenterInset - railWidth / 2))
         .frame(width: columnWidth, alignment: .leading)
         .padding(.bottom, 8)
+    }
+
+    private var dragIndex: Int? { dragY.map(index(at:)) }
+
+    private func index(at y: CGFloat) -> Int {
+        let index = Int(((y - Self.inset) / (Self.itemHeight + Self.itemSpacing)).rounded(.down))
+        return min(max(index, 0), Self.destinations.count - 1)
+    }
+
+    private func itemCenter(_ index: Int) -> CGFloat {
+        Self.inset + CGFloat(index) * (Self.itemHeight + Self.itemSpacing) + Self.itemHeight / 2
+    }
+
+    /// Follows the finger within the rail; Reduce Motion snaps it to the destination under it.
+    private func lensCenter(for y: CGFloat) -> CGFloat {
+        if reduceMotion { return itemCenter(index(at: y)) }
+        return min(max(y, itemCenter(0)), itemCenter(Self.destinations.count - 1))
     }
 }
 
@@ -316,17 +396,21 @@ struct SideReaderNavigation: View {
 private struct SideTabButton: View {
     let destination: AppDestination
     let selected: Bool
+    /// Under the finger while dragging across the rail; otherwise the selected destination.
+    let highlighted: Bool
+    /// False while the drag lens is lifted, so it isn't drawn twice.
+    let showsLens: Bool
     let glass: Namespace.ID
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: destination.symbol + (selected && destination != .search ? ".fill" : ""))
+            Image(systemName: destination.symbol + (highlighted && destination != .search ? ".fill" : ""))
                 .font(.title3)
-                .foregroundStyle(selected ? Color(.accent) : Color(.readingSecondary))
+                .foregroundStyle(highlighted ? Color(.accent) : Color(.readingSecondary))
                 .frame(maxWidth: .infinity, minHeight: 48)
         }
-        .buttonStyle(SideTabButtonStyle(selected: selected, glass: glass))
+        .buttonStyle(SideTabButtonStyle(selected: selected && showsLens, pressFeedback: showsLens, glass: glass))
         .accessibilityLabel(destination.localizedTitle)
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .accessibilityShowsLargeContentViewer {
@@ -343,6 +427,8 @@ private struct SideTabButton: View {
 /// lens, so touch feedback stays on the item under the finger.
 private struct SideTabButtonStyle: ButtonStyle {
     let selected: Bool
+    /// Off while dragging across the rail: the drag lens is the feedback then.
+    let pressFeedback: Bool
     let glass: Namespace.ID
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -354,33 +440,86 @@ private struct SideTabButtonStyle: ButtonStyle {
                         .fill(.clear)
                         .glassEffect(.regular.tint(Color(.accent).opacity(0.28)), in: .capsule)
                         .glassEffectID("selection", in: glass)
-                } else if configuration.isPressed {
+                } else if configuration.isPressed && pressFeedback {
                     Capsule()
                         .fill(.clear)
                         .glassEffect(.regular, in: .capsule)
                 }
             }
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.94 : 1)
+            .scaleEffect(configuration.isPressed && pressFeedback && !reduceMotion ? 0.94 : 1)
             .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: configuration.isPressed)
             .contentShape(.capsule)
     }
 }
 
-/// The bottom band reserved for Read Aloud's mini player when navigation moves to the side rail.
-struct SideNarrationInset: View {
-    @Bindable var state: AppState
-    @Environment(\.dynamicTypeSize) private var dynamicType
+/// A vertical glass capsule of controls for the Duo outer display's trailing column, with the rail's
+/// drag lens: dragging lifts a clear lens that follows the finger, and releasing over a control
+/// reports its index (owner request, 7 November 2026). Taps, VoiceOver, and keyboard use the
+/// controls themselves.
+struct SideLensStack<Content: View>: View {
+    let count: Int
+    let onRelease: (Int) -> Void
+    @ViewBuilder let content: Content
+    @State private var dragY: CGFloat?
+    @Namespace private var glass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static var itemHeight: CGFloat { 48 }
+    private static var itemSpacing: CGFloat { 2 }
+    private static var inset: CGFloat { 2 }
+    private var width: CGFloat { ReaderLayout.sideRailControlWidth }
 
     var body: some View {
-        if state.narration.status.isActive {
-            NarrationMiniPlayer(narration: state.narration, isElsewhere: state.isNarrationElsewhere,
-                                collapsed: state.destination == .read && state.reader.navigationCollapsed && !dynamicType.isAccessibilitySize,
-                                showReference: { state.showNarratedVerse() },
-                                openSettings: { state.isReadAloudSettingsPresented = true })
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+        GlassEffectContainer(spacing: 8) {
+            VStack(spacing: Self.itemSpacing) {
+                Group(subviews: content) { subviews in
+                    ForEach(subviews) { subview in
+                        subview
+                            .frame(maxWidth: .infinity, minHeight: Self.itemHeight, maxHeight: Self.itemHeight)
+                            .contentShape(.capsule)
+                    }
+                }
+            }
+            .buttonStyle(SideTabButtonStyle(selected: false, pressFeedback: dragY == nil, glass: glass))
+            .padding(Self.inset)
+            .frame(width: width)
+            .overlay(alignment: .top) {
+                if let dragY {
+                    Capsule()
+                        .fill(.clear)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .glassEffectID("lens", in: glass)
+                        .frame(width: width + 10, height: Self.itemHeight + 10)
+                        .offset(y: lensCenter(for: dragY) - (Self.itemHeight + 10) / 2)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 6)
+                    .onChanged { dragY = $0.location.y }
+                    .onEnded { value in
+                        let index = index(at: value.location.y)
+                        dragY = nil
+                        onRelease(index)
+                    }
+            )
+            .sensoryFeedback(.selection, trigger: dragY.map(index(at:))) { old, new in old != nil && new != nil }
         }
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: dragY == nil)
+    }
+
+    private func index(at y: CGFloat) -> Int {
+        let index = Int(((y - Self.inset) / (Self.itemHeight + Self.itemSpacing)).rounded(.down))
+        return min(max(index, 0), count - 1)
+    }
+
+    private func itemCenter(_ index: Int) -> CGFloat {
+        Self.inset + CGFloat(index) * (Self.itemHeight + Self.itemSpacing) + Self.itemHeight / 2
+    }
+
+    private func lensCenter(for y: CGFloat) -> CGFloat {
+        if reduceMotion { return itemCenter(index(at: y)) }
+        return min(max(y, itemCenter(0)), itemCenter(count - 1))
     }
 }
