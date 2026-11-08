@@ -306,87 +306,25 @@ struct PassageControls: View {
 struct SideReaderNavigation: View {
     @Bindable var state: AppState
     let columnWidth: CGFloat
-    @Namespace private var glass
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// The finger's position along the rail while dragging across it, like the system tab bar's
-    /// lifted lens (owner request, 7 November 2026).
-    @State private var dragY: CGFloat?
-    private static let itemHeight: CGFloat = 48, itemSpacing: CGFloat = 2, inset: CGFloat = 2
     private static let destinations = AppDestination.allCases
 
-    /// The destinations' width, matching the system's vertical toolbar pill above them (owner
-    /// request, 7 November 2026). Destinations keep 44-point targets.
-    private var railWidth: CGFloat { min(ReaderLayout.sideRailControlWidth, max(ReaderLayout.minimumControlTarget + 3, columnWidth - 8)) }
-
     var body: some View {
-        GlassEffectContainer(spacing: 8) {
-            VStack(spacing: Self.itemSpacing) {
-                ForEach(Self.destinations) { destination in
-                    SideTabButton(destination: destination, selected: state.destination == destination,
-                                  highlighted: (dragIndex.map { Self.destinations[$0] } ?? state.destination) == destination,
-                                  showsLens: dragY == nil, glass: glass) {
-                        state.destination = destination
-                    }
+        SideLensStack(count: Self.destinations.count,
+                      selectedIndex: Self.destinations.firstIndex(of: state.destination),
+                      onRelease: { state.destination = Self.destinations[$0] }) { hovered in
+            ForEach(Array(Self.destinations.enumerated()), id: \.element) { index, destination in
+                SideTabButton(destination: destination, selected: state.destination == destination,
+                              highlighted: (hovered ?? Self.destinations.firstIndex(of: state.destination)) == index) {
+                    state.destination = destination
                 }
             }
-            .padding(Self.inset)
-            .frame(width: railWidth)
-            .overlay(alignment: .top) {
-                // The selection lens lifts into a larger clear lens that follows the finger, then
-                // settles on the destination under it when released.
-                if let dragY {
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular.interactive(), in: .capsule)
-                        .glassEffectID("selection", in: glass)
-                        .frame(width: railWidth + 10, height: Self.itemHeight + 10)
-                        .offset(y: lensCenter(for: dragY) - (Self.itemHeight + 10) / 2)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            }
-            // Simultaneous, with a small minimum distance, so ordinary taps stay plain button taps
-            // (and VoiceOver and keyboard use the buttons directly).
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 6)
-                    .onChanged { value in dragY = value.location.y }
-                    .onEnded { value in
-                        state.destination = Self.destinations[index(at: value.location.y)]
-                        dragY = nil
-                    }
-            )
-            .sensoryFeedback(.selection, trigger: dragIndex) { old, new in old != nil && new != nil }
-            // Not interactive as a whole: each destination answers touch on its own lens, so a
-            // press never lights up all three (owner feedback, 7 November 2026).
-            .glassEffect(.regular, in: .rect(cornerRadius: 28))
-            .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("sideDestinations")
         }
-        // The selection lens morphs between destinations, from taps and keyboard shortcuts alike;
-        // Reduce Motion moves it without animation.
-        .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: state.destination)
-        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: dragY == nil)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("sideDestinations")
         // Centered on the system toolbar column above, which sits left of the safe-area column's middle.
-        .padding(.leading, max(0, ReaderLayout.sideRailCenterInset - railWidth / 2))
+        .padding(.leading, max(0, ReaderLayout.sideRailCenterInset - ReaderLayout.sideRailControlWidth / 2))
         .frame(width: columnWidth, alignment: .leading)
         .padding(.bottom, 8)
-    }
-
-    private var dragIndex: Int? { dragY.map(index(at:)) }
-
-    private func index(at y: CGFloat) -> Int {
-        let index = Int(((y - Self.inset) / (Self.itemHeight + Self.itemSpacing)).rounded(.down))
-        return min(max(index, 0), Self.destinations.count - 1)
-    }
-
-    private func itemCenter(_ index: Int) -> CGFloat {
-        Self.inset + CGFloat(index) * (Self.itemHeight + Self.itemSpacing) + Self.itemHeight / 2
-    }
-
-    /// Follows the finger within the rail; Reduce Motion snaps it to the destination under it.
-    private func lensCenter(for y: CGFloat) -> CGFloat {
-        if reduceMotion { return itemCenter(index(at: y)) }
-        return min(max(y, itemCenter(0)), itemCenter(Self.destinations.count - 1))
     }
 }
 
@@ -396,11 +334,8 @@ struct SideReaderNavigation: View {
 private struct SideTabButton: View {
     let destination: AppDestination
     let selected: Bool
-    /// Under the finger while dragging across the rail; otherwise the selected destination.
+    /// Under the finger while pressing or dragging across the rail; otherwise the selected destination.
     let highlighted: Bool
-    /// False while the drag lens is lifted, so it isn't drawn twice.
-    let showsLens: Bool
-    let glass: Namespace.ID
     let action: () -> Void
 
     var body: some View {
@@ -408,9 +343,8 @@ private struct SideTabButton: View {
             Image(systemName: destination.symbol + (highlighted && destination != .search ? ".fill" : ""))
                 .font(.title3)
                 .foregroundStyle(highlighted ? Color(.accent) : Color(.readingSecondary))
-                .frame(maxWidth: .infinity, minHeight: 48)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .buttonStyle(SideTabButtonStyle(selected: selected && showsLens, pressFeedback: showsLens, glass: glass))
         .accessibilityLabel(destination.localizedTitle)
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .accessibilityShowsLargeContentViewer {
@@ -422,56 +356,39 @@ private struct SideTabButton: View {
     }
 }
 
-/// The selection is a tinted glass lens, like the system tab bar's; one ID across destinations lets
-/// the container morph it from the old tab to the new one. A pressed destination gets its own clear
-/// lens, so touch feedback stays on the item under the finger.
-private struct SideTabButtonStyle: ButtonStyle {
-    let selected: Bool
-    /// Off while dragging across the rail: the drag lens is the feedback then.
-    let pressFeedback: Bool
-    let glass: Namespace.ID
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background {
-                if selected {
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular.tint(Color(.accent).opacity(0.28)), in: .capsule)
-                        .glassEffectID("selection", in: glass)
-                } else if configuration.isPressed && pressFeedback {
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular, in: .capsule)
-                }
-            }
-            .scaleEffect(configuration.isPressed && pressFeedback && !reduceMotion ? 0.94 : 1)
-            .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: configuration.isPressed)
-            .contentShape(.capsule)
-    }
-}
-
-/// A vertical glass capsule of controls for the Duo outer display's trailing column, with the rail's
-/// drag lens: dragging lifts a clear lens that follows the finger, and releasing over a control
-/// reports its index (owner request, 7 November 2026). Taps, VoiceOver, and keyboard use the
-/// controls themselves.
+/// A vertical glass capsule of controls in the Duo outer display's trailing column, with a lens
+/// like the system tab bar's (owner requests, 7 November 2026): touching lifts a clear glass lens
+/// behind the control under the finger, the lens follows a drag, and releasing over a control
+/// reports its index. A plain tap is left to the control itself; releasing well outside the capsule
+/// cancels. With `selectedIndex`, a tinted lens rests on the selection and the drag lens morphs
+/// from and back into it. Taps, VoiceOver, and keyboard use the controls themselves.
 struct SideLensStack<Content: View>: View {
     let count: Int
+    var selectedIndex: Int?
+    /// Touches starting here belong to the control (a menu opens on press), not the lens.
+    var passthroughIndex: Int?
     let onRelease: (Int) -> Void
-    @ViewBuilder let content: Content
-    @State private var dragY: CGFloat?
+    /// Receives the index under the finger while pressing or dragging.
+    @ViewBuilder let content: (Int?) -> Content
+    /// Resets on its own when the system cancels the touch, so the lens can't stick.
+    @GestureState private var touchY: CGFloat?
     @Namespace private var glass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static var itemHeight: CGFloat { 48 }
     private static var itemSpacing: CGFloat { 2 }
     private static var inset: CGFloat { 2 }
+    /// How far past the capsule a release still counts, like the system tab bar's slop.
+    private static var releaseSlop: CGFloat { 28 }
     private var width: CGFloat { ReaderLayout.sideRailControlWidth }
+    private var height: CGFloat {
+        Self.inset * 2 + CGFloat(count) * Self.itemHeight + CGFloat(max(0, count - 1)) * Self.itemSpacing
+    }
+    private var hoveredIndex: Int? { touchY.map(index(at:)) }
 
     var body: some View {
         GlassEffectContainer(spacing: 8) {
             VStack(spacing: Self.itemSpacing) {
-                Group(subviews: content) { subviews in
+                Group(subviews: content(hoveredIndex)) { subviews in
                     ForEach(subviews) { subview in
                         subview
                             .frame(maxWidth: .infinity, minHeight: Self.itemHeight, maxHeight: Self.itemHeight)
@@ -479,34 +396,57 @@ struct SideLensStack<Content: View>: View {
                     }
                 }
             }
-            .buttonStyle(SideTabButtonStyle(selected: false, pressFeedback: dragY == nil, glass: glass))
+            .buttonStyle(.plain)
             .padding(Self.inset)
             .frame(width: width)
-            .overlay(alignment: .top) {
-                if let dragY {
-                    Capsule()
-                        .fill(.clear)
-                        .glassEffect(.regular.interactive(), in: .capsule)
-                        .glassEffectID("lens", in: glass)
-                        .frame(width: width + 10, height: Self.itemHeight + 10)
-                        .offset(y: lensCenter(for: dragY) - (Self.itemHeight + 10) / 2)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            }
+            // Behind the controls, so the icon under the finger stays visible through the lens.
+            .background(alignment: .top) { lens }
             .glassEffect(.regular, in: .rect(cornerRadius: 28))
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 6)
-                    .onChanged { dragY = $0.location.y }
-                    .onEnded { value in
-                        let index = index(at: value.location.y)
-                        dragY = nil
-                        onRelease(index)
-                    }
-            )
-            .sensoryFeedback(.selection, trigger: dragY.map(index(at:))) { old, new in old != nil && new != nil }
+            .simultaneousGesture(gesture)
+            .sensoryFeedback(.selection, trigger: hoveredIndex) { old, new in old != nil && new != nil }
         }
-        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: dragY == nil)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: touchY == nil)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: selectedIndex)
+    }
+
+    @ViewBuilder private var lens: some View {
+        if let touchY {
+            let size = CGSize(width: width + 10, height: Self.itemHeight + 8)
+            Capsule()
+                .fill(.clear)
+                .glassEffect(.regular.tint(Color(.accent).opacity(0.14)).interactive(), in: .capsule)
+                .glassEffectID("lens", in: glass)
+                .frame(width: size.width, height: size.height)
+                .offset(y: lensCenter(for: touchY) - size.height / 2)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        } else if let selectedIndex {
+            Capsule()
+                .fill(.clear)
+                .glassEffect(.regular.tint(Color(.accent).opacity(0.28)), in: .capsule)
+                .glassEffectID("lens", in: glass)
+                .frame(width: width - Self.inset * 2, height: Self.itemHeight)
+                .offset(y: itemCenter(selectedIndex) - Self.itemHeight / 2)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var gesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .updating($touchY) { value, touchY, _ in
+                if let passthroughIndex, index(at: value.startLocation.y) == passthroughIndex { return }
+                touchY = value.location.y
+            }
+            .onEnded { value in
+                if let passthroughIndex, index(at: value.startLocation.y) == passthroughIndex { return }
+                // A tap belongs to the control under it.
+                guard hypot(value.translation.width, value.translation.height) >= 6 else { return }
+                let slop = Self.releaseSlop
+                guard value.location.x > -slop, value.location.x < width + slop,
+                      value.location.y > -slop, value.location.y < height + slop else { return }
+                onRelease(index(at: value.location.y))
+            }
     }
 
     private func index(at y: CGFloat) -> Int {
@@ -518,6 +458,7 @@ struct SideLensStack<Content: View>: View {
         Self.inset + CGFloat(index) * (Self.itemHeight + Self.itemSpacing) + Self.itemHeight / 2
     }
 
+    /// Follows the finger within the capsule; Reduce Motion snaps it to the control under it.
     private func lensCenter(for y: CGFloat) -> CGFloat {
         if reduceMotion { return itemCenter(index(at: y)) }
         return min(max(y, itemCenter(0)), itemCenter(count - 1))

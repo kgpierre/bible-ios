@@ -7,6 +7,9 @@ struct AppRootView: View {
     /// The regular-width window's width, so bottom-trailing controls stay on its trailing half.
     @State private var regularWidth: CGFloat = 0
     @State private var regularHeight: CGFloat = 0
+    /// The regular-width reader's trailing safe area: wide when the system stacks the toolbar in a
+    /// trailing column (Duo inner display) rather than across the top.
+    @State private var readTrailingInset: CGFloat = 0
     /// The top of the compact bottom controls (passage, tabs, and Read Aloud's player) in global
     /// coordinates. The reader's safe area doesn't include them, so it reserves this directly.
     @State private var compactChromeTop: CGFloat?
@@ -74,16 +77,6 @@ struct AppRootView: View {
                                              verticalCompact: verticalSizeClass == .compact) { regularLayout } else { compactLayout }
         }
         .background(Color(.readingCanvas))
-        .sheet(item: $state.summary) { summary in
-            ChapterSummaryView(state: summary) { source in
-                if let chapter = state.reader.catalogChapter(source.chapterID) {
-                    state.reader.navigate(to: chapter, verseID: source.id, cueVerseIDs: [source.id])
-                    state.destination = .read
-                }
-            }
-            // Overview and answers use the in-app text size and face, like the reader.
-            .environment(\.readingTypography, state.preferences.typography)
-        }
         .sheet(item: Binding(get: { state.reader.notesRequest }, set: { state.reader.notesRequest = $0 })) { request in
             SourceNotesView(request: request)
                 .preferredColorScheme(state.preferences.theme.colorScheme)
@@ -130,6 +123,7 @@ struct AppRootView: View {
                 chapter(wide: false, active: state.destination == .read)
                     .environment(state.narration)
                     .background(Color(.readingCanvas).ignoresSafeArea())
+                    .overlay(alignment: .topTrailing) { readerPanels(wide: false) }
                     .navigationTitle("")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbarBackground(.hidden, for: .navigationBar)
@@ -200,6 +194,8 @@ struct AppRootView: View {
                     chapter(wide: true, active: state.destination == .read)
                         .environment(state.narration)
                         .background(Color(.readingCanvas).ignoresSafeArea())
+                        .overlay(alignment: .topTrailing) { readerPanels(wide: true) }
+                        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.trailing } action: { readTrailingInset = $0 }
                         .navigationTitle("")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbarBackground(.hidden, for: .navigationBar)
@@ -416,22 +412,83 @@ struct AppRootView: View {
     }
 
     private var sideToolbar: some View {
-        SideLensStack(count: 4, onRelease: { index in
+        SideLensStack(count: 4, passthroughIndex: 3, onRelease: { index in
             switch index {
             case 0: state.isAppearancePresented = true
             case 1: if canSummarize { state.summarizeCurrentChapter() }
             case 2: if canSaveChapter { toggleSavedChapter() }
-            // SwiftUI can't open a menu from code; More opens with a tap.
+            // More is a menu: it opens on press, so its touches skip the lens.
             default: break
             }
-        }) {
+        }) { _ in
             appearanceButton
             summaryButton
             saveChapterButton
             moreMenu
         }
-        .buttonStyle(.plain)
         .foregroundStyle(Color(.readingPrimary))
+    }
+
+    /// Appearance and the chapter summary share one presentation (owner direction, 7 November 2026):
+    /// a popover beside the top controls on wide layouts, a sheet on compact ones. They point at an
+    /// anchor the app places beside the controls, not at the system's toolbar button: in the Duo's
+    /// vertical toolbar UIKit couldn't always resolve that button and fell back to the window's
+    /// top-left corner, on the left page.
+    private func readerPanels(wide: Bool) -> some View {
+        let vertical = wide && readTrailingInset >= ReaderLayout.minimumSideRailInset
+        // A vertical toolbar column: point right at it, at the height of its first controls. A top
+        // toolbar: point up at its trailing group from just below it.
+        let edge: Edge = vertical ? .trailing : .top
+        let width = panelWidth(wide: wide)
+        return ZStack {
+            panelAnchor
+                .popover(isPresented: $state.isAppearancePresented, arrowEdge: edge) {
+                    AppearanceView(preferences: state.preferences,
+                                   // Offer the page layout from the live window, never the device idiom:
+                                   // regular width can fit facing pages (iPad, Duo inner display, large
+                                   // phones in landscape), and a foldable keeps it while closed. Book-pose
+                                   // facing pages need a hinge and are always on.
+                                   showsPageLayout: AppearanceView.offersPageLayout(
+                                       horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
+                                   showsFoldOptions: state.hasHinge,
+                                   narration: state.narration)
+                        .frame(idealWidth: width, idealHeight: 560)
+                        .presentationCompactAdaptation(.sheet)
+                        // Leave the reader visible above the sheet so changes show as they are made.
+                        .presentationDetents([.medium, .large])
+                        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+                }
+            panelAnchor
+                .popover(item: $state.summary, arrowEdge: edge) { summary in
+                    ChapterSummaryView(state: summary) { source in
+                        if let chapter = state.reader.catalogChapter(source.chapterID) {
+                            state.reader.navigate(to: chapter, verseID: source.id, cueVerseIDs: [source.id])
+                            state.destination = .read
+                        }
+                    }
+                    // Overview and answers use the in-app text size and face, like the reader.
+                    .environment(\.readingTypography, state.preferences.typography)
+                    .frame(idealWidth: width, idealHeight: 600)
+                    .presentationCompactAdaptation(.sheet)
+                    .presentationDetents([.medium, .large])
+                }
+        }
+        // Level with the column's first controls (Appearance at about 130–166 points on the Duo
+        // inner display simulator, iOS 27.2); the system doesn't report the toolbar's frame.
+        .padding(.top, vertical ? 148 : 0)
+        .padding(.trailing, vertical ? 0 : 24)
+        .accessibilityHidden(true)
+    }
+
+    private var panelAnchor: some View {
+        Color.clear.frame(width: 1, height: 1).allowsHitTesting(false)
+    }
+
+    /// At most 400 points; in a wide window, no wider than the trailing page beside the toolbar, so
+    /// facing pages and a Duo fold keep the panel on the right page.
+    private func panelWidth(wide: Bool) -> CGFloat {
+        guard wide, regularWidth > regularHeight, regularWidth > 0 else { return 400 }
+        return min(400, max(320, regularWidth / 2 - readTrailingInset - 16))
     }
 
     private var canSummarize: Bool { state.reader.document != nil && !state.reader.isLoading }
@@ -446,21 +503,6 @@ struct AppRootView: View {
         Button { state.isAppearancePresented = true } label: { ToolbarGlyph(systemName: "textformat.size") }
             .accessibilityLabel("Appearance")
             .accessibilityIdentifier("appearanceButton")
-            .popover(isPresented: $state.isAppearancePresented) {
-                // Offer the page layout from the live window, never the device idiom: regular width
-                // can fit facing pages (iPad, Duo inner display, large phones in landscape), and a
-                // foldable keeps it while closed. Book-pose facing pages need a hinge and are always on.
-                AppearanceView(preferences: state.preferences,
-                               showsPageLayout: AppearanceView.offersPageLayout(
-                                   horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
-                               showsFoldOptions: state.hasHinge,
-                               narration: state.narration)
-                    .frame(idealWidth: 400, idealHeight: 560)
-                    .presentationCompactAdaptation(.sheet)
-                    // Leave the reader visible above the sheet so changes show as they are made.
-                    .presentationDetents([.medium, .large])
-                    .presentationBackgroundInteraction(.enabled(upThrough: .medium))
-            }
     }
 
     private var summaryButton: some View {

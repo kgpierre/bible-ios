@@ -828,7 +828,9 @@ final class BibleReaderUITests: XCTestCase {
         app.buttons["chapterSummaryButton"].tap()
         XCTAssertTrue(app.navigationBars["Summary"].waitForExistence(timeout: 5))
         capture(app, name: "Summary — dark largest Dynamic Type")
-        app.swipeUp()
+        // Wide layouts show Summary as a popover; a swipe outside it would dismiss it.
+        let popover = app.popovers.firstMatch
+        if popover.exists { popover.swipeUp() } else { app.swipeUp() }
         capture(app, name: "Summary — dark largest Dynamic Type scrolled")
         XCTAssertTrue(app.buttons["askBookQuestion"].exists)
         app.buttons["chapterSummaryDone"].tap()
