@@ -69,9 +69,6 @@ final class ReaderPreferences {
     var typography: ReadingTypography { didSet { save() } }
     /// Facing pages by default wherever two readable pages fit; narrow windows still scroll.
     var pageLayout: ReadingPageLayout { didSet { save() } }
-    /// Opt-in (owner request, 7 November 2026): while a foldable is open, offer the book and chapter
-    /// to its outer display, which the system shows only where it makes that display available.
-    var showsChapterOnOuterDisplay: Bool { didSet { save() } }
     @ObservationIgnored private let defaults: UserDefaults
     /// Version 2 made Two Pages the default. A version 1 page layout predates that default, so it
     /// reads as Two Pages once; every other value carries over. An older `automaticBookLayout`
@@ -81,8 +78,6 @@ final class ReaderPreferences {
         var theme: AppAppearance
         var typography: ReadingTypography
         var pageLayout: ReadingPageLayout?
-        /// Added after version 2 shipped; absent means off.
-        var showsChapterOnOuterDisplay: Bool?
     }
     private static let key = "reader.appearance.v1"
 
@@ -100,15 +95,13 @@ final class ReaderPreferences {
             theme = stored.theme
             typography = stored.typography
             pageLayout = stored.version == 1 ? .twoPages : stored.pageLayout ?? .twoPages
-            showsChapterOnOuterDisplay = stored.showsChapterOnOuterDisplay ?? false
             typography.sizeAdjustment = ReadingTypography.clamp(typography.sizeAdjustment)
-        } else { theme = .system; typography = ReadingTypography(); pageLayout = .twoPages; showsChapterOnOuterDisplay = false }
+        } else { theme = .system; typography = ReadingTypography(); pageLayout = .twoPages }
     }
 
     func resetReadingStyle() { typography = ReadingTypography() }
     private func save() {
-        guard let data = try? JSONEncoder().encode(Payload(theme: theme, typography: typography, pageLayout: pageLayout,
-                                                           showsChapterOnOuterDisplay: showsChapterOnOuterDisplay)) else { return }
+        guard let data = try? JSONEncoder().encode(Payload(theme: theme, typography: typography, pageLayout: pageLayout)) else { return }
         defaults.set(data, forKey: Self.key)
     }
 }

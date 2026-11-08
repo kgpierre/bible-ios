@@ -41,24 +41,6 @@ struct ReaderPreferencesTests {
         #expect(ReaderPreferences(defaults: defaults).pageLayout == .scroll)
     }
 
-    @Test @MainActor func outerDisplayChapterIsOffByDefaultAndPersists() throws {
-        let name = "BibleReader.Tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
-        #expect(ReaderPreferences(defaults: defaults).showsChapterOnOuterDisplay == false)
-        // A version 2 payload stored before the option existed reads as off and keeps its values.
-        defaults.set(Data(#"{"version":2,"theme":"light","typography":{"face":"serif","sizeAdjustment":0,"spacing":"standard"},"pageLayout":"scroll"}"#.utf8),
-                     forKey: "reader.appearance.v1")
-        let stored = ReaderPreferences(defaults: defaults)
-        #expect(stored.showsChapterOnOuterDisplay == false)
-        #expect(stored.pageLayout == .scroll)
-        #expect(stored.theme == .light)
-        stored.showsChapterOnOuterDisplay = true
-        #expect(ReaderPreferences(defaults: defaults).showsChapterOnOuterDisplay)
-        stored.resetReadingStyle()
-        #expect(ReaderPreferences(defaults: defaults).showsChapterOnOuterDisplay, "Reset Reading Style leaves the option alone")
-    }
-
     @Test @MainActor func textSizeGoesBelowDefaultAndClampsStoredSteps() throws {
         let name = "BibleReader.Tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: name))

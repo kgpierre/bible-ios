@@ -39,7 +39,6 @@ struct AppRootView: View {
             #endif
         }
         .focusedSceneValue(\.readerCommandState, state)
-        .modifier(OuterDisplayChapter(state: state))
         .background { HingeProbe { state.hasHinge = $0 }.frame(width: 0, height: 0).accessibilityHidden(true) }
         .background { VerticalBarProbe { hasVerticalBar = $0 }.frame(width: 0, height: 0).accessibilityHidden(true) }
         .onChange(of: undoManager, initial: true) { _, manager in state.reader.connectUndoManager(manager) }
@@ -434,7 +433,6 @@ struct AppRootView: View {
                                    showsPageLayout: AppearanceView.offersPageLayout(
                                        horizontalSizeClass: horizontalSizeClass, hasHinge: state.hasHinge),
                                    showsFoldOptions: state.hasHinge,
-                                   outerDisplayAvailable: state.outerDisplayAvailable,
                                    narration: state.narration)
                         .frame(idealWidth: width, idealHeight: 560)
                         .presentationCompactAdaptation(.sheet)
@@ -577,59 +575,4 @@ private extension View {
 #Preview {
     // About reads the app-owned TipStore; a non-observing store keeps the preview off StoreKit.
     AppRootView().environment(TipStore(observeTransactions: false))
-}
-
-/// Opt-in (owner request, 7 November 2026): while a foldable is open, offer the book and chapter to
-/// the system as a non-interactive scene accessory (iOS 27). The system decides whether and where it
-/// appears; on the iPhone Duo simulator (iOS 27.2) it reported the accessory unavailable while
-/// unfolded. The app stays fully functional without it, and the card shows only the chapter's
-/// labels, never Scripture text.
-private struct OuterDisplayChapter: ViewModifier {
-    @Bindable var state: AppState
-
-    func body(content: Content) -> some View {
-        if #available(iOS 27.0, *) {
-            content.sceneAccessory {
-                ExternalNonInteractiveAccessory(isEnabled: .constant(isEnabled)) {
-                    OuterChapterCard(document: state.reader.document, colorScheme: state.preferences.theme.colorScheme)
-                }
-                .onAvailabilityChange { state.outerDisplayAvailable = $0 }
-            }
-        } else {
-            content
-        }
-    }
-
-    private var isEnabled: Bool {
-        state.preferences.showsChapterOnOuterDisplay && state.hasHinge && state.reader.document != nil
-    }
-}
-
-/// The chapter heading as the reader shows it: eyebrow, book, and chapter, on the reading canvas.
-private struct OuterChapterCard: View {
-    let document: ChapterDocument?
-    let colorScheme: ColorScheme?
-
-    var body: some View {
-        VStack(spacing: 8) {
-            if let document {
-                Text(document.eyebrow)
-                    .font(.footnote.weight(.semibold)).tracking(0.6)
-                    .foregroundStyle(Color(.readingSecondary))
-                Text(document.bookName)
-                    .font(.system(.largeTitle, design: .serif).weight(.semibold))
-                    .foregroundStyle(Color(.readingPrimary))
-                Text("Chapter \(document.label)")
-                    .font(.system(.title2, design: .serif))
-                    .foregroundStyle(Color(.readingSecondary))
-            }
-        }
-        .multilineTextAlignment(.center)
-        .minimumScaleFactor(0.6)
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.readingCanvas))
-        .preferredColorScheme(colorScheme)
-        .accessibilityElement(children: .combine)
-    }
 }
