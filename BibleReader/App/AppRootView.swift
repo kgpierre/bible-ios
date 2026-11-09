@@ -9,6 +9,8 @@ struct AppRootView: View {
     @State private var regularHeight: CGFloat = 0
     /// The reader's trailing safe area, which includes a trailing vertical bar.
     @State private var readTrailingInset: CGFloat = 0
+    /// The reader is showing the tabletop pose (text above a horizontal fold, controls below).
+    @State private var isTabletop = false
     /// The top of the compact bottom controls (passage, tabs, and Read Aloud's player) in global
     /// coordinates. The reader's safe area doesn't include them, so it reserves this directly.
     @State private var compactChromeTop: CGFloat?
@@ -189,8 +191,10 @@ struct AppRootView: View {
                                             collapsed: !wide && state.destination == .read && state.reader.navigationCollapsed
                                                 && !dynamicTypeSize.isAccessibilitySize,
                                             playerMaxWidth: regularPlayerMaxWidth)
-                                .frame(maxWidth: regularTrailingHalf, alignment: .trailing)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
+                                // Tabletop centers it under the chapter controls below the fold
+                                // (owner request, 8 November 2026).
+                                .frame(maxWidth: regularTrailingHalf, alignment: isTabletop ? .center : .trailing)
+                                .frame(maxWidth: .infinity, alignment: isTabletop ? .center : .trailing)
                                 .padding(.horizontal, wide ? 20 : 16)
                                 .padding(.bottom, wide ? 12 : 8)
                         }
@@ -301,6 +305,8 @@ struct AppRootView: View {
                         tabletopControls
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                    .onAppear { isTabletop = true }
+                    .onDisappear { isTabletop = false }
                 } else if fold == nil, state.preferences.pageLayout == .twoPages,
                    ReaderLayout.supportsTwoPages(in: geometry.size, regularWidth: wide,
                        minimumPageWidth: minimumPageWidth, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
